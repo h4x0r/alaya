@@ -25,20 +25,52 @@ providers. Alaya takes a different approach.
 
 ### Comparison with Alternatives
 
-| | **Alaya** | **mem0** | **Zep / Graphiti** | **Letta (MemGPT)** | **LangChain Memory** |
-|---|---|---|---|---|---|
-| **Language** | Rust | Python | Python | Python | Python |
-| **Storage** | SQLite (single file) | Postgres + Qdrant/Pinecone | Postgres + Neo4j | Postgres + Chroma | In-memory / Redis |
-| **External infra** | None | Vector DB + relational DB | Graph DB + relational DB | Vector DB + relational DB | Varies by backend |
-| **LLM coupling** | None — agent provides via traits | OpenAI / others required | OpenAI required for extraction | OpenAI required | LangChain providers |
-| **Network calls** | Zero | Yes (LLM + vector DB) | Yes (LLM + graph DB) | Yes (LLM + vector DB) | Yes (LLM) |
-| **Memory model** | Three-store (episodic, semantic, implicit) | Flat key-value memories | Graph-based entities + relations | Tiered (core, recall, archival) | Buffer / summary / entity |
-| **Graph** | Hebbian — reshapes through use (LTP/LTD) | No graph | Static knowledge graph | No graph | No graph |
-| **Retrieval** | BM25 + vector + graph + RRF + spreading activation | Vector similarity | Graph traversal + vector | Vector similarity | Vector similarity |
-| **Forgetting** | Bjork dual-strength decay + RIF suppression | TTL-based expiry | No built-in forgetting | No built-in forgetting | Sliding window / token limit |
-| **Preference learning** | Vasana — emerges from accumulated impressions | Explicit user profiles | No | No | No |
-| **Privacy** | Fully local, no data leaves the process | Cloud-dependent | Cloud-dependent | Cloud-dependent | Cloud-dependent |
-| **Embedding provider** | BYO (or skip — BM25-only works) | Bundled | Bundled | Bundled | Bundled |
+#### Memory Systems
+
+| | **Alaya** | **mem0** | **Zep / Graphiti** | **Letta (MemGPT)** | **LangChain** | **LlamaIndex** |
+|---|---|---|---|---|---|---|
+| **Language** | Rust | Python | Python | Python | Python | Python |
+| **Storage** | SQLite (single file) | Qdrant/Pinecone + Postgres + Neo4j | Neo4j + Lucene | Postgres + Chroma/Qdrant | In-memory / Redis | SQLite / Postgres |
+| **External infra** | None | 2-3 services | 1-2 services | 1-2 services | 0-1 services | 0-1 services |
+| **LLM coupling** | None — traits | Required | Required for extraction | Required (LLM = memory manager) | Optional | Optional |
+| **Memory model** | Three-store (episodic, semantic, implicit) | Tiered + optional graph | Temporal knowledge graph | OS-inspired (core, recall, archival) | Buffer / summary / entity | Composable blocks |
+| **Graph** | Hebbian — reshapes through use | Optional (Mem0g) | Static temporal KG | No | No | No |
+| **Retrieval** | BM25 + vector + graph + RRF | Vector + graph (Mem0g) | Cosine + BM25 + graph + RRF | Agent-driven tool calls | Direct injection | Block-dependent |
+| **Forgetting** | Bjork dual-strength + RIF | Exponential decay | Temporal invalidation | Eviction + summarization | Window / truncation | FIFO eviction |
+| **Preferences** | Vasana (emergent) | LLM-extracted profiles | Indirect (graph) | Agent-edited blocks | Minimal | Basic (facts) |
+| **Privacy** | Fully local | Cloud-dependent | Configurable | Configurable | Configurable | Configurable |
+
+#### Rising Stars and Noteworthy Systems
+
+| System | Type | Language | Storage | Key Idea |
+|--------|------|----------|---------|----------|
+| **Cognee** | Knowledge engine | Python | Neo4j + vectors | Vector + graph hybrid; 70+ companies in production |
+| **A-MEM** | Research (NeurIPS 2025) | Python | Vector + note graph | Zettelkasten-inspired; 2x multi-hop reasoning |
+| **MemoryOS** | Research (EMNLP 2025) | Python | Configurable | Three-tier OS hierarchy; 49% F1 improvement on LoCoMo |
+| **Motorhead** | Memory server | Rust | Redis | Simple REST API; incremental summarization |
+| **Engram** | MCP memory | Go | SQLite + FTS5 | Zero dependencies; agent-directed; single binary |
+| **OpenViking** | Context DB | Python | VikingDB | Virtual filesystem paradigm; tiered loading (ByteDance) |
+| **LangGraph** | Agent framework | Python | Configurable | Stateful graph orchestration; checkpoint-based memory |
+| **Second Me** | AI identity | Python | Model parameters | Memory encoded into model weights via fine-tuning |
+| **MemoryBank** | Research (AAAI 2024) | Python | External bank | Ebbinghaus forgetting curve; user portrait synthesis |
+| **Generative Agents** | Research (UIST 2023) | Python | In-memory | Recency x importance x relevance (seminal paper) |
+
+#### Vector Databases (Infrastructure Layer)
+
+These provide storage and retrieval but not memory semantics (lifecycle,
+forgetting, preference learning, graph dynamics).
+
+| System | Language | Hybrid Search | Managed Cloud | Open Source |
+|--------|----------|:------------:|:-------------:|:----------:|
+| **Pinecone** | Cloud-native | No native BM25 | Yes (only option) | No |
+| **ChromaDB** | Python | FTS + vector | Chroma Cloud | Yes |
+| **Weaviate** | Go | BM25 + vector | Weaviate Cloud | Yes |
+| **Milvus** | Go/C++ | Dense + sparse | Zilliz Cloud | Yes |
+| **Cloudflare Vectorize** | Cloud-native | Via Workers AI | Yes (only option) | No |
+
+For a comprehensive analysis grounded in the CoALA taxonomy (Sumers et al.,
+2024) and RAG survey literature (Gao et al., 2023; Zhang et al., 2024), see
+[docs/related-work.md](docs/related-work.md).
 
 ## Architecture
 
