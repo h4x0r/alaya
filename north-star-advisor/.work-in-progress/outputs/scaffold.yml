@@ -1,0 +1,314 @@
+# Implementation Scaffold - Structured Output for Cross-Referencing
+# Generated: 2026-02-26 | Phase: 10
+# Source: north-star-advisor/docs/architecture/IMPLEMENTATION_SCAFFOLD.md
+
+codebase_state:
+  total_lines: 4064
+  total_files: 25
+  total_tests: 43
+  tests_passing: 43
+  doctests: 0
+  entry_point: "src/lib.rs"
+  binary: false
+  library: true
+
+module_tree:
+  - path: "src/lib.rs"
+    lines: 276
+    tests: 2
+    role: "AlayaStore struct, pub API (12 methods), integration tests"
+    status: "working"
+    gaps: ["no doctests", "no input validation", "modules should be pub(crate)", "no BEGIN IMMEDIATE"]
+
+  - path: "src/error.rs"
+    lines: 21
+    tests: 0
+    role: "AlayaError enum (5 variants), Result type alias"
+    status: "working"
+    gaps: ["#[non_exhaustive] missing"]
+
+  - path: "src/types.rs"
+    lines: 402
+    tests: 0
+    role: "All public types: 5 ID newtypes, 4 enums, 7 input types, 7 output types, 6 report types"
+    status: "working"
+    gaps: ["#[non_exhaustive] missing on enums"]
+
+  - path: "src/schema.rs"
+    lines: 238
+    tests: 3
+    role: "DB init: WAL mode, 7 tables, 1 FTS5, 3 triggers, 9 indexes"
+    status: "working"
+    gaps: ["no BEGIN IMMEDIATE helper", "no tombstones table", "no WAL checkpoint", "no content-hash column"]
+
+  - path: "src/provider.rs"
+    lines: 78
+    tests: 0
+    role: "ConsolidationProvider trait, NoOpProvider, MockProvider (test-only)"
+    status: "working"
+    gaps: ["EmbeddingProvider not yet defined (v0.2)"]
+
+  - path: "src/store/episodic.rs"
+    lines: 177
+    tests: 4
+    role: "Episodes CRUD, session queries, unconsolidated detection"
+    status: "working"
+
+  - path: "src/store/semantic.rs"
+    lines: 139
+    tests: 2
+    role: "Semantic nodes CRUD, corroboration, cascade delete"
+    status: "working"
+
+  - path: "src/store/implicit.rs"
+    lines: 182
+    tests: 2
+    role: "Impressions + Preferences CRUD, decay, prune"
+    status: "working"
+
+  - path: "src/store/embeddings.rs"
+    lines: 176
+    tests: 4
+    role: "f32 BLOB ser/de, cosine similarity, brute-force search"
+    status: "working"
+    scale_ceiling: "~50K embeddings (brute-force)"
+
+  - path: "src/store/strengths.rs"
+    lines: 145
+    tests: 2
+    role: "Bjork dual-strength: init, on_access, decay, suppress, archive"
+    status: "working"
+
+  - path: "src/graph/links.rs"
+    lines: 164
+    tests: 3
+    role: "CRUD, Hebbian co-retrieval LTP, decay, prune"
+    status: "working"
+
+  - path: "src/graph/activation.rs"
+    lines: 126
+    tests: 3
+    role: "Collins & Loftus spreading activation"
+    status: "working"
+
+  - path: "src/retrieval/bm25.rs"
+    lines: 104
+    tests: 2
+    role: "FTS5 MATCH with sanitization, BM25 score normalization"
+    status: "working"
+
+  - path: "src/retrieval/vector.rs"
+    lines: 27
+    tests: 1
+    role: "Thin wrapper over embeddings::search_by_vector"
+    status: "working"
+
+  - path: "src/retrieval/fusion.rs"
+    lines: 68
+    tests: 3
+    role: "Reciprocal Rank Fusion (k=60)"
+    status: "working"
+
+  - path: "src/retrieval/rerank.rs"
+    lines: 85
+    tests: 3
+    role: "Context similarity + recency decay reranking"
+    status: "working"
+
+  - path: "src/retrieval/pipeline.rs"
+    lines: 143
+    tests: 2
+    role: "Full query orchestration: BM25+vector+graph -> RRF -> rerank -> post-retrieval"
+    status: "working"
+    gaps: ["semantic/preference node enrichment not implemented"]
+
+  - path: "src/lifecycle/consolidation.rs"
+    lines: 118
+    tests: 2
+    role: "CLS replay: episodes -> semantic nodes"
+    status: "working"
+
+  - path: "src/lifecycle/perfuming.rs"
+    lines: 135
+    tests: 2
+    role: "Vasana: impressions -> preference crystallization"
+    status: "working"
+    gaps: ["summarize_impressions is placeholder (picks most recent)"]
+
+  - path: "src/lifecycle/transformation.rs"
+    lines: 134
+    tests: 2
+    role: "Dedup, link prune, preference decay, impression prune"
+    status: "working"
+    gaps: ["LTD not called (decay_links exists but unused here)"]
+
+  - path: "src/lifecycle/forgetting.rs"
+    lines: 95
+    tests: 2
+    role: "Bjork RS decay + archive below threshold"
+    status: "working"
+
+public_api_methods:
+  - { name: "open", category: "constructor", input: "impl AsRef<Path>", output: "Result<Self>", tested: true }
+  - { name: "open_in_memory", category: "constructor", input: "()", output: "Result<Self>", tested: true }
+  - { name: "store_episode", category: "write", input: "&NewEpisode", output: "Result<EpisodeId>", tested: true }
+  - { name: "query", category: "read", input: "&Query", output: "Result<Vec<ScoredMemory>>", tested: true }
+  - { name: "preferences", category: "read", input: "Option<&str>", output: "Result<Vec<Preference>>", tested: true }
+  - { name: "knowledge", category: "read", input: "Option<KnowledgeFilter>", output: "Result<Vec<SemanticNode>>", tested: true }
+  - { name: "neighbors", category: "read", input: "(NodeRef, u32)", output: "Result<Vec<(NodeRef, f32)>>", tested: false }
+  - { name: "consolidate", category: "lifecycle", input: "&dyn ConsolidationProvider", output: "Result<ConsolidationReport>", tested: true }
+  - { name: "perfume", category: "lifecycle", input: "(&Interaction, &dyn ConsolidationProvider)", output: "Result<PerfumingReport>", tested: true }
+  - { name: "transform", category: "lifecycle", input: "()", output: "Result<TransformationReport>", tested: true }
+  - { name: "forget", category: "lifecycle", input: "()", output: "Result<ForgettingReport>", tested: true }
+  - { name: "status", category: "admin", input: "()", output: "Result<MemoryStatus>", tested: true }
+  - { name: "purge", category: "admin", input: "PurgeFilter", output: "Result<PurgeReport>", tested: true }
+
+dependencies:
+  runtime:
+    - { name: "rusqlite", version: "0.32", features: ["bundled", "modern_sqlite"] }
+    - { name: "serde", version: "1", features: ["derive"] }
+    - { name: "serde_json", version: "1" }
+    - { name: "thiserror", version: "2" }
+  dev: []
+  planned:
+    - { name: "tempfile", version: "3", scope: "dev", phase: "v0.1" }
+    - { name: "sqlite-vec", version: "0.1", scope: "optional", feature: "vec-sqlite", phase: "v0.2" }
+    - { name: "ort", version: "2", scope: "optional", feature: "embed-ort", phase: "v0.2" }
+    - { name: "fastembed", version: "4", scope: "optional", feature: "embed-fastembed", phase: "v0.2" }
+    - { name: "tokio", version: "1", scope: "optional", feature: "async", phase: "v0.2" }
+    - { name: "divan", version: "0.1", scope: "dev", phase: "v0.2" }
+    - { name: "cbindgen", version: "0.27", scope: "build (alaya-ffi)", phase: "v0.2" }
+    - { name: "pyo3", version: "0.22", scope: "build (alaya-py)", phase: "v0.3" }
+
+feature_flags:
+  - { name: "vec-sqlite", enables: "sqlite-vec SIMD vector search", phase: "v0.2" }
+  - { name: "embed-ort", enables: "ONNX Runtime embedding backend", phase: "v0.2" }
+  - { name: "embed-fastembed", enables: "Turnkey fastembed-rs embeddings", phase: "v0.2" }
+  - { name: "async", enables: "Async API via tokio::task::spawn_blocking", phase: "v0.2" }
+
+known_gaps:
+  p0_hardening:
+    - id: "GAP-001"
+      title: "#[non_exhaustive] missing on public enums"
+      files: ["src/types.rs", "src/error.rs"]
+    - id: "GAP-002"
+      title: "No BEGIN IMMEDIATE for write transactions"
+      files: ["src/lib.rs", "src/schema.rs"]
+    - id: "GAP-003"
+      title: "No input validation at API boundary"
+      files: ["src/lib.rs"]
+    - id: "GAP-004"
+      title: "Internal modules exposed as pub (should be pub(crate))"
+      files: ["src/lib.rs"]
+    - id: "GAP-005"
+      title: "Zero compilable doctests on public methods"
+      files: ["src/lib.rs"]
+  p1_quality:
+    - id: "GAP-006"
+      title: "LTD not called from transformation pipeline"
+      files: ["src/lifecycle/transformation.rs"]
+    - id: "GAP-007"
+      title: "Semantic/preference nodes not enriched in retrieval pipeline"
+      files: ["src/retrieval/pipeline.rs"]
+    - id: "GAP-008"
+      title: "No tombstone mechanism for deleted nodes"
+      files: ["src/schema.rs"]
+    - id: "GAP-009"
+      title: "RIF (retrieval-induced forgetting) suppress not wired in pipeline"
+      files: ["src/retrieval/pipeline.rs", "src/store/strengths.rs"]
+  p2_polish:
+    - id: "GAP-010"
+      title: "No WAL checkpoint management"
+      files: ["src/schema.rs"]
+    - id: "GAP-011"
+      title: "No content-hash integrity column"
+      files: ["src/schema.rs"]
+    - id: "GAP-012"
+      title: "No CI pipeline"
+      files: [".github/workflows/ci.yml"]
+    - id: "GAP-013"
+      title: "No MSRV pinning"
+      files: ["rust-toolchain.toml", "Cargo.toml"]
+
+migration_phases:
+  - phase: 1
+    name: "P0 Hardening"
+    priority: "P0"
+    description: "Required before v0.1 release"
+    tasks:
+      - "Add #[non_exhaustive] to all public enums (GAP-001)"
+      - "Implement immediate_transaction() helper (GAP-002)"
+      - "Add input validation functions (GAP-003)"
+      - "Change internal modules to pub(crate) (GAP-004)"
+      - "Add doctests to all 12 pub methods (GAP-005)"
+    files_modified: ["src/types.rs", "src/error.rs", "src/schema.rs", "src/lib.rs"]
+
+  - phase: 2
+    name: "P1 Quality"
+    priority: "P1"
+    description: "v0.1 release quality"
+    tasks:
+      - "Call decay_links in transform() (GAP-006)"
+      - "Enrich semantic nodes in retrieval pipeline (GAP-007)"
+      - "Add tombstones table (GAP-008)"
+      - "Wire RIF suppression in pipeline (GAP-009)"
+    files_modified: ["src/lifecycle/transformation.rs", "src/retrieval/pipeline.rs", "src/schema.rs"]
+
+  - phase: 3
+    name: "P2 Polish"
+    priority: "P2"
+    description: "CI, tooling, documentation"
+    tasks:
+      - "WAL checkpoint in transform() (GAP-010)"
+      - "Create CI pipeline (GAP-012)"
+      - "Create rust-toolchain.toml + MSRV pin (GAP-013)"
+      - "Add tempfile dev-dependency"
+      - "Add Cargo.toml metadata (lints, docs.rs config)"
+    files_modified: ["src/schema.rs", "Cargo.toml", "rust-toolchain.toml", ".github/workflows/ci.yml"]
+
+workspace_plan:
+  current: "single crate"
+  v0_2: "workspace with 2 members (alaya, alaya-ffi)"
+  v0_3: "workspace with 3 members (alaya, alaya-ffi, alaya-py)"
+
+sqlite_schema:
+  tables: 7
+  fts5_virtual_tables: 1
+  triggers: 3
+  indexes: 9
+  planned_additions:
+    - "tombstones (node_type TEXT, node_id INTEGER, deleted_at INTEGER)"
+    - "content_hash column on episodes (SHA-256, v0.2)"
+
+test_coverage_summary:
+  by_module:
+    - { module: "lib (integration)", tests: 2 }
+    - { module: "schema", tests: 3 }
+    - { module: "store::episodic", tests: 4 }
+    - { module: "store::semantic", tests: 2 }
+    - { module: "store::implicit", tests: 2 }
+    - { module: "store::embeddings", tests: 4 }
+    - { module: "store::strengths", tests: 2 }
+    - { module: "graph::links", tests: 3 }
+    - { module: "graph::activation", tests: 3 }
+    - { module: "retrieval::bm25", tests: 2 }
+    - { module: "retrieval::vector", tests: 1 }
+    - { module: "retrieval::fusion", tests: 3 }
+    - { module: "retrieval::rerank", tests: 3 }
+    - { module: "retrieval::pipeline", tests: 2 }
+    - { module: "lifecycle::consolidation", tests: 2 }
+    - { module: "lifecycle::perfuming", tests: 2 }
+    - { module: "lifecycle::transformation", tests: 2 }
+    - { module: "lifecycle::forgetting", tests: 2 }
+  total: 43
+  doctests: 0
+
+ci_pipeline_planned:
+  jobs:
+    - "test (ubuntu, macos, windows)"
+    - "clippy (pedantic)"
+    - "fmt"
+    - "security audit"
+    - "msrv (1.75)"
+    - "no-network-deps verification"
+  msrv: "1.75"

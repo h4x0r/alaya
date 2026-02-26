@@ -1,0 +1,206 @@
+# Provider Contract Protocol - Structured Output for Cross-Referencing
+# Generated: 2026-02-26 | Phase: 10
+# Source: north-star-advisor/docs/architecture/HANDOFF_PROTOCOL.md
+
+reframing: "HANDOFF_PROTOCOL -> Provider Contract Protocol (Alaya is a library with trait-based extension points)"
+
+philosophy:
+  axioms:
+    - id: "no-direct-llm"
+      principle: "Alaya never calls an LLM directly"
+      implication: "Intelligence comes through provider trait methods; consumer owns API keys, costs, model selection"
+    - id: "noop-always-valid"
+      principle: "NoOpProvider is always a valid implementation"
+      implication: "Every lifecycle process degrades gracefully; BM25-only retrieval always works"
+    - id: "agent-controls-clock"
+      principle: "Lifecycle processes are explicit calls, not background threads"
+      implication: "No surprising state changes; deterministic testing; consumer controls LLM costs"
+
+  boundary: "Alaya owns storage/retrieval/lifecycle; consumer owns intelligence/LLM/prompts"
+  relationship: "Inversion of control -- Alaya calls consumer code through trait methods"
+
+trait_definitions:
+  consolidation_provider:
+    module: "src/provider.rs"
+    object_safe: true
+    used_as: "&dyn ConsolidationProvider"
+    methods:
+      - name: "extract_knowledge"
+        signature: "fn extract_knowledge(&self, episodes: &[Episode]) -> Result<Vec<NewSemanticNode>>"
+        called_by: "consolidate()"
+        input: "Slice of 3-10 Episode structs (unconsolidated episodes)"
+        output: "Zero or more NewSemanticNode structs with content, type, confidence, source_episodes"
+        noop_return: "Ok(vec![])"
+        error_behavior: "Propagates to caller via ?, batch remains unconsolidated for retry"
+
+      - name: "extract_impressions"
+        signature: "fn extract_impressions(&self, interaction: &Interaction) -> Result<Vec<NewImpression>>"
+        called_by: "perfume()"
+        input: "Single Interaction struct (conversation turn for impression extraction)"
+        output: "Zero or more NewImpression structs with domain, observation, valence"
+        noop_return: "Ok(vec![])"
+        error_behavior: "Propagates to caller via ?, interaction not processed"
+
+      - name: "detect_contradiction"
+        signature: "fn detect_contradiction(&self, a: &SemanticNode, b: &SemanticNode) -> Result<bool>"
+        called_by: "[not currently called; planned for transform() in v0.2]"
+        input: "Two SemanticNode structs to compare"
+        output: "bool -- true if nodes contradict, false otherwise"
+        noop_return: "Ok(false)"
+        error_behavior: "Would propagate to caller"
+
+  noop_provider:
+    module: "src/provider.rs"
+    struct: "NoOpProvider"
+    purpose: "Graceful degradation when no LLM is available"
+    extract_knowledge: "Ok(vec![])"
+    extract_impressions: "Ok(vec![])"
+    detect_contradiction: "Ok(false)"
+    use_cases:
+      - "Development and testing"
+      - "Offline/edge deployment"
+      - "Cost-controlled lifecycle (forgetting/transformation without LLM calls)"
+      - "MCP server default when no LLM configured"
+      - "Fallback when primary provider fails"
+
+  mock_provider:
+    module: "src/provider.rs"
+    cfg_test_only: true
+    struct: "MockProvider"
+    purpose: "Testing with canned results"
+    constructors:
+      - "MockProvider::empty()"
+      - "MockProvider::with_knowledge(Vec<NewSemanticNode>)"
+      - "MockProvider::with_impressions(Vec<NewImpression>)"
+
+  embedding_provider:
+    status: "planned for v0.2"
+    methods:
+      - "embed(&str) -> Result<Vec<f32>>"
+      - "embed_batch(&[&str]) -> Result<Vec<Vec<f32>>>"
+      - "dimension() -> usize"
+      - "model_name() -> &str"
+    feature_flags:
+      - "embed-ort: ONNX Runtime backend"
+      - "embed-fastembed: Turnkey fastembed-rs backend"
+
+lifecycle_call_map:
+  consolidate:
+    provider_method: "extract_knowledge"
+    trigger: "explicit call to AlayaStore::consolidate()"
+    preconditions: "3+ unconsolidated episodes"
+    batch_size: 10
+    post_processing:
+      - "Store nodes in semantic_nodes table"
+      - "Create Causal links to source episodes (weight=0.7)"
+      - "Initialize Bjork strengths (SS=0.5, RS=1.0)"
+    report: "ConsolidationReport { episodes_processed, nodes_created, links_created }"
+
+  perfume:
+    provider_method: "extract_impressions"
+    trigger: "explicit call to AlayaStore::perfume()"
+    preconditions: "none (always callable)"
+    post_processing:
+      - "Store impressions in impressions table"
+      - "Check domain counts against crystallization threshold (5)"
+      - "Crystallize new preferences or reinforce existing ones"
+    report: "PerfumingReport { impressions_stored, preferences_crystallized, preferences_reinforced }"
+
+  transform:
+    provider_method: "[none currently; planned: detect_contradiction]"
+    trigger: "explicit call to AlayaStore::transform()"
+    steps:
+      - "Dedup semantic nodes (embedding similarity >= 0.95)"
+      - "Prune weak links (weight < 0.02)"
+      - "Decay preferences (half-life 30 days)"
+      - "Prune weak preferences (confidence < 0.05)"
+      - "Prune old impressions (age > 90 days)"
+    report: "TransformationReport { duplicates_merged, links_pruned, preferences_decayed, impressions_pruned }"
+
+  forget:
+    provider_method: "[none]"
+    trigger: "explicit call to AlayaStore::forget()"
+    steps:
+      - "Decay all retrieval strengths (RS *= 0.95)"
+      - "Archive nodes below both thresholds (SS < 0.1, RS < 0.05)"
+    report: "ForgettingReport { nodes_decayed, nodes_archived }"
+
+error_handling:
+  error_type: "AlayaError::Provider(String)"
+  propagation: "All provider errors propagate via ? to the consumer"
+  no_partial_writes_guarantee: false
+  known_gap: "consolidate() can partially write nodes if DB error occurs mid-batch"
+  panic_handling: "Alaya does not catch panics; provider should never panic"
+  fallback_pattern: "FallbackProvider wraps primary + NoOpProvider; falls back on Err"
+
+contract_validation:
+  current_state: "No runtime validation of provider output (v0.1.0)"
+  type_system_checks:
+    - "content is String (not null)"
+    - "node_type is SemanticType enum (four variants)"
+    - "confidence is f32"
+    - "source_episodes is Vec<EpisodeId>"
+  planned_runtime_checks:
+    - "Non-empty content"
+    - "Content length limit"
+    - "Source episode existence verification"
+    - "Confidence clamping to [0.0, 1.0]"
+    - "Max nodes per batch"
+    - "Non-empty domain"
+    - "Valence clamping to [-1.0, 1.0]"
+    - "Embedding dimension consistency"
+    - "NaN/Infinity rejection in floats"
+
+constants:
+  consolidation_batch_size: 10
+  minimum_episodes_for_consolidation: 3
+  crystallization_threshold: 5
+  initial_causal_link_weight: 0.7
+  initial_storage_strength: 0.5
+  initial_retrieval_strength: 1.0
+  preference_confidence_cap: 0.9
+  rs_decay_factor: 0.95
+  archive_ss_threshold: 0.1
+  archive_rs_threshold: 0.05
+  link_prune_threshold: 0.02
+  dedup_similarity_threshold: 0.95
+  preference_half_life_days: 30
+  max_impression_age_days: 90
+  min_preference_confidence: 0.05
+
+graceful_degradation_chain:
+  - level: "Full provider"
+    works: "Everything: consolidation, perfuming, contradiction detection"
+    missing: "Nothing"
+  - level: "NoOpProvider"
+    works: "Store, query, transform, forget, BM25, graph, embeddings"
+    missing: "No new semantic nodes, no impressions, no contradiction checks"
+  - level: "No lifecycle calls"
+    works: "Store, query (BM25-only if no embeddings)"
+    missing: "No semantic layer, no preferences, no forgetting, no graph pruning"
+
+known_gaps:
+  - gap: "No provider output validation"
+    impact: "Garbage in, garbage stored"
+    planned_fix: "Validation layer in lifecycle functions"
+    version: "v0.1.x"
+  - gap: "detect_contradiction() never called"
+    impact: "Dead code in trait"
+    planned_fix: "Wire into transform()"
+    version: "v0.2.0"
+  - gap: "No transactional batch in consolidate()"
+    impact: "Partial writes on mid-batch DB error"
+    planned_fix: "Wrap in transaction"
+    version: "v0.1.x"
+  - gap: "summarize_impressions() is trivial heuristic"
+    impact: "Preference text quality depends on most-recent impression"
+    planned_fix: "Improve heuristic or delegate to provider"
+    version: "v0.2.0"
+  - gap: "No provider call metrics"
+    impact: "Cannot measure extraction latency"
+    planned_fix: "Add timing to lifecycle reports"
+    version: "v0.2.0"
+  - gap: "Unconsolidated episode tracking unclear"
+    impact: "Consumer cannot tell which episodes have been consolidated"
+    planned_fix: "Add consolidated flag or tracking table"
+    version: "v0.1.x"

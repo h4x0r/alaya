@@ -1,0 +1,830 @@
+# North Star Advisor - Progressive Strategic Context
+# This file is updated after each generation phase
+
+_meta:
+  generated_by: "north-star-advisor"
+  version: "1.0.0"
+  created_at: "2026-02-26T12:40:00+08:00"
+  last_updated: "2026-02-27T00:30:00+08:00"
+  phases_complete: [1, 2, 3, 4, "5a", "5b", "5c", "5d", 6, 7, 8, 9, 10, 11, "10p", "11h", "10r", "10d", "10s", "10t", "11s", 12, 13]
+
+project:
+  name: "Alaya"
+  description: "Embeddable Rust memory library with cognitive lifecycle processes and implicit preference emergence for privacy-first AI agents"
+  version: "0.1.0"
+  target_users: "Agent developers building privacy-first, relationship-heavy agents"
+  core_problem: "No memory system combines complete cognitive lifecycle with zero external dependencies. No system learns implicit preference tradeoffs from observed behavior."
+  differentiator: "Implicit preference emergence with contextual tradeoff resolution. Hebbian graph that reshapes through use. Bjork dual-strength forgetting. Zero dependencies (single SQLite file, Rust). LLM-agnostic with graceful degradation."
+  success_metric: "Agent developer ships product on Alaya with noticeable user impact. Benchmark results beating alternatives. OpenClaw or similar adoption."
+  tech_stack: "Rust, SQLite, zero external dependencies, optional LLM via traits"
+
+northstar:
+  metric: "Monthly Active Crate Consumers (MACC)"
+  metric_definition: "Unique projects calling AlayaStore::open() and executing store_episode() + query() in 30-day period"
+  targets:
+    v0.1: 5
+    v0.2: 25
+    v0.3: 100
+    v1.0: 500
+  personas:
+    - name: "Priya (Privacy-First Agent Developer)"
+      goal: "Ship companion agent with on-device memory"
+      pain: "Every memory solution requires cloud calls or LLM"
+    - name: "Marcus (Performance-Focused Agent Developer)"
+      goal: "Sub-ms retrieval, benchmark-verified quality, no framework lock-in"
+      pain: "Python memory libraries too slow; no benchmarks; context flooding"
+  phases:
+    - name: "v0.1 MVP"
+      focus: "Core library, CRUD completeness, LoCoMo baseline"
+      duration: "4-6 weeks"
+    - name: "v0.2 Ecosystem"
+      focus: "MCP server, benchmarks >75%, config, async, FFI"
+      duration: "6-8 weeks after v0.1"
+    - name: "v0.3 Growth"
+      focus: "Python bindings, community, DEF CON"
+      duration: "3-6 months after v0.2"
+  positioning: "For agent developers who need conversational memory with privacy guarantees, Alaya is the embeddable Rust memory engine that provides a complete cognitive lifecycle in a single SQLite file with zero external dependencies."
+
+strategy:
+  axioms:
+    - "Privacy > Features (never add network calls to core crate)"
+    - "Process > Storage (memory transforms through use, lifecycle is the product)"
+    - "Correctness > Speed (research grounding before shipping velocity)"
+    - "Simplicity > Completeness (single SQLite file, zero deps, minimal config)"
+    - "Honesty > Marketing (publish benchmarks even when numbers are bad)"
+  non_goals:
+    - "Cloud deployment or managed service"
+    - "Enterprise features (multi-tenant, RBAC, horizontal scaling)"
+    - "LLM-required operations"
+    - "Standalone memory service"
+    - "Procedural memory (executable skills)"
+    - "Parametric memory (model fine-tuning)"
+    - "External vector database as default"
+    - "Framework-specific integration"
+  constraints:
+    - "Zero runtime deps beyond rusqlite, serde, serde_json, thiserror"
+    - "All persistent state in single SQLite file"
+    - "No network calls in core crate (privacy by architecture)"
+    - "#[non_exhaustive] on all public enums"
+    - "BEGIN IMMEDIATE for all write transactions"
+    - "Sanitize all FTS5 MATCH input"
+    - "Typed reports from all lifecycle processes"
+    - "Compilable doctests on every public method"
+    - "4-6 feature flags maximum"
+    - "Conflict resolution: Safety > Privacy > Correctness > Simplicity > Performance > Features"
+  beliefs:
+    - id: "memory-is-process"
+      statement: "Memory is a process, not a database"
+      implication: "Every retrieval changes what is remembered; the graph reshapes through use"
+    - id: "forgetting-is-feature"
+      statement: "Forgetting is a feature"
+      implication: "Strategic decay improves retrieval quality; Bjork dual-strength model"
+    - id: "preferences-emerge"
+      statement: "Preferences emerge, they are not declared"
+      implication: "Vasana perfuming crystallizes behavioral patterns from accumulated observations"
+    - id: "agent-owns-identity"
+      statement: "The agent owns identity"
+      implication: "Alaya stores seeds; the agent decides which matter and how to present them"
+    - id: "graceful-degradation"
+      statement: "Graceful degradation"
+      implication: "No embeddings? BM25-only. No LLM? Episodes accumulate. Everything works independently."
+  kill_list:
+    - "Not cloud-dependent (zero network calls, privacy by architecture)"
+    - "Not enterprise (no multi-tenant, no RBAC, no horizontal scaling)"
+    - "Not LLM-coupled (works without any LLM via trait-based optional providers)"
+    - "Not hype-driven (no AI marketing language, research-grounded terminology)"
+    - "Not a standalone service (library only, cargo add alaya)"
+    - "Not procedural memory (stores observations, not executable skills)"
+    - "Not parametric memory (non-parametric domain only, no model fine-tuning)"
+  recommended_path:
+    id: "B"
+    name: "Developer Experience First, with Benchmark Fast-Follow"
+    confidence: "8/10"
+    summary: "Harden P0 gaps (weeks 1-2), document and close P1 gaps (weeks 3-5), CI + publish v0.1.0 (week 6), LoCoMo benchmark fast-follow (weeks 7-9)"
+    time_to_publication: "6-8 weeks"
+    expected_macc_6mo: "5-15"
+    reasoning:
+      - "Axiom hierarchy resolves tie: Simplicity > Completeness says ship minimal correct version"
+      - "Solo-developer feedback loop: users discover qualitatively different gaps than maintainer"
+      - "Downside analysis: Path B failure produces most reusable assets (docs, hardened crate, CI)"
+    phases:
+      - { name: "P0 Hardening", weeks: "1-2", focus: "non_exhaustive, BEGIN IMMEDIATE, validation, pub(crate), doctests" }
+      - { name: "P1 Quality + Docs", weeks: "3-5", focus: "LTD, enrichment, tombstones, RIF, README, examples" }
+      - { name: "CI + Publication", weeks: "6", focus: "GitHub Actions, cargo publish, launch comms, OpenClaw outreach" }
+      - { name: "Benchmark Fast-Follow", weeks: "7-9", focus: "LoCoMo harness, run baselines, blog post with honest results" }
+      - { name: "v0.1.x Iteration", weeks: "10+", focus: "User feedback, P2 polish, v0.2 planning" }
+    success_criteria_90day:
+      - "v0.1.0 published on crates.io"
+      - "MACC >= 3"
+      - "LoCoMo baseline measured and published"
+      - "At least one external API review"
+      - "OpenClaw outreach completed"
+      - "Zero SEV-1/SEV-2 incidents"
+  trade_offs:
+    rejected_paths:
+      - id: "A"
+        name: "Benchmark First"
+        time_to_publication: "10-13 weeks"
+        rejected_because: "Delays publication for optimization without user feedback; violates Simplicity > Completeness"
+        what_it_would_gain: "Stronger benchmark credibility at launch; Marcus persona served immediately"
+      - id: "C"
+        name: "OpenClaw Window"
+        time_to_publication: "8-11 weeks"
+        rejected_because: "Binary outcome coupled to external project; narrow API risk; violates Simplicity > Completeness"
+        what_it_would_gain: "Highest-value single adoption event if accepted"
+    key_trade_offs:
+      - "Publishing without benchmark numbers (mitigated by 3-week fast-follow commitment)"
+      - "Marcus persona deferred 2-3 weeks (mitigated by benchmark blog post)"
+      - "Known retrieval gaps at launch (P1 closed before publish; benchmarks measure remaining delta)"
+    review_triggers:
+      - "OpenClaw announces component selection within 4 weeks -> evaluate acceleration"
+      - "Competitor ships zero-dep cognitive memory library -> emergency publish"
+      - "LoCoMo baseline < 40% P@5 -> reframe blog as analysis, focus on lifecycle differentiators"
+      - "Zero MACC at 90 days -> 5 developer interviews, likely DX issue"
+    avoid_list:
+      - "Do not optimize retrieval before publication"
+      - "Do not build MCP server before v0.1.0"
+      - "Do not add feature flags before v0.1.0"
+      - "Do not chase GitHub stars"
+      - "Do not implement cross-language bindings before v0.2"
+      - "Do not skip CI pipeline"
+
+brand:
+  voice:
+    attributes: ["Technical but accessible", "Research-grounded", "Honest about tradeoffs", "Quiet confidence"]
+    rules: ["Active voice", "Present tense for features", "No superlatives without evidence", "Concrete over abstract"]
+  terminology:
+    preferred: ["memory engine", "cognitive lifecycle", "preference emergence"]
+    avoid: ["memory database", "AI-powered", "intelligent", "self-evolving"]
+  license: "MIT"
+  privacy_model: "architectural (no network calls, single SQLite file, no telemetry)"
+
+market:
+  competitors:
+    - name: "Mem0"
+      weakness: "Requires LLM for every write, cloud-dependent, simple exponential decay"
+    - name: "Zep / Graphiti"
+      weakness: "Requires Neo4j, LLM for entity extraction, static knowledge graph"
+    - name: "Letta (MemGPT)"
+      weakness: "Memory quality entirely LLM-dependent, crude eviction, requires infrastructure"
+    - name: "Supermemory"
+      weakness: "Ad-hoc forgetting, static graph, cloud-optimized, TypeScript-only"
+    - name: "Hindsight (Vectorize)"
+      weakness: "Requires LLM and external infrastructure, no graph, no principled forgetting"
+    - name: "Memvid"
+      weakness: "Append-only, no forgetting/consolidation/preferences/graph (log, not memory)"
+    - name: "Engram"
+      weakness: "Flat key-value store, no vector search/graph/forgetting/consolidation"
+  differentiation:
+    - "Only system with implicit preference emergence without LLM (vasana/perfuming)"
+    - "Only dual-strength forgetting model (Bjork) in any shipping system"
+    - "Only dynamic Hebbian graph (LTP/LTD) without LLM involvement"
+    - "Only system combining complete cognitive lifecycle with zero external dependencies"
+    - "Graceful degradation: every feature works independently"
+    - "Rust + single SQLite file + FFI: embeddable in any language"
+  whitespace: "High cognitive completeness + high operational simplicity (unoccupied quadrant)"
+  timing_windows:
+    - "OpenClaw ecosystem (now - Q3 2026)"
+    - "DEF CON credibility (August 2026)"
+    - "Pre-RL-productionization (12-18 months)"
+    - "Edge AI memory gap (2026-2028)"
+
+design:
+  journeys:
+    - "First-Time Developer: Discovery -> Evaluation -> Installation -> First Code -> Value"
+    - "Deepening Integration: Basic CRUD -> Lifecycle -> Custom Providers -> Tuning -> Production"
+    - "Error Recovery: Compilation -> Schema -> Empty Results -> Performance -> FTS5"
+    - "MCP Integration: Discovery -> Configuration -> First Memory -> Cross-Session Queries"
+    - "Persona Variations: Priya (privacy audit path), Marcus (benchmark-first path)"
+  tokens:
+    - "API naming: snake_case functions, CamelCase types, SCREAMING_SNAKE constants"
+    - "Entry point: AlayaStore::open(path)"
+    - "CRUD pattern: store_*/get_*/list_*/delete_* for every entity"
+    - "Builder pattern: AlayaConfig::builder().path().build()"
+    - "Provider traits: ConsolidationProvider, EmbeddingProvider"
+    - "Error type: AlayaError with #[non_exhaustive]"
+    - "All pub methods have compilable doctests"
+  api_patterns:
+    - "Single Entry Point: all interaction through AlayaStore"
+    - "New*/Entity Split: NewEpisode (input) vs Episode (output)"
+    - "Trait Extension: ConsolidationProvider + NoOpProvider fallback"
+    - "Result Everywhere: all fallible operations return Result<T, AlayaError>"
+    - "Typed Reports: every lifecycle method returns a specific report type"
+    - "Explicit Lifecycle: consolidate/forget/transform are explicit calls, not automatic"
+    - "Two-Level Query: Query::simple() for quickstart, full struct for advanced"
+    - "Reference by Borrow: all methods take &self and borrow arguments"
+  type_hierarchy:
+    ids: ["EpisodeId", "NodeId", "PreferenceId", "ImpressionId", "LinkId"]
+    polymorphic: "NodeRef { Episode, Semantic, Preference }"
+    inputs: ["NewEpisode", "NewSemanticNode", "NewImpression", "Interaction", "Query"]
+    outputs: ["Episode", "SemanticNode", "Impression", "Preference", "ScoredMemory", "Link", "NodeStrength"]
+    reports: ["ConsolidationReport", "PerfumingReport", "TransformationReport", "ForgettingReport", "PurgeReport", "MemoryStatus"]
+    enums: ["Role", "SemanticType", "LinkType", "PurgeFilter"]
+  consistency_rules:
+    - "Timestamps: i64 (Unix seconds)"
+    - "IDs: newtype around i64"
+    - "Text content: String (never &str in public API)"
+    - "Optional fields: Option<T> (never sentinel values)"
+    - "Collections: Vec<T> (never iterators in returns)"
+    - "Retrieval scores: f64, weights/strengths: f32"
+  accessibility:
+    - "Skill levels: beginner (3 methods) -> intermediate (lifecycle) -> advanced (traits) -> expert (tuning)"
+    - "Error messages: what happened + why + what to do"
+    - "Platform reach: Rust (T1) -> C FFI + MCP (T2) -> Python (T3)"
+    - "Cognitive load: <20 pub methods, CRUD symmetry, sensible defaults"
+    - "Time to first success: <2 minutes"
+    - "Documentation: progressive disclosure from README to architecture docs"
+
+architecture:
+  pattern: "Three-store + Hebbian graph + hybrid retrieval + cognitive lifecycle"
+  components:
+    - "AlayaStore (public API, single entry point)"
+    - "Three Stores (episodic, semantic, implicit)"
+    - "Graph Overlay (Hebbian LTP/LTD, spreading activation)"
+    - "Retrieval Pipeline (BM25 + vector + graph -> RRF -> RIF)"
+    - "Lifecycle Processes (consolidation, perfuming, transformation, forgetting)"
+    - "Provider Traits (ConsolidationProvider, EmbeddingProvider)"
+    - "SQLite Storage (WAL, FTS5, embeddings)"
+  tech_stack:
+    - "Rust (stable), rusqlite 0.32, serde, thiserror 2.x"
+    - "SQLite WAL + FTS5 + embeddings BLOBs"
+    - "Tiered vector: brute-force -> sqlite-vec -> HNSW via trait"
+    - "Feature flags: embed-ort, embed-fastembed, vec-sqlite, async"
+  known_gaps:
+    - "LTD not called from retrieval pipeline"
+    - "No BEGIN IMMEDIATE for write transactions"
+    - "#[non_exhaustive] missing on public enums"
+    - "No input validation at API boundary"
+  pipeline_stages:
+    - name: "BM25"
+      module: "retrieval/bm25.rs"
+      input: "query text (sanitized)"
+      output: "Vec<(EpisodeId, f64)> normalized [0,1]"
+      skip: "empty query"
+    - name: "Vector"
+      module: "retrieval/vector.rs"
+      input: "query embedding (f32 slice)"
+      output: "Vec<(NodeRef, f64)> cosine similarity"
+      skip: "query.embedding is None"
+    - name: "Graph"
+      module: "graph/activation.rs"
+      input: "top 3 BM25 + top 3 vector seeds"
+      output: "HashMap<NodeRef, f32> activation levels"
+      skip: "no seed nodes"
+      params: "depth=1, threshold=0.1, decay=0.6"
+    - name: "RRF Fusion"
+      module: "retrieval/fusion.rs"
+      input: "1-3 result sets"
+      output: "Vec<(NodeRef, f64)> merged ranked list"
+      params: "k=60"
+    - name: "Enrichment"
+      module: "pipeline.rs (inline)"
+      input: "fused NodeRef candidates"
+      output: "full candidate tuples with content"
+      gap: "non-episode nodes dropped"
+    - name: "Rerank"
+      module: "retrieval/rerank.rs"
+      formula: "base * (1 + 0.3*ctx) * (1 + 0.2*recency)"
+      output: "Vec<ScoredMemory>"
+    - name: "Post-Retrieval"
+      module: "store/strengths.rs + graph/links.rs"
+      effects: ["RS=1.0, SS += 0.05*(1-SS)", "co-retrieval LTP: w += 0.1*(1-w)"]
+  handoff_triggers:
+    - from: "BM25"
+      to: "RRF"
+      condition: "always (even if empty)"
+    - from: "Vector"
+      to: "RRF"
+      condition: "query.embedding.is_some() AND results non-empty"
+    - from: "Graph"
+      to: "RRF"
+      condition: "seed_nodes non-empty AND activated nodes exist"
+    - from: "RRF"
+      to: "Enrichment"
+      condition: "always"
+    - from: "Enrichment"
+      to: "Rerank"
+      condition: "always"
+    - from: "Rerank"
+      to: "Post-Retrieval"
+      condition: "always"
+  degradation_chain:
+    - "Full: BM25 + Vector + Graph -> 3-way RRF"
+    - "No embeddings: BM25 + Graph -> 2-way RRF"
+    - "No links: BM25 + Vector -> 2-way RRF"
+    - "BM25 only: 1-way RRF (passthrough)"
+    - "Empty DB: [] (no error)"
+  delegation_rules:
+    model: "Trait-based inversion of control (library calls consumer code)"
+    trait: "ConsolidationProvider"
+    methods:
+      - name: "extract_knowledge"
+        delegated_by: "consolidate()"
+        input: "&[Episode] (3-10 unconsolidated episodes)"
+        output: "Vec<NewSemanticNode>"
+        noop: "empty vec (no semantic nodes created)"
+      - name: "extract_impressions"
+        delegated_by: "perfume()"
+        input: "&Interaction (single conversation turn)"
+        output: "Vec<NewImpression>"
+        noop: "empty vec (no impressions stored)"
+      - name: "detect_contradiction"
+        delegated_by: "[planned: transform()]"
+        input: "(&SemanticNode, &SemanticNode)"
+        output: "bool"
+        noop: "false (no contradiction)"
+    fallback: "NoOpProvider always valid; returns empty/false for all methods"
+    error_handling: "AlayaError::Provider propagates to caller; no partial writes guarantee missing"
+    planned_v0_2: "EmbeddingProvider trait (embed, embed_batch, dimension, model_name)"
+  context_passing:
+    consolidate_to_provider:
+      passed: "Batch of Episode structs (id, content, role, session_id, timestamp, context)"
+      context_fields: "topics, sentiment, conversation_turn, mentioned_entities, preceding_episode"
+      batch_size: 10
+      minimum: 3
+    perfume_to_provider:
+      passed: "Single Interaction struct (text, role, session_id, timestamp, context)"
+      note: "Interaction is transient (not stored); consumer constructs from their message format"
+    provider_to_alaya:
+      knowledge: "NewSemanticNode (content, node_type, confidence, source_episodes, embedding)"
+      impressions: "NewImpression (domain, observation, valence)"
+      contradiction: "bool"
+    post_processing:
+      knowledge: "Store node, create Causal links (weight=0.7), init Bjork strengths (SS=0.5, RS=1.0)"
+      impressions: "Store impression, check domain crystallization threshold (5), crystallize or reinforce"
+    validation_state: "No runtime validation of provider output in v0.1; planned for v0.1.x hardening"
+  agent_prompts:
+    - "Direct Rust API: store_episode after turns, query before response, dream() periodically"
+    - "MCP server: universal agent integration via tool interface (v0.2)"
+    - "Consumer system prompts: memory context + preferences + guidelines"
+    - "Provider implementation: ConsolidationProvider, EmbeddingProvider trait guides"
+    - "Anti-patterns: don't skip lifecycle, don't store system messages, don't ignore preferences"
+  capability_detection:
+    description: "Runtime probing for available retrieval signals (embeddings, links, FTS data)"
+    mechanism: "Each retrieval signal probed independently; empty results excluded from RRF fusion"
+    capability_states: ["Empty", "Episodes only (BM25)", "With embeddings (BM25+Vector)", "With graph (BM25+Graph)", "Full (BM25+Vector+Graph)"]
+    provider_fallback: "NoOpProvider returns empty results for all trait methods (no error, no extraction)"
+  transaction_resilience:
+    wal_mode: true
+    synchronous: "NORMAL"
+    known_gaps: ["No BEGIN IMMEDIATE (planned v0.1)", "No WAL checkpoint management (planned v0.1)", "No explicit transaction boundaries on multi-statement operations"]
+    busy_handling: "AlayaError::Db propagated to consumer; consumer implements retry"
+    threading: "Send but not Sync; consumer wraps in Arc<Mutex<AlayaStore>>"
+  degradation_chain:
+    levels:
+      - "Level 1: Full (BM25 + Vector + Graph -> RRF -> Rerank)"
+      - "Level 2: No embeddings (BM25 + Graph -> RRF -> Rerank)"
+      - "Level 3: No links (BM25 + Vector -> RRF -> Rerank)"
+      - "Level 4: No FTS matches (Vector + Graph -> RRF -> Rerank)"
+      - "Level 5: BM25 only (BM25 -> Rerank)"
+      - "Level 6: Empty (Ok(vec![]))"
+    enabler: "RRF accepts variable-length result set lists; self-healing via co-retrieval link formation"
+  operation_idempotency:
+    consolidate: "convergent (re-run picks up remaining work)"
+    forget: "partial (decay is multiplicative, not idempotent; archival is idempotent)"
+    transform: "mostly (pruning idempotent, decay not)"
+    perfume: "not idempotent (accumulates duplicate impressions)"
+    purge: "fully idempotent"
+  resource_budgets:
+    embedding_scan: "Full brute-force O(N*D), ceiling ~50K; sqlite-vec planned v0.2"
+    graph_traversal: "max_depth + threshold + decay_per_hop + activation_cap(2.0)"
+    query_results: "max_results * 3 at each pipeline stage, default max_results=5"
+    consolidation_batch: "10 episodes per call"
+
+decisions:
+  - "ADR-001: SQLite as sole storage engine"
+  - "ADR-002: Three-store memory architecture"
+  - "ADR-003: Hebbian graph overlay"
+  - "ADR-004: Trait-based extension model"
+  - "ADR-005: Bjork dual-strength forgetting"
+  - "ADR-006: RRF fusion strategy"
+  - "ADR-007: Vasana preference emergence"
+  - "ADR-008: Sync-first API"
+  - "ADR-009: Zero network calls"
+  - "ADR-010: FTS5 for full-text search"
+
+security:
+  auth_pattern: "architectural (no auth in library; consumer responsibility)"
+  threats:
+    - "Memory poisoning (OWASP ASI06)"
+    - "FTS5 MATCH injection"
+    - "Memory resurrection after deletion"
+    - "Cross-user data leakage"
+    - "PII persistence in memories/embeddings"
+    - "Embedding poisoning"
+    - "WAL corruption/unbounded growth"
+    - "Transaction deadlock (BEGIN DEFERRED)"
+    - "Provider output injection"
+    - "File theft (unencrypted SQLite)"
+  guardrails:
+    - "Zero network calls in core"
+    - "FTS5 input sanitization"
+    - "BEGIN IMMEDIATE for writes"
+    - "Tombstone mechanism for deletions"
+    - "Content validation hooks"
+    - "Mandatory scoping (user_id + agent_id)"
+    - "Parameterized queries (no SQL injection)"
+    - "Surrogate key architecture (no PII in keys)"
+    - "No raw SQL in public API"
+    - "Typed lifecycle reports for audit"
+  hardening_roadmap:
+    v0_1:
+      - "BEGIN IMMEDIATE for all write transactions"
+      - "Input validation at API boundary"
+      - "Tombstone table for cascade deletion"
+      - "Content-hash integrity column"
+      - "Provider output validation"
+      - "WAL checkpoint management"
+    v0_2:
+      - "Quarantine API"
+      - "SQLCipher feature flag"
+      - "Audit trait"
+      - "compact() method"
+    v0_3:
+      - "Formal security audit"
+      - "Fuzz testing (cargo-fuzz)"
+  compliance:
+    gdpr: "purge() + VACUUM + crypto-shredding via per-user keys"
+    ccpa: "query/knowledge/preferences for access; purge for deletion"
+    soc2: "Simplified -- no cloud deps, no network, single file"
+    hipaa: "Not designed for HIPAA; requires SQLCipher + audit logging"
+
+operations:
+  logging_strategy:
+    model: "library-native (consumer owns subscriber, library emits spans)"
+    crate: "tracing 0.1 (optional, feature-flagged)"
+    target_prefix: "alaya::"
+    pii_policy: "Never log content, queries, observations, embeddings, or entity names. Log only metadata: lengths, counts, IDs, types, timestamps."
+    enforcement: ["skip in #[instrument]", "No Debug formatting of content types", "Integration test for PII leakage"]
+    current_state: "No tracing dependency yet. Observability via typed reports only."
+  tracing:
+    feature_flag: "tracing"
+    span_hierarchy:
+      public_methods: ["open", "store_episode", "query", "consolidate", "perfume", "transform", "forget", "status", "purge"]
+      pipeline_stages: ["bm25", "vector", "graph_activation", "rrf_fusion", "enrich", "rerank", "post_retrieval"]
+      lifecycle_stages: ["fetch_episodes", "provider_extract", "store_node", "extract_impressions", "crystallize", "dedup_semantic", "prune_links", "decay_retrieval", "find_archivable"]
+    event_count: 51
+    degradation_events: ["degraded_no_embeddings", "degraded_no_links", "degraded_bm25_only", "degraded_empty_db", "provider_returned_empty"]
+    consumer_integration: ["tracing-subscriber fmt", "tracing-subscriber json", "tracing-opentelemetry", "tokio-console", "custom Layer"]
+  dashboards:
+    model: "No built-in dashboards (library, not service)"
+    consumer_options:
+      - "Typed reports (ConsolidationReport, ForgettingReport, etc.) -- always available, no feature flag"
+      - "tracing spans with timing subscribers -- query latency breakdown by pipeline stage"
+      - "AlayaMetrics trait (v0.2) -- callback interface for Prometheus/StatsD/Datadog"
+      - "diagnostics() method (v0.2) -- extended health snapshot including WAL, strengths, coverage"
+    metrics_derivable_from_spans:
+      - "query.duration, query.bm25.duration, query.vector.duration"
+      - "store_episode.duration, consolidate.duration"
+      - "query.result_count, query.retrieval_channels"
+      - "consolidation.nodes_created, forgetting.nodes_archived"
+    health_check_levels:
+      - "Quick: status() -- 6 COUNT queries, call per request"
+      - "Standard: diagnostics() -- ~20 queries, call per minute"
+      - "Deep: health_check() -- PRAGMA integrity_check, call weekly"
+  monitoring:
+    model: "CI-pipeline-as-monitoring (library has no runtime to monitor)"
+    quality_gates:
+      - name: "test_coverage"
+        tool: "cargo-llvm-cov"
+        threshold: "80%"
+        frequency: "every PR"
+        action: "block merge"
+      - name: "benchmark_regression"
+        tool: "divan + baseline comparison"
+        threshold: "20% regression"
+        frequency: "every PR"
+        action: "block merge"
+      - name: "dependency_audit"
+        tool: "cargo audit + cargo deny"
+        threshold: "any vulnerability or banned crate"
+        frequency: "every PR + weekly scheduled"
+        action: "block merge / create issue"
+      - name: "clippy_pedantic"
+        tool: "cargo clippy -D warnings -D clippy::pedantic"
+        threshold: "any warning"
+        frequency: "every PR"
+        action: "block merge"
+      - name: "msrv_check"
+        tool: "cargo +1.70.0 check"
+        threshold: "compile failure"
+        frequency: "every PR"
+        action: "block merge"
+      - name: "schema_compat"
+        tool: "migration test against prior release DB"
+        threshold: "open failure"
+        frequency: "every release"
+        action: "block release"
+      - name: "network_dep_ban"
+        tool: "cargo deny [bans]"
+        banned: ["reqwest", "hyper", "openssl", "rustls"]
+        frequency: "every PR"
+        action: "block merge"
+    proxy_metrics:
+      - name: "MACC (Monthly Active Crate Consumers)"
+        source: "GitHub dependents with recent commits"
+        frequency: "monthly"
+      - name: "crates.io downloads"
+        source: "crates.io/crates/alaya"
+        frequency: "weekly"
+      - name: "issue velocity"
+        source: "GitHub issues opened/closed"
+        frequency: "weekly"
+    compile_time_budget:
+      clean_build: "< 60s"
+      incremental_build: "< 10s"
+      feature_flag_ceiling: "< 120s (any combination)"
+    binary_size_budget:
+      core_release_stripped: "< 5MB"
+      with_embed_ort: "< 45MB (acceptable, feature-gated)"
+  alerts:
+    model: "GitHub-native (no PagerDuty, no Sentry -- library has no runtime)"
+    channels:
+      - name: "dependabot_security"
+        trigger: "cargo audit finds vulnerability in dependency"
+        response: "evaluate within 24 hours, update within 1 week"
+      - name: "ci_failure_on_main"
+        trigger: "CI pipeline fails on main branch"
+        response: "fix within 24 hours"
+      - name: "sev1_issue"
+        trigger: "bug/data-corruption or bug/semver-violation label"
+        response: "acknowledge within 4 hours, fix within 24 hours"
+      - name: "sev2_issue"
+        trigger: "bug/security label"
+        response: "acknowledge within 24 hours, fix within 48 hours"
+      - name: "downstream_breakage"
+        trigger: "consumer reports build failure after cargo update"
+        response: "reproduce + classify within 48 hours"
+      - name: "docs_rs_failure"
+        trigger: "docs.rs fails to build documentation"
+        response: "fix within 1 week"
+    escalation:
+      sev1: "data corruption or semver violation -> 4h ack, 24h hotfix, yank"
+      sev2: "security vulnerability -> 24h ack, 48h fix"
+      sev3: "incorrect behavior or panic -> 48h ack, next release"
+      sev4: "performance regression -> 1wk ack, next release"
+    post_mortem:
+      required_for: ["SEV-1", "SEV-2"]
+      template: "what happened, why not caught, what gate added"
+      location: "docs/post-mortems/"
+
+testing:
+  current_state:
+    total_tests: 43
+    test_modules: 18
+    integration_tests: 0
+    property_tests: 0
+    doc_tests: 0
+    benchmarks: 0
+    dev_dependencies: "empty"
+  unit_coverage:
+    modules_with_tests: 18
+    modules_needing_expansion: ["types.rs (0)", "error.rs (0)", "provider.rs (0)", "store/embeddings.rs (needs NaN/edge)", "store/strengths.rs (needs bounds)", "retrieval/pipeline.rs (needs degradation)"]
+    target_v0_1: 150
+    target_v0_2: 250
+  integration_tests:
+    suites: ["store_lifecycle", "retrieval_quality", "degradation_chain", "concurrent_access", "persistence", "error_paths", "purge_compliance"]
+    pattern: "tests/ directory, import alaya as external crate, AlayaStore::open_in_memory()"
+    target_v0_1: 20
+  property_tests:
+    framework: "proptest 1.4"
+    invariant_groups: ["bjork_dual_strength (5)", "hebbian_weights (4)", "rrf_fusion (2)", "cosine_similarity (4)", "recency_decay (2)"]
+    target_v0_1: 15
+  golden_datasets:
+    - name: "LoCoMo"
+      source: "arXiv:2402.14088"
+      metrics: ["precision_at_5", "recall_at_10", "ndcg_at_5", "mrr"]
+      targets: { bm25_only_p5: 0.70, hybrid_p5: 0.80, ndcg_at_5: 0.65 }
+    - name: "LongMemEval"
+      source: "arXiv:2410.10813"
+      metrics: ["precision_at_5", "ndcg_at_5"]
+    - name: "Alaya-Internal"
+      source: "hand-curated"
+      tests: "Bjork forgetting impact, vasana crystallization, Hebbian graph delta"
+  lifecycle_invariants: 19
+  fuzz_targets: ["fts5_sanitization", "embedding_deserialize", "context_json", "store_episode", "cosine_similarity"]
+  benchmarks:
+    framework: "divan 0.1"
+    categories: ["store_operations", "retrieval_at_scale", "lifecycle_processes", "low_level_math"]
+    performance_targets:
+      bm25_query_1k: "< 1 ms"
+      vector_query_1k_384: "< 5 ms"
+      hybrid_query_1k: "< 10 ms"
+      cosine_384: "< 1 us"
+  ci:
+    platforms: ["ubuntu-22.04", "macos-14", "windows-2022"]
+    rust_versions: ["1.75.0 (MSRV)", "stable", "beta"]
+    enforcements: ["no networking deps (ADR-009)", "clippy -D warnings", "cargo fmt", "quickstart regression"]
+  doc_tests:
+    coverage_target: "100% of pub methods and types"
+    standard: "compilable, self-contained, open_in_memory() only"
+
+implementation:
+  project_structure:
+    entry_point: "src/lib.rs"
+    crate_type: "lib"
+    total_lines: 4064
+    total_files: 25
+    total_tests: 43
+    msrv: "1.75"
+    modules:
+      - { path: "src/lib.rs", role: "AlayaStore struct, 12 pub methods, integration tests", lines: 276 }
+      - { path: "src/error.rs", role: "AlayaError enum, Result alias", lines: 21 }
+      - { path: "src/types.rs", role: "All public types (IDs, enums, input/output/report structs)", lines: 402 }
+      - { path: "src/schema.rs", role: "DB init: WAL, 7 tables, FTS5, triggers, indexes", lines: 238 }
+      - { path: "src/provider.rs", role: "ConsolidationProvider trait, NoOpProvider", lines: 78 }
+      - { path: "src/store/episodic.rs", role: "Episodes CRUD, FTS5 sync", lines: 177 }
+      - { path: "src/store/semantic.rs", role: "Semantic nodes CRUD, corroboration", lines: 139 }
+      - { path: "src/store/implicit.rs", role: "Impressions + Preferences CRUD, decay", lines: 182 }
+      - { path: "src/store/embeddings.rs", role: "f32 BLOB ser/de, cosine similarity, brute-force search", lines: 176 }
+      - { path: "src/store/strengths.rs", role: "Bjork dual-strength tracking", lines: 145 }
+      - { path: "src/graph/links.rs", role: "Hebbian links CRUD, co-retrieval LTP", lines: 164 }
+      - { path: "src/graph/activation.rs", role: "Collins & Loftus spreading activation", lines: 126 }
+      - { path: "src/retrieval/bm25.rs", role: "FTS5 search with sanitization", lines: 104 }
+      - { path: "src/retrieval/vector.rs", role: "Vector search delegation", lines: 27 }
+      - { path: "src/retrieval/fusion.rs", role: "RRF merge (k=60)", lines: 68 }
+      - { path: "src/retrieval/rerank.rs", role: "Context similarity + recency decay", lines: 85 }
+      - { path: "src/retrieval/pipeline.rs", role: "Full query orchestration", lines: 143 }
+      - { path: "src/lifecycle/consolidation.rs", role: "CLS replay: episodes -> semantic nodes", lines: 118 }
+      - { path: "src/lifecycle/perfuming.rs", role: "Vasana: impressions -> preferences", lines: 135 }
+      - { path: "src/lifecycle/transformation.rs", role: "Dedup, prune, decay", lines: 134 }
+      - { path: "src/lifecycle/forgetting.rs", role: "Bjork RS decay + archive", lines: 95 }
+    visibility:
+      public: ["lib.rs (AlayaStore)", "error.rs (AlayaError, Result)", "types.rs (all types)", "provider.rs (traits)"]
+      internal: ["schema", "store/*", "graph/*", "retrieval/*", "lifecycle/*"]
+      note: "Internal modules are currently pub but should be pub(crate)"
+  setup_scripts:
+    build: "cargo build"
+    test: "cargo test"
+    lint: "cargo clippy -- -W clippy::pedantic"
+    format: "cargo fmt -- --check"
+    doc: "cargo doc --no-deps --open"
+    audit: "cargo audit"
+    bench: "cargo bench (v0.2, divan)"
+    ci_check: "cargo test && cargo clippy -- -W clippy::pedantic && cargo fmt -- --check"
+    no_network_verify: "cargo tree --no-default-features | grep -E '(reqwest|hyper|h2|tokio.*net)' && exit 1 || echo OK"
+  hardening_gaps:
+    p0:
+      - "#[non_exhaustive] on all public enums (types.rs, error.rs)"
+      - "BEGIN IMMEDIATE for write transactions (schema.rs, lib.rs)"
+      - "Input validation at API boundary (lib.rs)"
+      - "Internal modules to pub(crate) (lib.rs)"
+      - "Compilable doctests on all pub methods (lib.rs)"
+    p1:
+      - "LTD integration in transform() (lifecycle/transformation.rs)"
+      - "Semantic node enrichment in pipeline (retrieval/pipeline.rs)"
+      - "Tombstone table (schema.rs)"
+      - "RIF suppression wiring (retrieval/pipeline.rs)"
+    p2:
+      - "WAL checkpoint management (schema.rs)"
+      - "CI pipeline (.github/workflows/ci.yml)"
+      - "MSRV pinning (rust-toolchain.toml, Cargo.toml)"
+  workspace_plan:
+    current: "single crate (alaya)"
+    v0_2: "workspace: alaya + alaya-ffi (cbindgen C FFI)"
+    v0_3: "workspace: alaya + alaya-ffi + alaya-py (PyO3 Python bindings)"
+  feature_flags_planned:
+    - { name: "vec-sqlite", deps: "sqlite-vec", phase: "v0.2" }
+    - { name: "embed-ort", deps: "ort", phase: "v0.2" }
+    - { name: "embed-fastembed", deps: "fastembed", phase: "v0.2" }
+    - { name: "async", deps: "tokio", phase: "v0.2" }
+
+roadmap:
+  path: "B -- Developer Experience First, with Benchmark Fast-Follow"
+  confidence: "8/10"
+  time_to_publication: "6 weeks"
+  phase_1:
+    name: "P0 Hardening"
+    weeks: "1-2"
+    priority: "P0"
+    goal: "Close semver safety, transaction integrity, and API contract gaps"
+    tasks:
+      - "Add #[non_exhaustive] to all public enums (GAP-001) -- src/types.rs, src/error.rs"
+      - "Implement BEGIN IMMEDIATE for write transactions (GAP-002) -- src/schema.rs, src/lib.rs"
+      - "Add input validation at API boundary (GAP-003) -- src/lib.rs"
+      - "Change internal modules to pub(crate) (GAP-004) -- src/lib.rs"
+      - "Add compilable doctests on all pub methods (GAP-005) -- src/lib.rs"
+      - "Add tempfile dev-dependency -- Cargo.toml"
+      - "Schema versioning with PRAGMA user_version -- src/schema.rs"
+    review: "End of Week 2: all P0 gaps closed, test count ~65-75"
+  phase_2:
+    name: "P1 Quality and Documentation"
+    weeks: "3-4"
+    priority: "P1"
+    goal: "Close lifecycle correctness gaps, write docs, expand tests to 80+"
+    tasks:
+      - "Wire LTD in transform() (GAP-006) -- src/lifecycle/transformation.rs"
+      - "Semantic/preference enrichment in pipeline (GAP-007) -- src/retrieval/pipeline.rs"
+      - "Tombstone mechanism for deleted nodes (GAP-008) -- src/schema.rs, src/store/episodic.rs"
+      - "RIF suppression in retrieval pipeline (GAP-009) -- src/retrieval/pipeline.rs"
+      - "README rewrite with quickstart -- README.md"
+      - "Examples directory (3 examples) -- examples/"
+      - "Cargo.toml metadata completion (GAP-013 partial) -- Cargo.toml"
+      - "CHANGELOG.md -- CHANGELOG.md"
+      - "Expand test coverage (+40 tests) -- various modules"
+      - "Proptest for mathematical invariants (15 properties)"
+    review: "End of Week 4: all P0+P1 gaps closed, docs ready, test count ~107-117"
+  phase_3:
+    name: "CI Pipeline and Publication"
+    weeks: "5-6"
+    priority: "P0"
+    goal: "CI pipeline, all release gates, cargo publish v0.1.0, launch comms"
+    tasks:
+      - "GitHub Actions CI workflow (GAP-012) -- .github/workflows/ci.yml"
+      - "MSRV pinning (GAP-013) -- rust-toolchain.toml"
+      - "Pre-publication dry run (all release gates)"
+      - "Cargo.toml final review"
+      - "Publish v0.1.0 to crates.io"
+      - "Launch communications: r/rust, HackerNews, blog post, OpenClaw outreach"
+    review: "End of Week 6: v0.1.0 live, docs.rs builds, CI green, all channels posted"
+  phase_4:
+    name: "Benchmark Fast-Follow"
+    weeks: "7-9"
+    priority: "P1"
+    goal: "LoCoMo benchmark harness, run baselines, publish honest results"
+    tasks:
+      - "LoCoMo benchmark harness -- benches/locomo.rs"
+      - "Run and document baselines -- benchmarks/results/"
+      - "LongMemEval baseline (stretch) -- tests/longmemeval/"
+      - "Benchmark blog post with honest numbers"
+      - "OpenClaw follow-up with benchmark data"
+    review: "3 weeks post-publish: LoCoMo measured, blog live, strategy adjustment if needed"
+  phase_5:
+    name: "v0.1.x Iteration and v0.2 Planning"
+    weeks: "10-12"
+    priority: "P2"
+    goal: "Respond to feedback, patch issues, plan v0.2 based on MACC data"
+    tasks:
+      - "Post-launch monitoring (daily then weekly)"
+      - "v0.1.x patch releases as needed"
+      - "P2 polish: WAL checkpoint (GAP-010), content-hash (GAP-011), integration tests"
+      - "v0.2 scope planning based on MACC and feedback"
+    review: "90 days post-publish: MACC vs target, full strategy reassessment"
+  avoid_list:
+    - "Do not optimize retrieval quality before publication"
+    - "Do not build MCP server before v0.1.0"
+    - "Do not add feature flags before v0.1.0"
+    - "Do not chase GitHub stars or social media engagement"
+    - "Do not implement cross-language bindings before v0.2"
+    - "Do not skip CI pipeline"
+    - "Do not attempt to make v0.1 perfect"
+  success_criteria_90day:
+    - "v0.1.0 published on crates.io"
+    - "MACC >= 3"
+    - "LoCoMo baseline measured and published"
+    - "At least one external API review"
+    - "OpenClaw outreach completed"
+    - "Zero SEV-1/SEV-2 incidents"
+  pivot_triggers:
+    - "OpenClaw selection timeline < 4 weeks -> evaluate acceleration"
+    - "Competitor ships zero-dep cognitive library -> emergency publish"
+    - "LoCoMo < 40% P@5 -> reframe as analysis"
+    - "Zero MACC at 90 days -> 5 developer interviews"
+    - "MACC > 5 at 4 weeks -> accelerate v0.2"
+
+references:
+  docs:
+    core:
+      - { path: "north-star-advisor/docs/BRAND_GUIDELINES.md", phase: 1, title: "Brand Guidelines", words: 4536 }
+      - { path: "north-star-advisor/docs/NORTHSTAR.md", phase: 2, title: "North Star Specification", words: 6742 }
+      - { path: "north-star-advisor/docs/COMPETITIVE_LANDSCAPE.md", phase: 3, title: "Competitive Landscape", words: 5749 }
+      - { path: "north-star-advisor/docs/NORTHSTAR_EXTRACT.md", phase: 4, title: "North Star Extract", words: 3938 }
+      - { path: "north-star-advisor/docs/ARCHITECTURE_BLUEPRINT.md", phase: 6, title: "Architecture Blueprint", words: 5975 }
+      - { path: "north-star-advisor/docs/SECURITY_ARCHITECTURE.md", phase: 8, title: "Security Architecture", words: 7064 }
+      - { path: "north-star-advisor/docs/ADR.md", phase: 9, title: "Architecture Decision Records", words: 7925 }
+      - { path: "north-star-advisor/docs/POST_DEPLOYMENT.md", phase: 10, title: "Library Operations & Release Management", words: 9136 }
+      - { path: "north-star-advisor/docs/STRATEGIC_RECOMMENDATION.md", phase: 11, title: "Strategic Recommendation", words: 7220 }
+      - { path: "north-star-advisor/docs/ACTION_ROADMAP.md", phase: 12, title: "Action Roadmap", words: 9577 }
+      - { path: "north-star-advisor/docs/INDEX.md", phase: 13, title: "Documentation Index" }
+    design:
+      - { path: "north-star-advisor/docs/design/USER_JOURNEYS.md", phase: "5a", title: "Developer Experience Journeys", words: 5900 }
+      - { path: "north-star-advisor/docs/design/UI_DESIGN_SYSTEM.md", phase: "5b", title: "API Design System", words: 6185 }
+      - { path: "north-star-advisor/docs/design/ACCESSIBILITY.md", phase: "5c", title: "Developer Accessibility Strategy", words: 7813 }
+      - { path: "north-star-advisor/docs/design/WIREFRAMES.md", phase: "5d", title: "API Surface Specification", words: 10266 }
+    architecture:
+      - { path: "north-star-advisor/docs/architecture/AGENT_PROMPTS.md", phase: 7, title: "Consumer Integration Patterns", words: 6281 }
+      - { path: "north-star-advisor/docs/architecture/PIPELINE_ORCHESTRATION.md", phase: "10p", title: "Retrieval Pipeline Implementation", words: 7602 }
+      - { path: "north-star-advisor/docs/architecture/RESILIENCE_PATTERNS.md", phase: "10r", title: "Graceful Degradation Patterns", words: 9105 }
+      - { path: "north-star-advisor/docs/architecture/IMPLEMENTATION_SCAFFOLD.md", phase: "10s", title: "Module Structure & Build System", words: 8445 }
+      - { path: "north-star-advisor/docs/architecture/OBSERVABILITY.md", phase: "10d", title: "Library Instrumentation", words: 6987 }
+      - { path: "north-star-advisor/docs/architecture/TESTING_STRATEGY.md", phase: "10t", title: "Rust Testing Framework", words: 9708 }
+      - { path: "north-star-advisor/docs/architecture/HANDOFF_PROTOCOL.md", phase: "11h", title: "Provider Contract Protocol", words: 7548 }
+  supplementary:
+    - { path: "north-star-advisor/ai-context.yml", title: "Progressive Strategic Context (machine-readable)" }
+    - { path: "north-star-advisor/.work-in-progress/research/summary.md", title: "Research Synthesis" }
+  stats:
+    total_documents: 22
+    total_words: 155702
+    generation_date: "2026-02-26"
+    phases_total: 13
+
+# Sections populated as phases complete:
+# - strategy: Phase 2 (metric, personas), Phase 4 (axioms), Phase 11s (recommended_path, trade_offs)
+# - market: Phase 3 (competitors, differentiation, whitespace)
+# - architecture: Phase 6 (pattern, components, tech_stack, known_gaps), Phase 10p (pipeline_stages, handoff_triggers), Phase 10r (capability_detection, transaction_resilience, degradation_chain, operation_idempotency, resource_budgets)
+# - security: Phase 8 (auth, threats, guardrails, compliance)
+# - operations: Phase 10 (logging_strategy, tracing, dashboards), Phase 10d (monitoring, alerts)
+# - testing: Phase 10t (unit_coverage, integration_tests, golden_datasets, property_tests, benchmarks, ci)
+# - implementation: Phase 10s (project_structure, setup_scripts, hardening_gaps, workspace_plan, feature_flags_planned)
+# - roadmap: Phase 12 (phases, milestones)
+# - references: Phase 13 (document index) -- COMPLETE

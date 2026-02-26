@@ -1,0 +1,216 @@
+# Observability Architecture - Structured Output for Cross-Referencing
+# Generated: 2026-02-26 | Phase: 10
+# Source: north-star-advisor/docs/architecture/OBSERVABILITY.md
+
+model: "library-native (consumer owns subscriber, library emits spans)"
+privacy_model: "PII-safe logging (never log content, only metadata)"
+
+feature_flags:
+  - name: "tracing"
+    dependency: "tracing 0.1"
+    enables: "Structured spans and events via tracing crate"
+    version: "v0.1.x"
+  - name: "metrics"
+    dependency: "none (trait-only)"
+    enables: "AlayaMetrics callback trait for Prometheus/StatsD"
+    version: "v0.2"
+
+observability_levels:
+  - level: "Typed Reports"
+    feature_flag: null
+    description: "Return values from lifecycle methods (ConsolidationReport, etc.)"
+    implemented: true
+  - level: "tracing Spans and Events"
+    feature_flag: "tracing"
+    description: "Structured spans around all public methods and pipeline stages"
+    implemented: false
+    planned: "v0.1.x"
+  - level: "Metrics Export Interface"
+    feature_flag: "metrics"
+    description: "AlayaMetrics trait for consumer-provided monitoring"
+    implemented: false
+    planned: "v0.2"
+
+tracing_integration:
+  crate: "tracing 0.1"
+  feature_flag: "tracing"
+  zero_overhead_when_disabled: true
+  target_prefix: "alaya::"
+  instrument_macro: "#[cfg_attr(feature = \"tracing\", instrument(skip(self, ...), fields(...)))]"
+  internal_macros: ["alaya_span!", "alaya_event!"]
+
+span_hierarchy:
+  write_path:
+    root: "alaya::store_episode"
+    children:
+      - "alaya::store::episodic_insert"
+      - "alaya::store::embedding_store"
+      - "alaya::store::strength_init"
+      - "alaya::graph::temporal_link"
+  query_path:
+    root: "alaya::query"
+    children:
+      - "alaya::retrieval::bm25"
+      - "alaya::retrieval::vector"
+      - "alaya::retrieval::graph_activation"
+      - "alaya::retrieval::rrf_fusion"
+      - "alaya::retrieval::enrich"
+      - "alaya::retrieval::rerank"
+      - "alaya::retrieval::post_retrieval"
+  lifecycle:
+    consolidate:
+      root: "alaya::consolidate"
+      children: ["fetch_episodes", "provider_extract", "store_node"]
+    perfume:
+      root: "alaya::perfume"
+      children: ["extract_impressions", "store_impression", "check_crystallization"]
+    transform:
+      root: "alaya::transform"
+      children: ["dedup_semantic", "prune_links", "decay_preferences", "prune_impressions"]
+    forget:
+      root: "alaya::forget"
+      children: ["decay_retrieval", "find_archivable", "archive_node"]
+
+pii_safe_policy:
+  never_logged:
+    - field: "content"
+      safe_alternative: "content_len"
+      reason: "Episode text is high-sensitivity PII"
+    - field: "query_text"
+      safe_alternative: "query_text_len"
+      reason: "Query may contain PII"
+    - field: "observation"
+      safe_alternative: "observation_len"
+      reason: "Impression text"
+    - field: "preference_text"
+      safe_alternative: "preference_domain"
+      reason: "Crystallized preference text"
+    - field: "embedding"
+      safe_alternative: "embedding_dim"
+      reason: "Invertible to approximate content"
+    - field: "mentioned_entities"
+      safe_alternative: "entity_count"
+      reason: "May contain personal names"
+    - field: "topics"
+      safe_alternative: "topic_count"
+      reason: "May reveal conversation subject"
+  always_safe:
+    - "IDs (episode_id, node_id, link_id) -- surrogate keys"
+    - "session_id -- opaque identifier"
+    - "role -- enum value"
+    - "timestamps -- temporal metadata"
+    - "counts -- aggregate numbers"
+    - "byte lengths -- size metadata"
+    - "confidence, weights, strengths -- numeric metadata"
+    - "type enums (node_type, link_type, semantic_type)"
+    - "domain names -- category labels"
+    - "boolean flags (has_embedding, has_preceding)"
+  enforcement:
+    - "skip in #[instrument] attributes"
+    - "No automatic Debug formatting of content types"
+    - "Code review rule for new tracing events"
+    - "Integration test asserting content never appears in events"
+
+event_categories:
+  write_path: 5
+  retrieval_pipeline: 14
+  lifecycle: 22
+  database: 4
+  degradation: 6
+  total: 51
+
+degradation_events:
+  - name: "degraded_no_embeddings"
+    level: "WARN"
+    trigger: "Query has no embedding, vector channel skipped"
+  - name: "degraded_no_links"
+    level: "WARN"
+    trigger: "Graph activation skipped, no links in DB"
+  - name: "degraded_bm25_only"
+    level: "WARN"
+    trigger: "Only BM25 channel available"
+  - name: "degraded_empty_db"
+    level: "DEBUG"
+    trigger: "Database has zero episodes"
+  - name: "provider_returned_empty"
+    level: "DEBUG"
+    trigger: "Provider returned no nodes from extract_knowledge()"
+
+metrics_trait:
+  name: "AlayaMetrics"
+  feature_flag: "metrics"
+  methods:
+    - "on_query(duration_us, result_count, retrieval_channels, bm25_hits, vector_hits, graph_hits)"
+    - "on_store(duration_us, has_embedding)"
+    - "on_lifecycle(operation, duration_us, items_processed, items_created)"
+    - "on_degradation(degradation_type)"
+    - "on_error(operation, error_code)"
+  composable_with_tracing: true
+
+diagnostics:
+  status_method:
+    exists: true
+    fields: ["episode_count", "semantic_node_count", "preference_count", "impression_count", "link_count", "embedding_count"]
+  diagnostics_method:
+    exists: false
+    planned: "v0.2"
+    fields:
+      - "schema_version, sqlite_version, fts5_available"
+      - "wal_pages, wal_checkpointed, journal_mode"
+      - "avg_storage_strength, avg_retrieval_strength"
+      - "avg_links_per_node, orphan_node_count"
+      - "embedding_coverage_episodes, embedding_coverage_semantic"
+  health_check_levels:
+    - level: "Quick"
+      method: "status()"
+      cost: "6 COUNT queries"
+    - level: "Standard"
+      method: "diagnostics()"
+      cost: "~20 queries"
+    - level: "Deep"
+      method: "health_check()"
+      cost: "PRAGMA integrity_check"
+
+latency_budgets:
+  store_episode_no_embedding_p50_us: 50
+  store_episode_with_embedding_p50_us: 100
+  query_bm25_only_p50_us: 200
+  query_bm25_vector_p50_ms: 2
+  query_full_hybrid_p50_ms: 3
+  consolidate_10_episodes_p50_us: 500
+  transform_dedup_p50_ms: 10
+  forget_decay_p50_us: 100
+
+implementation_roadmap:
+  v0_1:
+    status: "implemented"
+    items: ["Typed reports (6 report types)", "MemoryStatus", "AlayaError"]
+  v0_1_x:
+    status: "planned"
+    items:
+      - "Add tracing feature flag"
+      - "#[instrument] on all 9 public methods"
+      - "Pipeline stage spans"
+      - "Lifecycle event emissions"
+      - "Degradation events"
+      - "PII safety integration test"
+  v0_2:
+    status: "planned"
+    items:
+      - "AlayaMetrics trait"
+      - "diagnostics() method"
+      - "divan benchmarks (latency baselines)"
+  v0_3:
+    status: "planned"
+    items:
+      - "health_check() with integrity verification"
+      - "Rolling query statistics"
+      - "Degradation rate tracking"
+
+current_state:
+  tracing_dependency: false
+  tracing_instrumentation: false
+  logging: false
+  metrics: false
+  status_method: true
+  typed_reports: true

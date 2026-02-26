@@ -1,0 +1,132 @@
+# North Star Specification - Structured Output for Cross-Referencing
+# Generated: 2026-02-26
+# Source: north-star-advisor/docs/NORTHSTAR.md
+
+metric:
+  name: "Monthly Active Crate Consumers (MACC)"
+  definition: "Unique Rust projects calling AlayaStore::open() and executing store_episode() + query() in a 30-day period"
+  proxy_sources: ["crates.io downloads", "GitHub dependents", "non-maintainer issues", "MCP connection logs"]
+  targets:
+    v0.1: 5
+    v0.2: 25
+    v0.3: 100
+    v1.0: 500
+
+input_metrics:
+  - category: "API Completeness"
+    metrics:
+      - name: "Table-stakes operations coverage"
+        target: "100%"
+      - name: "Public method doctest coverage"
+        target: "100%"
+      - name: "Missing CRUD operations"
+        target: "0"
+  - category: "Retrieval Quality"
+    metrics:
+      - name: "LoCoMo benchmark score"
+        target: ">75%"
+      - name: "LongMemEval benchmark score"
+        target: ">70%"
+      - name: "BM25-only baseline"
+        target: ">55%"
+  - category: "Developer Experience"
+    metrics:
+      - name: "Time to working example"
+        target: "<2 min"
+      - name: "Clean build time"
+        target: "<20s"
+  - category: "Ecosystem Integration"
+    metrics:
+      - name: "MCP server"
+        target: "v0.2"
+      - name: "Python bindings"
+        target: "v0.3"
+
+personas:
+  - name: "Priya (Privacy-First Agent Developer)"
+    role: "Solo developer building companion/coaching agent"
+    goal: "Ship a companion agent with on-device memory that never leaks data"
+    pain: "Every memory solution requires cloud calls, an LLM, or both"
+    success_signal: "Ships companion app with Alaya; user notices AI remembers preferences unprompted"
+  - name: "Marcus (Performance-Focused Agent Developer)"
+    role: "Systems engineer building coding agent or conversational tool (e.g., OpenClaw)"
+    goal: "Sub-millisecond retrieval, benchmark-verified quality, no framework lock-in"
+    pain: "Python memory libraries too slow; no benchmarks; context flooding from accumulation-only systems"
+    success_signal: "Integrates Alaya into OpenClaw; measures <1ms retrieval at 10K+ memories"
+
+phases:
+  - name: "v0.1 MVP"
+    goal: "Publishable crate on crates.io with complete CRUD, cognitive lifecycle, LoCoMo baseline"
+    duration: "4-6 weeks"
+    exit_criteria:
+      - "All 5 missing table-stakes operations implemented"
+      - "Every public method has compilable doctest"
+      - "LoCoMo score measured"
+      - "cargo publish succeeds"
+      - "At least one external API review"
+  - name: "v0.2 Ecosystem"
+    goal: "MCP server, benchmark leadership, production-grade configuration"
+    duration: "6-8 weeks after v0.1"
+    exit_criteria:
+      - "LoCoMo >75%"
+      - "MCP server passes conformance"
+      - "Non-Rust integration demonstrated"
+      - "Security audit (FTS5 injection, BEGIN IMMEDIATE)"
+  - name: "v0.3 Growth"
+    goal: "Python bindings, community traction, DEF CON presentation"
+    duration: "3-6 months after v0.2"
+    exit_criteria:
+      - "pip install alaya works"
+      - "100+ GitHub stars"
+      - "DEF CON talk delivered or accepted"
+
+positioning:
+  statement: "For agent developers who need conversational memory with privacy guarantees, Alaya is the embeddable Rust memory engine that provides a complete cognitive lifecycle in a single SQLite file with zero external dependencies."
+  competitors:
+    - name: "Mem0"
+      weakness: "Cloud-dependent, LLM-required"
+    - name: "Zep / Graphiti"
+      weakness: "Neo4j-dependent, LLM-required"
+    - name: "Engram"
+      weakness: "Simpler lifecycle, no preference emergence"
+    - name: "LangChain Memory"
+      weakness: "Framework lock-in, accumulation-only"
+
+architecture_layers:
+  - name: "AlayaStore (public API)"
+    description: "Single entry point owning SQLite connection"
+  - name: "Three Stores"
+    components: ["Episodic (episodes)", "Semantic (knowledge nodes)", "Implicit (impressions + preferences)"]
+  - name: "Graph Overlay"
+    description: "Hebbian links with LTP/LTD dynamics, spreading activation via recursive CTEs"
+  - name: "Retrieval Pipeline"
+    description: "BM25 + vector + graph -> RRF fusion -> RIF"
+  - name: "Provider Traits"
+    description: "ConsolidationProvider, EmbeddingProvider -- agent owns LLM connection"
+  - name: "Lifecycle Layer"
+    processes: ["Consolidation (CLS replay)", "Perfuming (vasana)", "Transformation (asraya-paravrtti)", "Forgetting (Bjork dual-strength)"]
+  - name: "Storage Layer"
+    description: "SQLite WAL mode, FTS5, embeddings BLOBs, node_strengths"
+
+kill_list:
+  - "Not cloud-dependent"
+  - "Not enterprise"
+  - "Not LLM-coupled"
+  - "Not hype-driven"
+  - "Not a standalone service"
+  - "Not procedural memory"
+  - "Not parametric memory"
+
+technology_constraints:
+  - "Zero runtime deps beyond rusqlite, serde, serde_json, thiserror"
+  - "Sync-first (async via feature flag)"
+  - "Single SQLite file"
+  - "No network calls in core crate"
+  - "Trait-based extension only"
+  - "#[non_exhaustive] on public enums"
+  - "4-6 feature flags maximum"
+
+launch_channels:
+  v0.1: ["crates.io", "r/rust", "r/MachineLearning", "HackerNews", "blog post", "OpenClaw outreach"]
+  v0.2: ["benchmark blog post", "MCP server demo", "MCP registry", "r/LocalLLaMA"]
+  v0.3: ["PyPI", "r/Python", "DEF CON AI Village", "conference CFPs"]

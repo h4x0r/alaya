@@ -1,0 +1,212 @@
+# API Surface Wireframes - Structured Output for Cross-Referencing
+# Generated: 2026-02-26 | Phase: 5d
+# Source: north-star-advisor/docs/design/WIREFRAMES.md
+
+surfaces:
+  - id: "readme"
+    name: "README (Landing Page)"
+    sections: 8
+    critical_rules:
+      - "Code visible without scrolling on 1080p"
+      - "Quickstart compiles without modification"
+      - "Query has lexical overlap with stored content (avoid BM25 empty-result trap)"
+      - "No specialized terminology in first 6 lines"
+      - "No superlatives without evidence"
+      - "CI regression test extracts and compiles quickstart"
+    section_order:
+      - "Header (title, tagline, badges, one-liner, constraints)"
+      - "Quick Start (cargo add + 15-line example)"
+      - "Why Alaya? (6 differentiating bullets)"
+      - "How It Works (architecture diagrams + tables)"
+      - "API Overview (12 methods grouped by category)"
+      - "Comparison (feature table vs 7+ competitors)"
+      - "Documentation (5 links in depth order)"
+      - "Research Foundations (neuroscience, Yogacara, IR)"
+
+  - id: "docs_rs"
+    name: "docs.rs Module Layout"
+    modules:
+      - name: "crate root (alaya)"
+        content: "Overview, quickstart doctest, architecture text, design principles"
+        note: "Use open_in_memory() in doctests, not file paths"
+      - name: "error"
+        content: "Error recovery table, variant descriptions with 'what to do'"
+        note: "Recovery table in module doc, not just on individual variants"
+      - name: "types"
+        content: "Types organized by lifecycle role, naming convention guide"
+        note: "New* = input, no prefix = output, *Report = lifecycle, *Filter = constraint"
+      - name: "provider"
+        content: "NoOpProvider example, custom implementation example"
+        note: "Custom example uses no_run (has todo!()). Data safety guarantee stated."
+
+  - id: "examples"
+    name: "Example Code Templates"
+    examples:
+      - file: "basic.rs"
+        lines: 25
+        skill_level: 1
+        journey_phase: "First Code"
+        shows: "Store 5 episodes, query, print results, check status"
+      - file: "lifecycle.rs"
+        lines: 40
+        skill_level: 2
+        journey_phase: "Dream Cycle"
+        shows: "Multi-session episodes, consolidate + forget + transform, before/after status"
+      - file: "custom_provider.rs"
+        lines: 60
+        skill_level: 3
+        journey_phase: "Custom Providers"
+        shows: "Mock ConsolidationProvider, extract_knowledge, extract_impressions"
+      - file: "advanced_retrieval.rs"
+        lines: 45
+        skill_level: 3
+        journey_phase: "Tuning"
+        shows: "EpisodeContext, QueryContext, neighbors, knowledge filter, preferences"
+      - file: "production.rs"
+        lines: 55
+        skill_level: 4
+        journey_phase: "Production"
+        shows: "Arc<AlayaStore>, backup, periodic dream cycle, monitoring thresholds"
+
+  - id: "error_output"
+    name: "Error Output Format"
+    format: "What happened -> Why -> What to do"
+    variants:
+      - name: "Db"
+        scenarios: ["file not found", "permission denied", "database locked", "corrupt database"]
+        always_states: "data safety"
+      - name: "NotFound"
+        v0_1: "String message"
+        v0_2: "Structured { entity, id }"
+      - name: "InvalidInput"
+        scenarios: ["empty content", "zero-length embedding", "max_results = 0", "empty session_id"]
+      - name: "Serialization"
+        note: "Suggests schema version mismatch, states raw data intact"
+      - name: "Provider"
+        note: "Attributes to developer code, states data safety, says batch was skipped"
+    rules:
+      - "Attribution boundary always explicit (Alaya vs provider)"
+      - "Data safety always stated"
+      - "Recovery steps use imperative verbs"
+      - "FTS5 errors never reach developer (input sanitization)"
+      - "No stack traces in Display output"
+
+  - id: "mcp_server"
+    name: "MCP Server Interface (v0.2)"
+    tools:
+      - name: "alaya_store_episode"
+        maps_to: "store_episode()"
+        required_params: ["content", "role", "session_id"]
+      - name: "alaya_query"
+        maps_to: "query()"
+        required_params: ["text"]
+      - name: "alaya_get_episode"
+        maps_to: "get_episode()"
+        required_params: ["episode_id"]
+        note: "Gap: get_episode() not yet in public API"
+      - name: "alaya_dream"
+        maps_to: "consolidate() + forget() + transform()"
+        required_params: []
+      - name: "alaya_status"
+        maps_to: "status()"
+        required_params: []
+      - name: "alaya_preferences"
+        maps_to: "preferences()"
+        required_params: []
+    rules:
+      - "alaya_ prefix on all tool names"
+      - "Timestamps as Unix seconds (i64)"
+      - "Scores as f64"
+      - "Structured JSON error responses"
+      - "NoOp provider by default"
+      - "No authentication (local only)"
+
+  - id: "diagnostics"
+    name: "Diagnostic Output"
+    levels:
+      - level: 1
+        name: "Status"
+        api: "status()"
+        version: "v0.1"
+        shows: "Aggregate counts across all stores"
+      - level: 2
+        name: "Lifecycle Reports"
+        api: "consolidate/forget/transform/perfume return values"
+        version: "v0.1"
+        shows: "Per-process counts"
+      - level: 3
+        name: "QueryExplanation"
+        api: "explain_query() (planned)"
+        version: "v0.2"
+        shows: "Full pipeline trace: BM25 -> vector -> graph -> RRF -> rerank"
+      - level: 4
+        name: "Tracing"
+        api: "tracing crate integration (planned)"
+        version: "v0.2"
+        shows: "Structured logging for every internal operation"
+
+gaps:
+  - id: 1
+    description: "get_episode() not exposed on AlayaStore"
+    source: "Phase 5a (MCP Journey)"
+    priority: "v0.1"
+    effort: "small"
+  - id: 2
+    description: "session_history() not exposed on AlayaStore"
+    source: "Phase 5a (Deepening Journey)"
+    priority: "v0.1"
+    effort: "small"
+  - id: 3
+    description: "delete_episode() missing"
+    source: "Phase 5b (CRUD symmetry)"
+    priority: "v0.1"
+    effort: "medium"
+  - id: 4
+    description: "list_episodes() missing"
+    source: "Phase 5b (CRUD symmetry)"
+    priority: "v0.1"
+    effort: "small"
+  - id: 5
+    description: "#[non_exhaustive] not on public enums"
+    source: "Phase 4 (Extract), Phase 5b"
+    priority: "v0.1"
+    effort: "small"
+  - id: 6
+    description: "No input validation at API boundary"
+    source: "Phase 5c (Accessibility), Phase 4"
+    priority: "v0.1"
+    effort: "medium"
+  - id: 7
+    description: "No compilable doctests on public methods"
+    source: "Phase 4 (Extract), Phase 5b"
+    priority: "v0.1"
+    effort: "medium"
+  - id: 8
+    description: "QueryExplanation not implemented"
+    source: "Phase 5c (Diagnostics)"
+    priority: "v0.2"
+    effort: "large"
+  - id: 9
+    description: "Input types missing Serialize/Deserialize"
+    source: "Phase 5b (Consistency)"
+    priority: "v0.1/v0.2"
+    effort: "small"
+  - id: 10
+    description: "FTS5 input not sanitized"
+    source: "Phase 4 (Extract), Phase 5a"
+    priority: "v0.1"
+    effort: "small"
+
+v0_1_gap_count: 9
+v0_2_gap_count: 2
+
+public_api_after_gaps_closed:
+  current_method_count: 12
+  target_method_count: 16
+  new_methods:
+    - "get_episode(EpisodeId) -> Result<Episode>"
+    - "session_history(&str) -> Result<Vec<Episode>>"
+    - "delete_episode(EpisodeId) -> Result<()>"
+    - "list_episodes(usize, usize) -> Result<Vec<Episode>>"
+  within_target: true
+  note: "16 methods, still under <20 cognitive load target from Phase 5c"

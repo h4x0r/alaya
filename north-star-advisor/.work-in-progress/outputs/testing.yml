@@ -1,0 +1,270 @@
+# Alaya Testing Strategy - Structured Extract
+# Generated: 2026-02-26 | Phase: 10
+# Source: north-star-advisor/docs/architecture/TESTING_STRATEGY.md
+
+current_state:
+  total_tests: 43
+  test_modules: 18
+  integration_tests: 0
+  property_tests: 0
+  doc_tests: 0
+  benchmarks: 0
+  fuzz_targets: 0
+  dev_dependencies: "empty"
+
+targets:
+  v0_1:
+    unit_tests: 150
+    integration_tests: 20
+    property_tests: 15
+    fuzz_targets: 3
+    doc_tests: 30
+    benchmarks: 5
+  v0_2:
+    unit_tests: 250
+    integration_tests: 40
+    property_tests: 30
+    fuzz_targets: 6
+    doc_tests: 50
+    benchmarks: 15
+  v0_3:
+    unit_tests: 350
+    integration_tests: 60
+    property_tests: 40
+    fuzz_targets: 8
+    doc_tests: 70
+    benchmarks: 20
+
+unit_coverage:
+  schema:
+    current: 3
+    target: 8
+    gaps: ["WAL mode verification", "pragma checks", "index existence", "FTS5 update trigger", "table count"]
+  store_episodic:
+    current: 3
+    target: 11
+    gaps: ["Unicode content", "context serialization roundtrip", "NotFound error", "timestamp ordering", "unconsolidated filter", "bulk insert", "session isolation"]
+  store_semantic:
+    current: 2
+    target: 8
+    gaps: ["type filtering", "confidence ordering", "delete cascade", "source episodes roundtrip", "corroboration nonexistent", "embedding alongside node"]
+  store_implicit:
+    current: 2
+    target: 9
+    gaps: ["get all preferences", "decay targeting", "reinforce caps confidence", "prune weak", "prune old impressions", "multi-domain isolation", "count accuracy"]
+  store_embeddings:
+    current: 4
+    target: 14
+    gaps: ["dimension mismatch", "zero vector", "empty vectors", "antiparallel", "high-dimensional", "type filter", "unembedded episodes", "upsert", "NaN handling", "subnormal floats"]
+  store_strengths:
+    current: 2
+    target: 10
+    gaps: ["upper bound", "RS reset on access", "find archivable", "exclude strong from archivable", "untracked default", "init idempotent", "boost cap", "decay floor"]
+  retrieval_bm25:
+    current: 2
+    target: 8
+    gaps: ["FTS5 injection prevention", "stemming", "whitespace query", "multi-word", "score normalization range", "single result score"]
+  retrieval_fusion:
+    current: 3
+    target: 9
+    gaps: ["empty input", "single empty set", "all-sets presence", "k-parameter invariance", "many sets", "output sorted"]
+  retrieval_rerank:
+    current: 3
+    target: 10
+    gaps: ["full pipeline", "truncation", "future timestamps", "empty context", "jaccard identical", "jaccard disjoint", "jaccard both empty"]
+  retrieval_pipeline:
+    current: 2
+    target: 8
+    gaps: ["BM25-only degradation", "vector-only degradation", "post-retrieval strength update", "co-retrieval links", "empty database", "hybrid query"]
+  graph_links:
+    current: 3
+    target: 9
+    gaps: ["duplicate idempotent", "bidirectional query", "co-retrieval creates link", "decay links", "multiple link types", "activation count"]
+  graph_activation:
+    current: 3
+    target: 8
+    gaps: ["cyclic graph", "activation cap", "empty graph", "multiple seeds", "zero depth"]
+  lifecycle_consolidation:
+    current: 2
+    target: 8
+    gaps: ["NoOp produces nothing", "provider error propagation", "link verification", "strength initialization", "episode marking", "exact threshold"]
+  lifecycle_perfuming:
+    current: 2
+    target: 8
+    gaps: ["reinforcement path", "multi-domain", "empty provider", "crystallization strength", "exact threshold", "below threshold"]
+  lifecycle_transformation:
+    current: 2
+    target: 7
+    gaps: ["dedup merges similar", "dedup preserves distinct", "preference decay targeting", "impression pruning", "idempotent"]
+  lifecycle_forgetting:
+    current: 2
+    target: 7
+    gaps: ["multi-cycle archival", "accessed resists forgetting", "skips preferences", "archives semantic", "cleans strength records"]
+  provider:
+    current: 0
+    target: 4
+    gaps: ["NoOp extract_knowledge", "NoOp extract_impressions", "NoOp detect_contradiction", "MockProvider returns data"]
+  types:
+    current: 0
+    target: 8
+    gaps: ["NodeRef roundtrip", "Role roundtrip", "SemanticType roundtrip", "LinkType roundtrip", "Query::simple defaults", "EpisodeContext default", "report defaults"]
+  error:
+    current: 0
+    target: 5
+    gaps: ["NotFound display", "InvalidInput display", "Provider display", "From rusqlite", "From serde"]
+
+integration_tests:
+  - name: "store_lifecycle"
+    purpose: "Full CRUD + lifecycle flows"
+    tests: ["full_agent_lifecycle", "preference_emergence_lifecycle", "hybrid_retrieval_with_embeddings"]
+  - name: "retrieval_quality"
+    purpose: "Query relevance assertions"
+    tests: ["locomo_baseline", "precision_at_k", "ndcg_at_k"]
+  - name: "degradation_chain"
+    purpose: "Graceful degradation scenarios"
+    tests: ["empty_db", "bm25_only", "vector_only", "bm25_and_vector", "full_pipeline"]
+  - name: "concurrent_access"
+    purpose: "Multi-threaded Arc<Mutex> patterns"
+    tests: ["arc_mutex_concurrent_writes", "concurrent_reads"]
+  - name: "persistence"
+    purpose: "File-backed database roundtrip"
+    tests: ["persistence_roundtrip", "reopen_after_lifecycle"]
+  - name: "error_paths"
+    purpose: "Every AlayaError variant exercised"
+    tests: ["all_error_variants_display", "provider_error_propagation"]
+  - name: "purge_compliance"
+    purpose: "GDPR purge completeness"
+    tests: ["purge_all_resets", "purge_session", "purge_older_than"]
+
+property_tests:
+  bjork_dual_strength:
+    - "storage_strength_monotonic: SS_new >= SS for all SS in [0, 1]"
+    - "retrieval_strength_decay_monotonic: RS * 0.95 <= RS"
+    - "storage_strength_convergence: approaches 1.0 after many accesses"
+    - "retrieval_strength_approaches_zero: approaches 0.0 after many cycles"
+    - "archival_safety: nodes above thresholds are never archivable"
+  hebbian_weights:
+    - "ltp_bounded: w + 0.1 * (1 - w) in [0, 1]"
+    - "ltp_monotonic: LTP preserves weight ordering"
+    - "ltp_convergence: approaches 1.0 after many co-retrievals"
+    - "decay_non_negative: w * factor >= 0"
+  rrf_fusion:
+    - "scores_positive: all RRF scores > 0 for non-empty inputs"
+    - "more_sets_higher_score: presence in more sets >= presence in fewer"
+  cosine_similarity:
+    - "range: cos(a, b) in [-1, 1]"
+    - "symmetric: cos(a, b) == cos(b, a)"
+    - "self_identity: cos(a, a) == 1.0 for non-zero a"
+    - "embedding_roundtrip: serialize/deserialize preserves all f32 bits"
+  recency_decay:
+    - "monotonic: older timestamps produce lower decay"
+    - "range: always in [0, 1]"
+
+golden_datasets:
+  - name: "LoCoMo"
+    source: "arXiv:2402.14088"
+    tests: "Multi-session recall, temporal reasoning, preference tracking"
+    metrics: ["precision_at_5", "recall_at_10", "ndcg_at_5", "mrr"]
+    targets:
+      bm25_only_p5: 0.70
+      hybrid_p5: 0.80
+      recall_at_10: 0.60
+      ndcg_at_5: 0.65
+  - name: "LongMemEval"
+    source: "arXiv:2410.10813"
+    tests: "Factual recall, preference consistency, temporal ordering"
+    metrics: ["precision_at_5", "ndcg_at_5"]
+  - name: "Alaya-Internal"
+    source: "hand-curated"
+    tests: "Bjork forgetting impact, vasana crystallization accuracy, Hebbian graph traversal delta"
+    metrics: ["forgetting_recall_curve", "preference_precision", "hybrid_delta"]
+
+lifecycle_invariants:
+  consolidation:
+    - "I1: safe on any database state (including empty)"
+    - "I2: NoOpProvider never creates semantic nodes"
+    - "I3: created nodes are linked to source episodes"
+    - "I4: does not delete or modify episodes"
+  forgetting:
+    - "I5: never increases retrieval strength"
+    - "I6: never modifies storage strength"
+    - "I7: archived nodes are fully removed (no orphans)"
+    - "I8: safe to call repeatedly (idempotent decay)"
+    - "I9: recently accessed nodes survive"
+  transformation:
+    - "I10: idempotent on clean data"
+    - "I11: dedup preserves stronger node"
+    - "I12: prune only removes below threshold"
+    - "I13: never deletes episodes"
+  perfuming:
+    - "I14: crystallization requires >= 5 impressions"
+    - "I15: NoOpProvider stores zero impressions"
+    - "I16: no duplicate preferences within domain"
+    - "I17: reinforcement monotonically increases evidence_count"
+  cross_lifecycle:
+    - "I18: full lifecycle sequence does not corrupt database"
+    - "I19: purge(All) resets to empty state"
+
+fuzz_targets:
+  - name: "fts5_sanitization"
+    input: "arbitrary strings"
+    tests: "FTS5 MATCH injection resistance"
+    priority: "critical (ADR-010, security)"
+  - name: "embedding_deserialize"
+    input: "arbitrary bytes"
+    tests: "BLOB deserialization safety"
+    priority: "high"
+  - name: "context_json"
+    input: "arbitrary strings"
+    tests: "EpisodeContext JSON deserialization"
+    priority: "medium"
+  - name: "store_episode"
+    input: "arbitrary strings as content"
+    tests: "Episode storage with adversarial content"
+    priority: "high"
+  - name: "cosine_similarity"
+    input: "arbitrary f32 vec pairs"
+    tests: "Cosine similarity with edge-case floats"
+    priority: "medium"
+
+performance_benchmarks:
+  targets:
+    store_episode_no_emb: "< 100 us"
+    store_episode_384_emb: "< 200 us"
+    bm25_query_1k: "< 1 ms"
+    bm25_query_10k: "< 5 ms"
+    vector_query_1k_384: "< 5 ms"
+    vector_query_10k_384: "< 50 ms"
+    hybrid_query_1k: "< 10 ms"
+    cosine_384: "< 1 us"
+    forget_sweep_1k: "< 5 ms"
+    transform_1k_5k: "< 50 ms"
+  regression_threshold: "20% warning, 50% failure"
+  framework: "divan 0.1"
+
+ci_pipeline:
+  platforms: ["ubuntu-22.04", "macos-14", "windows-2022"]
+  rust_versions: ["1.75.0 (MSRV)", "stable", "beta"]
+  checks:
+    - "cargo build --all-targets"
+    - "cargo test --all-targets"
+    - "cargo test --doc"
+    - "cargo clippy -- -D warnings"
+    - "cargo fmt --check"
+    - "cargo tree (no networking deps)"
+    - "quickstart regression"
+  scheduled:
+    - "nightly fuzz runs (10 min per target)"
+    - "weekly extended proptest (10K cases)"
+
+dev_dependencies_to_add:
+  - "proptest = '1.4'"
+  - "tempfile = '3.10'"
+  - "divan = '0.1'"
+
+cross_references:
+  architecture_blueprint: "Phase 6 - components, retrieval pipeline, graceful degradation"
+  adr: "Phase 9 - ADR-001 through ADR-010 informing test invariants"
+  accessibility: "Phase 5c - doctest coverage, quickstart regression, error path testing"
+  security: "Phase 8 - FTS5 injection, provider injection, fuzz target priorities"
+  brand: "Phase 1 - Honesty > Marketing axiom driving benchmark publication"

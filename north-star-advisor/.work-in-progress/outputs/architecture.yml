@@ -1,0 +1,196 @@
+# Structured extract from ARCHITECTURE_BLUEPRINT.md
+# Generated: 2026-02-26
+# Phase: 6
+
+pattern: "Three-store + Hebbian graph + hybrid retrieval + cognitive lifecycle"
+
+entry_point: "AlayaStore::open(path)"
+ownership: "AlayaStore owns Connection, all methods take &self"
+thread_safety: "Send but not Sync; caller wraps in Mutex for multi-thread"
+
+components:
+  - name: "AlayaStore"
+    role: "Public API, single entry point"
+    module: "lib.rs"
+    methods:
+      - "open(path) -> Result<Self>"
+      - "open_in_memory() -> Result<Self>"
+      - "store_episode(&self, &NewEpisode) -> Result<EpisodeId>"
+      - "query(&self, &Query) -> Result<Vec<ScoredMemory>>"
+      - "preferences(&self, Option<&str>) -> Result<Vec<Preference>>"
+      - "knowledge(&self, Option<KnowledgeFilter>) -> Result<Vec<SemanticNode>>"
+      - "neighbors(&self, NodeRef, u32) -> Result<Vec<(NodeRef, f32)>>"
+      - "consolidate(&self, &dyn ConsolidationProvider) -> Result<ConsolidationReport>"
+      - "perfume(&self, &Interaction, &dyn ConsolidationProvider) -> Result<PerfumingReport>"
+      - "transform(&self) -> Result<TransformationReport>"
+      - "forget(&self) -> Result<ForgettingReport>"
+      - "status(&self) -> Result<MemoryStatus>"
+      - "purge(&self, PurgeFilter) -> Result<PurgeReport>"
+
+  - name: "Episodic Store"
+    role: "Conversation episodes CRUD, FTS5 indexing"
+    module: "store/episodic.rs"
+    tables: ["episodes", "episodes_fts"]
+
+  - name: "Semantic Store"
+    role: "Extracted knowledge nodes, corroboration tracking"
+    module: "store/semantic.rs"
+    tables: ["semantic_nodes"]
+
+  - name: "Implicit Store"
+    role: "Impressions and crystallized preferences (vasana)"
+    module: "store/implicit.rs"
+    tables: ["impressions", "preferences"]
+
+  - name: "Embeddings"
+    role: "Polymorphic embedding storage, brute-force cosine search"
+    module: "store/embeddings.rs"
+    tables: ["embeddings"]
+
+  - name: "Node Strengths"
+    role: "Bjork dual-strength tracking per node"
+    module: "store/strengths.rs"
+    tables: ["node_strengths"]
+
+  - name: "Graph Overlay"
+    role: "Hebbian link management, LTP/LTD, spreading activation"
+    module: "graph/"
+    tables: ["links"]
+    submodules:
+      - "links.rs: CRUD, co-retrieval LTP, decay, pruning"
+      - "activation.rs: Collins & Loftus spreading activation"
+
+  - name: "Retrieval Pipeline"
+    role: "Hybrid retrieval: BM25 + vector + graph -> RRF -> rerank"
+    module: "retrieval/"
+    submodules:
+      - "bm25.rs: FTS5 search with sanitization"
+      - "vector.rs: cosine similarity search delegation"
+      - "fusion.rs: Reciprocal Rank Fusion (k=60)"
+      - "rerank.rs: context similarity + recency decay"
+      - "pipeline.rs: full query orchestration"
+
+  - name: "Lifecycle Processes"
+    role: "Cognitive lifecycle: consolidate, perfume, transform, forget"
+    module: "lifecycle/"
+    submodules:
+      - "consolidation.rs: CLS replay, episodes -> semantic nodes"
+      - "perfuming.rs: vasana, impressions -> preferences"
+      - "transformation.rs: dedup, prune, decay"
+      - "forgetting.rs: Bjork dual-strength RS decay + archival"
+
+  - name: "Provider Traits"
+    role: "Extension boundary: agent implements, Alaya calls"
+    module: "provider.rs"
+    traits:
+      - "ConsolidationProvider: extract_knowledge, extract_impressions, detect_contradiction"
+    defaults:
+      - "NoOpProvider: returns empty results, everything degrades gracefully"
+
+retrieval_pipeline:
+  stages:
+    - name: "BM25"
+      source: "FTS5 MATCH on episodes_fts"
+      output: "Vec<(EpisodeId, f64)>"
+      graceful_degradation: "empty query -> empty result"
+    - name: "Vector"
+      source: "brute-force cosine on embeddings table"
+      output: "Vec<(NodeRef, f64)>"
+      graceful_degradation: "no embedding provided -> empty result"
+    - name: "Graph"
+      source: "spreading activation from top BM25+vector seeds"
+      output: "HashMap<NodeRef, f32>"
+      graceful_degradation: "no links -> empty result"
+    - name: "RRF Fusion"
+      k: 60
+      reference: "Cormack, Clarke & Buettcher (2009)"
+    - name: "Rerank"
+      formula: "base * (1 + 0.3*context_sim) * (1 + 0.2*recency)"
+      recency: "exp(-age_days / 30)"
+    - name: "Post-retrieval"
+      effects:
+        - "strengths::on_access() -> RS=1.0, SS += 0.05*(1-SS)"
+        - "links::on_co_retrieval() -> Hebbian LTP, w += 0.1*(1-w)"
+
+lifecycle:
+  consolidation:
+    trigger: "explicit call to consolidate()"
+    batch_size: 10
+    minimum_episodes: 3
+    reference: "CLS (McClelland et al., 1995)"
+  perfuming:
+    trigger: "explicit call to perfume()"
+    crystallization_threshold: 5
+    reference: "Yogacara vasana"
+  transformation:
+    trigger: "explicit call to transform()"
+    dedup_threshold: 0.95
+    link_prune_threshold: 0.02
+    preference_half_life_days: 30
+    impression_max_age_days: 90
+    reference: "Yogacara asraya-paravrtti"
+  forgetting:
+    trigger: "explicit call to forget()"
+    rs_decay_factor: 0.95
+    archive_ss_threshold: 0.1
+    archive_rs_threshold: 0.05
+    reference: "Bjork & Bjork (1992)"
+
+tech_stack:
+  runtime:
+    - "Rust stable (edition 2021)"
+    - "rusqlite 0.32 (bundled, modern_sqlite)"
+    - "serde 1.x + serde_json 1.x"
+    - "thiserror 2.x"
+  storage:
+    - "SQLite WAL mode"
+    - "FTS5 (external content, synced by triggers)"
+    - "Embeddings as f32 BLOBs (little-endian)"
+  planned:
+    - "sqlite-vec (feature flag vec-sqlite, v0.2)"
+    - "ort / fastembed-rs (feature flags, v0.2)"
+    - "tokio spawn_blocking (feature flag async, v0.2)"
+    - "divan benchmarks (v0.2)"
+    - "cbindgen C FFI (alaya-ffi crate, v0.2)"
+    - "PyO3 Python bindings (alaya-py crate, v0.3)"
+
+sqlite_config:
+  pragmas:
+    - "journal_mode = WAL"
+    - "foreign_keys = ON"
+    - "synchronous = NORMAL"
+  tables: 7
+  fts5_virtual_tables: 1
+  triggers: 3
+  indexes: 9
+
+feature_flags_planned:
+  - name: "vec-sqlite"
+    enables: "sqlite-vec SIMD vector search"
+    version: "v0.2"
+  - name: "embed-ort"
+    enables: "ONNX Runtime embedding backend"
+    version: "v0.2"
+  - name: "embed-fastembed"
+    enables: "Turnkey fastembed-rs embeddings"
+    version: "v0.2"
+  - name: "async"
+    enables: "Async API via spawn_blocking"
+    version: "v0.2"
+
+known_gaps:
+  - "LTD not called from retrieval pipeline (decay_links exists but unused)"
+  - "No BEGIN IMMEDIATE for write transactions"
+  - "#[non_exhaustive] missing on public enums"
+  - "No input validation at API boundary"
+  - "No compilable doctests on public methods"
+  - "No tombstone mechanism for deleted nodes"
+  - "No WAL checkpoint management"
+
+graceful_degradation_chain:
+  - "Full: BM25 + vector + graph -> RRF -> rerank"
+  - "No embeddings: BM25 + graph -> RRF -> rerank"
+  - "No links: BM25 + vector -> RRF -> rerank"
+  - "No FTS matches: vector + graph -> RRF -> rerank"
+  - "Minimal: BM25-only -> rerank"
+  - "Empty DB: [] (empty result, no error)"

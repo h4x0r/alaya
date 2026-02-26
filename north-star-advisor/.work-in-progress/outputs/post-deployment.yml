@@ -1,0 +1,205 @@
+# Post-Publication Operations - Structured Output for Cross-Referencing
+# Generated: 2026-02-26 | Phase: 10
+# Source: north-star-advisor/docs/POST_DEPLOYMENT.md
+
+reframing: "POST_DEPLOYMENT -> Post-Publication Operations (Alaya is a library, not a service)"
+
+quality_metrics:
+  test_coverage:
+    tool: "cargo-llvm-cov"
+    target_v0_1: "80%"
+    target_v0_2: "90%"
+    ci_gate: true
+    weakest_modules: ["retrieval/vector.rs", "retrieval/rerank.rs"]
+  benchmarks:
+    tool: "divan or criterion"
+    status: "not yet implemented (planned v0.2)"
+    regression_threshold: "20%"
+    key_benchmarks:
+      - name: "bench_query_bm25_10k"
+        target: "< 2ms"
+      - name: "bench_query_hybrid_10k"
+        target: "< 20ms"
+      - name: "bench_vector_cosine_10k"
+        target: "< 15ms"
+      - name: "bench_store_episode"
+        target: "< 500us"
+  static_analysis:
+    clippy: "pedantic, -D warnings"
+    fmt: "cargo fmt --check"
+    audit: "cargo audit (every PR + weekly)"
+    deny: "cargo deny check (licenses + bans)"
+  msrv:
+    declared: "1.70.0 (estimated, must verify)"
+    ci_gate: true
+  schema_compat:
+    versioning: "PRAGMA user_version (not yet implemented)"
+    migration_testing: "open prior-version DB on each release"
+
+release_gates:
+  automated:
+    - "cargo test --all-features (0 failures)"
+    - "cargo test --doc (0 failures)"
+    - "cargo clippy --all-targets --all-features -- -D warnings (0 warnings)"
+    - "cargo fmt --check (no diff)"
+    - "cargo audit (0 vulnerabilities)"
+    - "cargo deny check (0 denials)"
+    - "RUSTDOCFLAGS='-D warnings' cargo doc --no-deps (0 warnings)"
+    - "cargo +msrv check --all-features (compiles)"
+    - "cargo publish --dry-run (success)"
+    - "cargo llvm-cov >= 80%"
+    - "cargo bench vs baseline (no regression > 20%)"
+    - "schema compat test (open prior DB, run status())"
+  manual:
+    - "CHANGELOG.md updated"
+    - "Semver correctness verified"
+    - "cargo-semver-checks passes"
+    - "Public API diff reviewed"
+    - "Feature flag matrix tested"
+
+pre_publication_blockers:
+  - item: "#[non_exhaustive] on public enums"
+    status: "not done"
+    risk: "adding enum variants is breaking without it"
+  - item: "BEGIN IMMEDIATE for write transactions"
+    status: "not done"
+    risk: "deadlock under concurrent access"
+  - item: "compilable doctests on all pub methods"
+    status: "not done"
+    risk: "poor docs.rs experience"
+  - item: "schema versioning (PRAGMA user_version)"
+    status: "not done"
+    risk: "silent schema incompatibility on upgrade"
+  - item: "input validation at API boundary"
+    status: "not done"
+    risk: "garbage-in-garbage-out"
+
+community_feedback:
+  proxy_signals:
+    - "crates.io downloads (weekly)"
+    - "GitHub stars and dependents (monthly)"
+    - "GitHub issues (continuous)"
+    - "Reverse dependency search (monthly)"
+  issue_triage:
+    sev1_response: "4 hours"
+    sev1_resolution: "24 hours (yank + hotfix)"
+    sev1_examples: ["data corruption", "semver violation"]
+    sev2_response: "24 hours"
+    sev2_examples: ["security vulnerability"]
+    sev3_response: "48 hours"
+    sev3_examples: ["incorrect lifecycle behavior", "panic in library code"]
+  feature_evaluation:
+    framework: "axiom alignment check"
+    kill_list_check: true
+    axiom_priority: "Privacy > Features, Process > Storage, Correctness > Speed, Simplicity > Completeness"
+
+dependency_management:
+  update_policy:
+    rusqlite: "critical path; update on SQLite security advisory or FTS5 improvements"
+    serde: "stable; update on cargo audit advisory"
+    thiserror: "stable; update on cargo audit advisory"
+  planned_dependencies:
+    - crate: "sqlite-vec"
+      feature_flag: "vec-sqlite"
+      version: "v0.2"
+      compile_impact: "+5s"
+    - crate: "ort"
+      feature_flag: "embed-ort"
+      version: "v0.2"
+      compile_impact: "+30-60s"
+    - crate: "tokio"
+      feature_flag: "async"
+      version: "v0.2"
+      compile_impact: "+15-20s"
+  enforcement:
+    tool: "cargo-deny"
+    banned_crates: ["reqwest", "hyper", "openssl", "rustls"]
+    reason: "ADR-009: Zero Network Calls"
+
+breaking_change_response:
+  severity_levels:
+    sev1: "data corruption -> 4h response, 24h fix, yank"
+    sev2: "semver violation -> 4h response, 24h fix, yank"
+    sev3: "security vulnerability -> 24h response, 48h fix"
+    sev4: "incorrect lifecycle behavior -> 48h response, 1wk fix"
+    sev5: "performance regression >3x -> 1wk response, next release"
+  semver_policy: "strict cargo semver; pre-1.0 minor treated as major"
+  schema_migration:
+    additive: "CREATE IF NOT EXISTS in init_db()"
+    destructive: "explicit migration function, PRAGMA user_version increment"
+    fts5_rebuild: "DROP + recreate + INSERT INTO ... VALUES('rebuild')"
+  hotfix_process: "branch from tag -> failing test -> fix -> full gates -> publish -> yank broken"
+  known_regression_vectors:
+    - "FTS5 trigger sync on deletion"
+    - "Schema init idempotency"
+    - "Embedding BLOB format"
+    - "Bjork strength decay constants"
+    - "RRF fusion ordering determinism"
+    - "Co-retrieval LTP O(n^2)"
+    - "PurgeFilter::All missing transaction boundary"
+
+compile_time_budget:
+  clean_build_target: "< 60s"
+  incremental_build_target: "< 10s"
+  binary_size_target: "< 5MB (core, release, stripped)"
+  direct_dependencies: 4
+  feature_flag_budget: "no combination > 120s clean build on 4-core CI"
+  monitoring: "CI job measuring and comparing compile time per release"
+
+roadmap_checkpoints:
+  - id: "checkpoint-1"
+    name: "Pre-Publication"
+    trigger: "now"
+    decision: "fix blockers then publish, or publish with known gaps"
+  - id: "checkpoint-2"
+    name: "Post-v0.1 2-Week Review"
+    trigger: "2 weeks after publication"
+    decision: "prioritize backlog for v0.1.x patches"
+  - id: "checkpoint-3"
+    name: "v0.2 Planning"
+    trigger: "v0.1.x stable, MACC >= 5"
+    decision: "scope feature flags and ecosystem crates"
+  - id: "checkpoint-4"
+    name: "v0.3 Growth Decision"
+    trigger: "v0.2 stable, MACC >= 25"
+    decision: "Python bindings, security audit, DEF CON"
+  - id: "checkpoint-5"
+    name: "1.0 Stability Decision"
+    trigger: "v0.3 stable, MACC >= 100"
+    decision: "API freeze, LTS commitment, or continue iterating"
+
+add_vs_stabilize:
+  add_when:
+    - "MACC below target"
+    - "feature differentiates from competitor"
+    - "multiple consumers request same capability"
+    - "feature enables new consumer category"
+  stabilize_when:
+    - "MACC exceeds target"
+    - "bug reports exceed feature requests"
+    - "API surface > 20 pub methods on AlayaStore"
+    - "benchmark suite incomplete"
+
+contributor_onboarding:
+  good_first_issues:
+    - "Add #[cfg(test)] mod tests to retrieval/rerank.rs"
+    - "Add doctests to AlayaStore pub methods"
+    - "Add #[non_exhaustive] to public enums"
+    - "Replace unwrap_or in lib.rs:35 with AlayaError"
+  common_contribution_paths:
+    - "Adding tests (good first issue)"
+    - "Adding doctests"
+    - "Fixing known gaps (architecture.yml known_gaps)"
+    - "Adding feature flags (v0.2+)"
+  setup: "git clone + cargo build (no additional deps needed)"
+  code_style:
+    functions: "snake_case"
+    types: "CamelCase"
+    constants: "SCREAMING_SNAKE"
+    sql: "uppercase keywords, lowercase identifiers, ?N parameters"
+    errors: "Result<T, AlayaError>, no unwrap in library code"
+  pr_process: "fork -> branch -> changes -> test+clippy+fmt -> PR -> CI -> review -> squash merge"
+
+yanking_policy:
+  yank_for: ["security vulnerability", "data corruption", "semver violation"]
+  never_yank_for: ["performance regressions", "non-security bugs", "doc errors"]

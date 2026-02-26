@@ -1,0 +1,418 @@
+# Action Roadmap - Structured Output for Cross-Referencing
+# Generated: 2026-02-26 | Phase: 12
+# Source: north-star-advisor/docs/ACTION_ROADMAP.md
+
+recommended_path: "B"
+recommended_path_name: "Developer Experience First, with Benchmark Fast-Follow"
+confidence: 8
+total_phases: 5
+total_tasks: 30
+time_to_publication: "6 weeks"
+time_to_benchmarks: "9 weeks"
+
+phase_1:
+  name: "P0 Hardening"
+  weeks: "1-2"
+  priority: "P0"
+  goal: "Close all semver safety, transaction integrity, and API contract gaps"
+  estimated_hours: "16-24"
+  tasks:
+    - id: "1.1"
+      title: "Add #[non_exhaustive] to all public enums"
+      gap: "GAP-001"
+      files: ["src/types.rs", "src/error.rs"]
+      estimated_hours: 0.5
+      completion: "All 6 public enums annotated; all tests pass"
+    - id: "1.2"
+      title: "Implement BEGIN IMMEDIATE for write transactions"
+      gap: "GAP-002"
+      files: ["src/schema.rs", "src/lib.rs"]
+      estimated_hours: 3
+      completion: "All write methods use BEGIN IMMEDIATE; concurrent write test passes"
+    - id: "1.3"
+      title: "Add input validation at API boundary"
+      gap: "GAP-003"
+      files: ["src/lib.rs"]
+      estimated_hours: 4
+      completion: "Each validation rule has corresponding error-path test; 8+ new tests"
+    - id: "1.4"
+      title: "Change internal modules to pub(crate)"
+      gap: "GAP-004"
+      files: ["src/lib.rs"]
+      estimated_hours: 0.5
+      completion: "Internal modules not accessible externally; all tests pass"
+    - id: "1.5"
+      title: "Add compilable doctests on all pub methods"
+      gap: "GAP-005"
+      files: ["src/lib.rs"]
+      estimated_hours: 5
+      completion: "cargo test --doc passes; all 12+ pub methods have examples"
+    - id: "1.6"
+      title: "Add tempfile dev-dependency"
+      gap: null
+      files: ["Cargo.toml"]
+      estimated_hours: 0.1
+      completion: "tempfile = '3' in [dev-dependencies]"
+    - id: "1.7"
+      title: "Schema versioning with PRAGMA user_version"
+      gap: null
+      files: ["src/schema.rs"]
+      estimated_hours: 2
+      completion: "New DBs get user_version=1; version check on open; migration path exists"
+  review:
+    timing: "End of Week 2"
+    criteria:
+      - "All 6 public enums have #[non_exhaustive]"
+      - "All write methods use BEGIN IMMEDIATE"
+      - "Input validation covers all public methods"
+      - "Internal modules are pub(crate)"
+      - "All pub methods have compilable doctests"
+      - "Schema versioning operational"
+      - "Test count ~65-75"
+      - "cargo test && cargo test --doc && cargo clippy -- -W clippy::pedantic all pass"
+    decision: "Proceed to Phase 2 or extend Phase 1 if P0 gaps remain"
+
+phase_2:
+  name: "P1 Quality and Documentation"
+  weeks: "3-4"
+  priority: "P1"
+  goal: "Close lifecycle correctness gaps, write documentation, expand tests"
+  estimated_hours: "24-32"
+  tasks:
+    - id: "2.1"
+      title: "Wire LTD in transform()"
+      gap: "GAP-006"
+      files: ["src/lifecycle/transformation.rs", "src/graph/links.rs"]
+      estimated_hours: 2
+      completion: "transform() calls decay_links(); TransformationReport includes decayed count"
+    - id: "2.2"
+      title: "Semantic/preference node enrichment in retrieval pipeline"
+      gap: "GAP-007"
+      files: ["src/retrieval/pipeline.rs"]
+      estimated_hours: 4
+      completion: "Semantic and preference nodes appear in query results when relevant"
+    - id: "2.3"
+      title: "Tombstone mechanism for deleted nodes"
+      gap: "GAP-008"
+      files: ["src/schema.rs", "src/store/episodic.rs", "src/lifecycle/consolidation.rs"]
+      estimated_hours: 4
+      completion: "Tombstones table exists; deletion creates tombstone; consolidation checks tombstones"
+    - id: "2.4"
+      title: "RIF suppression in retrieval pipeline"
+      gap: "GAP-009"
+      files: ["src/retrieval/pipeline.rs", "src/store/strengths.rs"]
+      estimated_hours: 3
+      completion: "Non-retrieved candidates have RS reduced; RIF factor is named constant"
+    - id: "2.5"
+      title: "README rewrite with quickstart"
+      gap: null
+      files: ["README.md"]
+      estimated_hours: 4
+      completion: "Quickstart compiles standalone; <2 min to working code; no marketing language"
+    - id: "2.6"
+      title: "Examples directory (3 examples)"
+      gap: null
+      files: ["examples/basic_agent.rs", "examples/lifecycle_demo.rs", "examples/custom_provider.rs"]
+      estimated_hours: 4
+      completion: "All 3 examples compile with cargo run --example <name>"
+    - id: "2.7"
+      title: "Cargo.toml metadata completion"
+      gap: "GAP-013"
+      files: ["Cargo.toml"]
+      estimated_hours: 0.5
+      completion: "rust-version, homepage, documentation, docs.rs config, lint config"
+    - id: "2.8"
+      title: "CHANGELOG.md"
+      gap: null
+      files: ["CHANGELOG.md"]
+      estimated_hours: 0.3
+      completion: "Keep a Changelog format; v0.1.0 section complete"
+    - id: "2.9"
+      title: "Expand test coverage (+40 tests)"
+      gap: null
+      files: ["various test modules"]
+      estimated_hours: 7
+      completion: "Test count >= 80; no modules with 0 tests; adversarial input tests for security paths"
+    - id: "2.10"
+      title: "Proptest for mathematical invariants (15 properties)"
+      gap: null
+      files: ["Cargo.toml (proptest dep)", "various test modules"]
+      estimated_hours: 4
+      completion: "15 property tests pass with default config (256 cases)"
+  review:
+    timing: "End of Week 4"
+    criteria:
+      - "GAP-006 through GAP-009 closed"
+      - "README with working quickstart"
+      - "3 examples compile and run"
+      - "Cargo.toml metadata complete"
+      - "CHANGELOG.md written"
+      - "Test count >= 80 + 15 proptest"
+      - "All P0 and P1 gaps closed"
+    decision: "Proceed to Phase 3 (CI + publish) or extend Phase 2"
+
+phase_3:
+  name: "CI Pipeline and Publication"
+  weeks: "5-6"
+  priority: "P0"
+  goal: "Build CI pipeline, pass all release gates, publish v0.1.0, execute launch comms"
+  estimated_hours: "12-16"
+  tasks:
+    - id: "3.1"
+      title: "Create GitHub Actions CI workflow"
+      gap: "GAP-012"
+      files: [".github/workflows/ci.yml"]
+      estimated_hours: 4
+      completion: "CI green on ubuntu/macos/windows, MSRV+stable, all 6 jobs pass"
+    - id: "3.2"
+      title: "MSRV pinning"
+      gap: "GAP-013"
+      files: ["rust-toolchain.toml", "Cargo.toml"]
+      estimated_hours: 0.5
+      completion: "cargo +1.75.0 check compiles"
+    - id: "3.3"
+      title: "Pre-publication dry run (all release gates)"
+      gap: null
+      files: []
+      estimated_hours: 2
+      completion: "All automated release gates pass in sequence"
+    - id: "3.4"
+      title: "Cargo.toml final review"
+      gap: null
+      files: ["Cargo.toml"]
+      estimated_hours: 0.5
+      completion: "All crates.io required fields verified"
+    - id: "3.5"
+      title: "Publish v0.1.0 to crates.io"
+      gap: null
+      files: []
+      estimated_hours: 0.5
+      completion: "crates.io/crates/alaya shows v0.1.0; docs.rs builds; cargo add works"
+    - id: "3.6"
+      title: "Launch communications (4 channels)"
+      gap: null
+      files: []
+      estimated_hours: 5
+      completion: "r/rust, HackerNews, blog post, OpenClaw outreach -- all within 48h of publish"
+  review:
+    timing: "End of Week 6"
+    criteria:
+      - "v0.1.0 live on crates.io"
+      - "docs.rs builds successfully"
+      - "CI green on all platforms"
+      - "All 4 launch channels posted"
+      - "No SEV-1/SEV-2 issues within 48h"
+    decision: "Proceed to Phase 4 (benchmarks)"
+
+phase_4:
+  name: "Benchmark Fast-Follow"
+  weeks: "7-9"
+  priority: "P1"
+  goal: "LoCoMo benchmark harness, run baselines, publish honest results"
+  estimated_hours: "20-30"
+  tasks:
+    - id: "4.1"
+      title: "LoCoMo benchmark harness"
+      gap: null
+      files: ["benches/locomo.rs or tests/locomo/"]
+      estimated_hours: 10
+      completion: "Harness produces reproducible P@5, R@10, nDCG@5, MRR for BM25 and hybrid"
+    - id: "4.2"
+      title: "Run and document baselines"
+      gap: null
+      files: ["benchmarks/results/*.yml"]
+      estimated_hours: 5
+      completion: "Results in machine-readable format; methodology documented"
+    - id: "4.3"
+      title: "LongMemEval baseline (stretch)"
+      gap: null
+      files: ["tests/longmemeval/"]
+      estimated_hours: 7
+      completion: "P@5 and nDCG@5 measured (stretch goal)"
+    - id: "4.4"
+      title: "Benchmark blog post"
+      gap: null
+      files: []
+      estimated_hours: 5
+      completion: "Published with honest numbers, methodology, comparison table, reproducibility"
+    - id: "4.5"
+      title: "OpenClaw follow-up with benchmark data"
+      gap: null
+      files: []
+      estimated_hours: 1
+      completion: "Follow-up engagement with published results"
+  review:
+    timing: "3 weeks post-publish"
+    criteria:
+      - "LoCoMo results measured and published"
+      - "Blog post live"
+      - "Benchmark data in machine-readable format"
+      - "OpenClaw follow-up completed"
+    decision: "Adjust v0.2 scope based on benchmark results and MACC"
+
+phase_5:
+  name: "v0.1.x Iteration and v0.2 Planning"
+  weeks: "10-12"
+  priority: "P2"
+  goal: "Respond to feedback, patch issues, plan v0.2 scope"
+  estimated_hours: "variable"
+  tasks:
+    - id: "5.1"
+      title: "Post-launch monitoring"
+      gap: null
+      files: []
+      estimated_hours: "ongoing"
+      completion: "Daily monitoring first 2 weeks, weekly thereafter"
+    - id: "5.2"
+      title: "v0.1.x patch releases"
+      gap: null
+      files: ["various"]
+      estimated_hours: "as needed"
+      completion: "SEV-1/SEV-2 within SLA; SEV-3 in next release"
+    - id: "5.3"
+      title: "P2 polish (WAL, content-hash, integration tests)"
+      gap: "GAP-010, GAP-011"
+      files: ["src/schema.rs", "tests/"]
+      estimated_hours: 10
+      completion: "WAL checkpoint management; content-hash column; 20 integration tests"
+    - id: "5.4"
+      title: "v0.2 scope planning"
+      gap: null
+      files: []
+      estimated_hours: 4
+      completion: "v0.2 scope document based on MACC data and user feedback"
+  review:
+    timing: "90 days post-publish"
+    criteria:
+      - "MACC >= 3"
+      - "v0.1.x stable (no open SEV-1/2)"
+      - "v0.2 scope defined"
+    decision: "Full strategy reassessment"
+
+success_criteria:
+  90_day:
+    - "v0.1.0 published on crates.io"
+    - "MACC >= 3"
+    - "LoCoMo baseline measured and published"
+    - "At least one external API review"
+    - "OpenClaw outreach completed with published crate"
+    - "Zero SEV-1 or SEV-2 incidents"
+    - "Test count >= 100"
+    - "CI green on all platforms"
+
+failure_criteria:
+  90_day:
+    - "v0.1.0 not published (execution failure)"
+    - "Zero external engagement (positioning failure)"
+    - "Competitor occupies quadrant first (timing failure)"
+
+review_cadence:
+  - name: "Phase 1 completion"
+    timing: "End of Week 2"
+    focus: "P0 gaps closed? Blockers?"
+  - name: "Phase 2 completion"
+    timing: "End of Week 4"
+    focus: "P1 gaps closed? Docs adequate?"
+  - name: "Pre-publication gate"
+    timing: "End of Week 6"
+    focus: "All gates pass? Ship decision."
+  - name: "Post-launch check"
+    timing: "2 weeks post-publish"
+    focus: "Any MACC? Feedback quality?"
+  - name: "Benchmark review"
+    timing: "3 weeks post-publish"
+    focus: "LoCoMo numbers. Strategy adjustment?"
+  - name: "90-day review"
+    timing: "90 days post-publish"
+    focus: "MACC vs target. Full reassessment."
+  - name: "v0.2 scope decision"
+    timing: "When MACC >= 5"
+    focus: "User-driven feature prioritization."
+
+pivot_triggers:
+  - trigger: "OpenClaw announces component selection within 4 weeks"
+    response: "Evaluate accelerating Phase 1-2; consider v0.1.0-alpha"
+  - trigger: "Competitor ships zero-dep cognitive memory library"
+    response: "Emergency publish: close P0 in 1 week, minimal docs"
+  - trigger: "LoCoMo baseline below 40% P@5"
+    response: "Reframe blog as analysis; focus on lifecycle differentiators"
+  - trigger: "Zero MACC 90 days post-publication"
+    response: "5 developer interviews; likely DX issue"
+  - trigger: "MACC exceeds 5 within 4 weeks"
+    response: "Accelerate v0.2 planning; publish roadmap RFC"
+  - trigger: "Solo-dev capacity constraint (Phase 2 incomplete after 6 weeks)"
+    response: "Drop Phase 4; minimum viable is Phases 1-3"
+
+gap_closure:
+  p0:
+    - { id: "GAP-001", phase: 1, status: "open" }
+    - { id: "GAP-002", phase: 1, status: "open" }
+    - { id: "GAP-003", phase: 1, status: "open" }
+    - { id: "GAP-004", phase: 1, status: "open" }
+    - { id: "GAP-005", phase: 1, status: "open" }
+    - { id: "GAP-012", phase: 3, status: "open" }
+  p1:
+    - { id: "GAP-006", phase: 2, status: "open" }
+    - { id: "GAP-007", phase: 2, status: "open" }
+    - { id: "GAP-008", phase: 2, status: "open" }
+    - { id: "GAP-009", phase: 2, status: "open" }
+  p2:
+    - { id: "GAP-010", phase: 5, status: "deferred" }
+    - { id: "GAP-011", phase: 5, status: "deferred" }
+    - { id: "GAP-013", phase: "2-3", status: "open" }
+
+test_trajectory:
+  current: 43
+  end_phase_1: "65-75"
+  end_phase_2: "107-117"
+  end_phase_3: "112-122"
+  v0_1_target: 150
+  v0_2_target: 250
+
+files_modified:
+  phase_1:
+    - "src/types.rs"
+    - "src/error.rs"
+    - "src/schema.rs"
+    - "src/lib.rs"
+    - "Cargo.toml"
+  phase_2:
+    - "src/lifecycle/transformation.rs"
+    - "src/retrieval/pipeline.rs"
+    - "src/schema.rs"
+    - "src/store/episodic.rs"
+    - "src/lifecycle/consolidation.rs"
+    - "src/store/strengths.rs"
+    - "README.md"
+    - "CHANGELOG.md"
+    - "Cargo.toml"
+    - "examples/basic_agent.rs"
+    - "examples/lifecycle_demo.rs"
+    - "examples/custom_provider.rs"
+  phase_3:
+    - ".github/workflows/ci.yml"
+    - "rust-toolchain.toml"
+  phase_4:
+    - "benches/locomo.rs"
+    - "benchmarks/results/*.yml"
+  phase_5:
+    - "src/schema.rs"
+    - "tests/"
+
+v0_2_candidates:
+  - { feature: "vec-sqlite", deps: "sqlite-vec 0.1", effort: "1-2 weeks", impact: "medium" }
+  - { feature: "embed-ort", deps: "ort 2", effort: "1 week", impact: "high" }
+  - { feature: "async", deps: "tokio 1", effort: "1 week", impact: "medium" }
+  - { feature: "MCP server", deps: "separate crate", effort: "2-3 weeks", impact: "high" }
+  - { feature: "AlayaConfig builder", deps: "none", effort: "3 days", impact: "medium" }
+  - { feature: "Quarantine API", deps: "none", effort: "1 week", impact: "low" }
+
+cross_references:
+  recommendation: "Phase 11 - path selection, sequence, avoid list"
+  northstar: "MACC targets, personas, launch channels"
+  competitive: "Market timing, OpenClaw window, competitor baselines"
+  scaffold: "Module tree, known gaps GAP-001 through GAP-013"
+  testing: "Coverage gaps, benchmark plans, CI pipeline spec"
+  post_deployment: "Release gates, quality metrics, hotfix process"
+  security: "Threats informing validation and tombstone priorities"
+  adr: "ADR-001 through ADR-010 informing implementation details"

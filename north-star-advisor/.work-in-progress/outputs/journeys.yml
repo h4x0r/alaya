@@ -1,0 +1,254 @@
+# Developer Journeys - Structured Output for Cross-Referencing
+# Generated: 2026-02-26 | Phase: 5a
+# Source: north-star-advisor/docs/design/USER_JOURNEYS.md
+
+journeys:
+  - id: "first-time-developer"
+    name: "First-Time Developer"
+    summary: "Discovery -> Evaluation -> Installation -> First Code -> Value Realization"
+    phases:
+      - name: "Discovery"
+        entry_points: ["crates.io", "GitHub", "blog post", "r/rust", "OpenClaw community", "conference talk"]
+        success: "Developer clicks through to README within 60 seconds"
+        emotion: "Skeptical"
+      - name: "Evaluation"
+        duration: "< 3 minutes"
+        evaluation_criteria: ["dependency count", "API surface", "privacy claims", "LLM coupling", "maturity signals"]
+        success: "Developer runs cargo add alaya"
+        emotion: "Evaluating"
+      - name: "Installation"
+        duration: "< 30 seconds"
+        command: "cargo add alaya"
+        risks: ["rusqlite version conflict", "feature flag confusion", "libsqlite3-sys compile time"]
+        success: "cargo build succeeds without warnings"
+        emotion: "Committed"
+      - name: "First Code"
+        duration: "< 2 minutes"
+        key_api: ["AlayaStore::open()", "store_episode()", "Query::simple()", "query()"]
+        success: "Query returns relevant results"
+        emotion: "Invested"
+      - name: "Value Realization"
+        signal: "Developer stores 10-20 episodes across sessions, queries return contextual results spanning time"
+        follow_up: ["store.status()", "docs.rs exploration", "discovers lifecycle methods"]
+        success: "Developer plans integration into own project"
+        emotion: "Delighted"
+    dx_target: "Under 2 minutes from cargo add to working query results"
+    critical_failure_point: "Empty query results on first try (BM25 lexical gap)"
+
+  - id: "deepening-integration"
+    name: "Deepening Integration"
+    summary: "Basic CRUD -> Lifecycle -> Custom Providers -> Tuning -> Production"
+    phases:
+      - name: "Basic CRUD Integration"
+        timeframe: "Day 1"
+        pattern: "Wire store_episode() into conversation handler, query() into context assembly"
+        key_api: ["store_episode()", "query()", "EpisodeContext"]
+        success: "Agent retrieves relevant memories from previous conversations"
+      - name: "Lifecycle Integration"
+        timeframe: "Day 2-3"
+        pattern: "Dream cycle: consolidate() -> forget() -> transform() between conversations"
+        key_api: ["consolidate()", "forget()", "transform()"]
+        key_insight: "Memory transforms from raw episodes into structured knowledge and preferences"
+        success: "Semantic nodes and preferences emerge from accumulated episodes"
+      - name: "Custom Providers"
+        timeframe: "Week 1"
+        pattern: "Implement ConsolidationProvider trait with developer's own LLM"
+        key_api: ["ConsolidationProvider trait", "extract_knowledge()", "extract_impressions()"]
+        key_insight: "Alaya does not own the LLM connection; developer chooses model and prompt"
+        success: "LLM-extracted semantic nodes improve query results"
+      - name: "Tuning and Benchmarking"
+        timeframe: "Week 2-3"
+        dimensions: ["retrieval count", "query context", "embedding quality", "lifecycle frequency", "forgetting aggressiveness"]
+        success: "Developer has quantified retrieval quality and latency for their use case"
+      - name: "Production Deployment"
+        timeframe: "Week 4+"
+        considerations: ["file location", "backup (single file cp)", "schema migration", "concurrency (WAL mode)", "monitoring (status())"]
+        success: "End user says 'it remembered that I prefer X' without being told to remember"
+
+  - id: "error-recovery"
+    name: "Error Recovery"
+    summary: "Compilation -> Schema -> Empty Results -> Performance -> FTS5"
+    error_categories:
+      - category: "Compilation"
+        types: ["trait bound not satisfied", "missing struct field", "version conflict"]
+        severity: "blocking but recoverable"
+        recovery: "Clear trait docs, struct documentation, version range docs"
+      - category: "Runtime"
+        types: ["database open failure", "schema migration", "FTS5 syntax error"]
+        severity: "concerning (data safety worry)"
+        recovery: "Actionable error messages, migration guide, auto-sanitization"
+      - category: "Semantic"
+        types: ["empty query results", "irrelevant results"]
+        severity: "high trust risk (developer thinks library is broken)"
+        recovery: "QueryExplanation debug mode, BM25 behavior documentation, embedding guidance"
+      - category: "Performance"
+        types: ["slow queries"]
+        severity: "frustrating"
+        recovery: "Performance tuning guide, ANALYZE command, embedding/graph density checks"
+      - category: "Data"
+        types: ["corrupt database"]
+        severity: "critical"
+        recovery: "Backup guide, WAL checkpoint, integrity check, single-file backup strategy"
+    design_principles:
+      - "Every error message answers 'what do I do now?'"
+      - "Provider errors are clearly attributed to developer code"
+      - "Data safety is always communicated"
+      - "Compilation errors preferred over runtime errors"
+      - "Silent failures are worse than loud errors"
+    self_service_target: ">90% of errors resolved without filing an issue"
+
+  - id: "mcp-integration"
+    name: "MCP Integration"
+    summary: "Discovery -> Configuration -> First Memory -> Cross-Session Queries -> Lifecycle via MCP"
+    adoption_phase: "v0.2"
+    value_proposition: "Lowers barrier from 'must write Rust' to 'must configure an MCP server'"
+    phases:
+      - name: "Discovery"
+        entry_points: ["MCP registry", "Alaya README", "blog post", "existing MCP user search"]
+        key_evaluation: "No infrastructure required, runs locally, single binary + single file"
+      - name: "Configuration"
+        steps: ["cargo install alaya-mcp", "add to MCP client config", "specify database path"]
+        default_path: "~/.alaya/memory.db"
+      - name: "First Memory"
+        tools: ["alaya.store_episode", "alaya.query"]
+        success: "Round-trip store and retrieve via MCP"
+      - name: "Cross-Session"
+        signal: "Query returns results from previous session after client restart"
+        success: "Developer experiences 'it remembers' moment"
+      - name: "Lifecycle via MCP"
+        tools: ["alaya.dream", "alaya.status"]
+        limitation: "NoOpProvider by default; full cognitive lifecycle requires configured LLM provider"
+    mcp_tools:
+      - "store_episode"
+      - "query"
+      - "status"
+      - "dream"
+      - "preferences"
+
+  - id: "persona-priya"
+    name: "Priya (Privacy-First Agent Developer)"
+    persona_ref: "Priya (Privacy-First Agent Developer)"
+    journey_overlay: "Privacy audit at every phase"
+    additional_steps:
+      - phase: "Evaluation"
+        action: "Checks Cargo.toml for network crates; greps source for connect/socket/http"
+      - phase: "Evaluation"
+        action: "Verifies single-file storage; inspects SQLite schema"
+      - phase: "Installation"
+        action: "Tests offline build with vendored dependencies"
+      - phase: "First Code"
+        action: "Evaluates encryption options (SQLCipher, filesystem-level)"
+      - phase: "Production"
+        action: "Threat models data flow; documents compliance for end users"
+    trust_signals:
+      - "Zero network dependencies in Cargo.toml"
+      - "No telemetry code in source"
+      - "Single SQLite file (verifiable)"
+      - "MIT license"
+      - "Clear data deletion path (PurgeFilter::All or delete file)"
+    dealbreakers:
+      - "Any dependency that makes network calls"
+      - "Telemetry or analytics"
+      - "Data written outside specified database path"
+      - "Unclear data deletion guarantees"
+
+  - id: "persona-marcus"
+    name: "Marcus (Performance-Focused Agent Developer)"
+    persona_ref: "Marcus (Performance-Focused Agent Developer)"
+    journey_overlay: "Benchmark-first at every phase"
+    additional_steps:
+      - phase: "Evaluation"
+        action: "Checks published LoCoMo/LongMemEval scores; runs benchmarks locally"
+      - phase: "Evaluation"
+        action: "Audits dependency count for binary size and compile time"
+      - phase: "First Code"
+        action: "Writes microbenchmark: 1000 episodes, 100 queries, measure p50/p99"
+      - phase: "Integration"
+        action: "Scale test at 10K+ episodes; measures latency, footprint, file size"
+      - phase: "Tuning"
+        action: "Graph analysis; spreading activation depth; retrieval quality measurement"
+      - phase: "Production"
+        action: "Continuous benchmarking in CI; regression alerts"
+    performance_targets:
+      store_episode: "< 0.5ms"
+      query_bm25_1k: "< 1ms"
+      query_bm25_vec_1k: "< 5ms"
+      query_bm25_10k: "< 5ms"
+      consolidate_10_episodes: "< 10ms (excl. LLM)"
+      forget_sweep_10k: "< 50ms"
+      cold_open_10k: "< 10ms"
+      file_size_per_1k: "< 500KB"
+    dealbreakers:
+      - "No published benchmarks"
+      - "Required LLM for basic operations"
+      - "Framework lock-in"
+      - "Performance regression between versions"
+
+funnel_metrics:
+  - phase: "Discovery -> Installation"
+    metric: "cargo add within 5 min of README"
+    target: ">50%"
+  - phase: "Installation -> First Example"
+    metric: "Working example in < 2 min"
+    target: ">80%"
+  - phase: "First Example -> Integration"
+    metric: "Uses in own project within 1 week"
+    target: ">30%"
+  - phase: "Integration -> Production"
+    metric: "Ships to end users within 1 month"
+    target: ">10%"
+  - phase: "Error -> Resolution"
+    metric: "Self-service resolution rate"
+    target: ">90%"
+
+quality_metrics:
+  - metric: "Time to first successful query"
+    target: "< 2 minutes"
+  - metric: "Compilation errors in quickstart"
+    target: "0"
+  - metric: "Documentation coverage (public API)"
+    target: "100%"
+  - metric: "Doctest pass rate"
+    target: "100%"
+
+api_implications:
+  from_journey_1:
+    - "AlayaStore::open(path) with no builder required for basic use"
+    - "Query::simple(text) convenience constructor with sensible defaults"
+    - "Result<T> everywhere, impl AsRef<Path>, familiar Rust patterns"
+    - "Re-export commonly used types from crate root"
+  from_journey_2:
+    - "Explicit lifecycle methods (consolidate, forget, transform) -- opt-in, not automatic"
+    - "ConsolidationProvider trait: two required methods, clear types"
+    - "Typed lifecycle reports with counts (not just ())"
+    - "store.status() returning MemoryStatus"
+  from_journey_3:
+    - "AlayaError variants with context, not just wrapped SQLite errors"
+    - "Provider errors attributed to developer code"
+    - "Future: QueryExplanation type for empty/poor results"
+    - "FTS5 input sanitization (developer never sees syntax errors)"
+  from_journey_4:
+    - "API methods individually callable (not pipeline-only)"
+    - "All public types derive Serialize, Deserialize"
+    - "NoOpProvider provides baseline functionality"
+  from_journey_5:
+    - "Minimal, auditable dependency list"
+    - "Each public method independently benchmarkable"
+    - "Performance characteristics in doc comments"
+
+dx_anti_patterns:
+  - name: "Hello World That Isn't"
+    description: "Quickstart requiring config, API keys, or multiple files"
+    commitment: "Single file, cargo add, no external deps"
+  - name: "Opaque Error"
+    description: "Error says what went wrong but not what to do"
+    commitment: "Actionable error messages with recovery steps"
+  - name: "Mandatory Migration"
+    description: "Silent schema changes on version upgrade"
+    commitment: "Versioned schema, explicit migration, pre-migration backup"
+  - name: "Feature Flag Maze"
+    description: "15+ flags required to understand before use"
+    commitment: "4-6 flags max, default features give complete working system"
+  - name: "Works on My Machine Benchmark"
+    description: "Performance claims without reproducible methodology"
+    commitment: "Every benchmark includes hardware, dataset, methodology, repro script"

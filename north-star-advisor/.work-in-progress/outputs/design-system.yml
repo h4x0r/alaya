@@ -1,0 +1,247 @@
+# API Design System - Structured Output for Cross-Referencing
+# Generated: 2026-02-26 | Phase: 5b
+# Source: north-star-advisor/docs/design/UI_DESIGN_SYSTEM.md
+
+naming:
+  functions: "snake_case"
+  types: "CamelCase"
+  enum_variants: "CamelCase"
+  constants: "SCREAMING_SNAKE_CASE"
+  modules: "snake_case, singular"
+  id_types: "CamelCase + Id suffix (EpisodeId, NodeId, PreferenceId)"
+  input_types: "New + entity name (NewEpisode, NewSemanticNode)"
+  report_types: "CamelCase + Report suffix (ConsolidationReport)"
+  filter_types: "entity + Filter (KnowledgeFilter, PurgeFilter)"
+
+entry_point:
+  struct: "AlayaStore"
+  constructor_persistent: "AlayaStore::open(path)"
+  constructor_ephemeral: "AlayaStore::open_in_memory()"
+  visibility: "All interaction through AlayaStore; internals are pub(crate)"
+
+modules:
+  - name: "lib"
+    role: "Entry point, AlayaStore struct, re-exports"
+  - name: "error"
+    role: "AlayaError enum, Result type alias"
+  - name: "types"
+    role: "All public types (IDs, enums, structs, reports)"
+  - name: "schema"
+    role: "Database initialization, WAL mode, tables, indexes, FTS5"
+    visibility: "pub(crate)"
+  - name: "provider"
+    role: "ConsolidationProvider trait, NoOpProvider"
+  - name: "store"
+    role: "CRUD for episodes, semantic nodes, impressions, preferences, embeddings, strengths"
+    visibility: "pub(crate)"
+  - name: "retrieval"
+    role: "BM25, vector search, RRF fusion, context reranking, pipeline orchestration"
+    visibility: "pub(crate)"
+  - name: "graph"
+    role: "Hebbian links, spreading activation"
+    visibility: "pub(crate)"
+  - name: "lifecycle"
+    role: "Consolidation, perfuming, transformation, forgetting"
+    visibility: "pub(crate)"
+
+public_api:
+  write:
+    - method: "store_episode"
+      input: "NewEpisode"
+      output: "Result<EpisodeId>"
+  read:
+    - method: "query"
+      input: "Query"
+      output: "Result<Vec<ScoredMemory>>"
+    - method: "preferences"
+      input: "Option<&str>"
+      output: "Result<Vec<Preference>>"
+    - method: "knowledge"
+      input: "Option<KnowledgeFilter>"
+      output: "Result<Vec<SemanticNode>>"
+    - method: "neighbors"
+      input: "(NodeRef, u32)"
+      output: "Result<Vec<(NodeRef, f32)>>"
+  lifecycle:
+    - method: "consolidate"
+      input: "&dyn ConsolidationProvider"
+      output: "Result<ConsolidationReport>"
+    - method: "perfume"
+      input: "(&Interaction, &dyn ConsolidationProvider)"
+      output: "Result<PerfumingReport>"
+    - method: "transform"
+      input: "()"
+      output: "Result<TransformationReport>"
+    - method: "forget"
+      input: "()"
+      output: "Result<ForgettingReport>"
+  admin:
+    - method: "status"
+      input: "()"
+      output: "Result<MemoryStatus>"
+    - method: "purge"
+      input: "PurgeFilter"
+      output: "Result<PurgeReport>"
+
+provider_trait:
+  name: "ConsolidationProvider"
+  methods:
+    - name: "extract_knowledge"
+      input: "&[Episode]"
+      output: "Result<Vec<NewSemanticNode>>"
+    - name: "extract_impressions"
+      input: "&Interaction"
+      output: "Result<Vec<NewImpression>>"
+    - name: "detect_contradiction"
+      input: "(&SemanticNode, &SemanticNode)"
+      output: "Result<bool>"
+  fallback: "NoOpProvider (returns empty vecs and false)"
+
+type_categories:
+  id_types:
+    - "EpisodeId(i64)"
+    - "NodeId(i64)"
+    - "PreferenceId(i64)"
+    - "ImpressionId(i64)"
+    - "LinkId(i64)"
+  polymorphic: "NodeRef { Episode(EpisodeId), Semantic(NodeId), Preference(PreferenceId) }"
+  input_types:
+    - "NewEpisode"
+    - "NewSemanticNode"
+    - "NewImpression"
+    - "Interaction"
+    - "Query"
+  output_types:
+    - "Episode"
+    - "SemanticNode"
+    - "Impression"
+    - "Preference"
+    - "ScoredMemory"
+    - "Link"
+    - "NodeStrength"
+  report_types:
+    - "ConsolidationReport"
+    - "PerfumingReport"
+    - "TransformationReport"
+    - "ForgettingReport"
+    - "PurgeReport"
+    - "MemoryStatus"
+  enum_types:
+    - "Role { User, Assistant, System }"
+    - "SemanticType { Fact, Relationship, Event, Concept }"
+    - "LinkType { Temporal, Topical, Entity, Causal, CoRetrieval }"
+    - "PurgeFilter { Session(String), OlderThan(i64), All }"
+  context_types:
+    - "EpisodeContext (topics, sentiment, conversation_turn, mentioned_entities, preceding_episode)"
+    - "QueryContext (topics, sentiment, mentioned_entities, current_timestamp)"
+    - "KnowledgeFilter (node_type, min_confidence, limit)"
+
+patterns:
+  - name: "Single Entry Point"
+    description: "All interaction through AlayaStore; no internal types exposed"
+  - name: "Reference by Borrow"
+    description: "All methods take &self and borrow arguments"
+  - name: "New*/Entity Split"
+    description: "Input types (NewEpisode) vs output types (Episode) with system-added fields"
+  - name: "Trait Extension"
+    description: "ConsolidationProvider trait + NoOpProvider fallback for graceful degradation"
+  - name: "Result Everywhere"
+    description: "All fallible operations return Result<T, AlayaError>"
+  - name: "Typed Reports"
+    description: "Every lifecycle process returns a specific report type, never ()"
+  - name: "Explicit Lifecycle"
+    description: "Lifecycle methods are explicit calls, not automatic triggers"
+  - name: "Two-Level Query"
+    description: "Query::simple() for quickstart, full struct for advanced use"
+
+retrieval_pipeline:
+  stages:
+    - name: "BM25"
+      source: "FTS5"
+      normalization: "[0.0, 1.0]"
+    - name: "Vector"
+      source: "Cosine similarity"
+      condition: "Only when query.embedding is Some"
+    - name: "Graph"
+      source: "Spreading activation from top seeds"
+      depth: 1
+    - name: "RRF Fusion"
+      algorithm: "Reciprocal Rank Fusion"
+      k: 60
+    - name: "Context Reranking"
+      factors: ["topic Jaccard (0.5)", "entity Jaccard (0.25)", "sentiment similarity (0.25)", "recency decay (30-day half-life)"]
+    - name: "Post-Retrieval"
+      effects: ["strength boost on_access", "co-retrieval Hebbian LTP"]
+
+error_design:
+  type: "AlayaError"
+  derives: "Debug, Error (thiserror)"
+  variants:
+    - name: "Db"
+      wraps: "rusqlite::Error"
+      origin: "SQLite layer"
+    - name: "NotFound"
+      wraps: "String"
+      origin: "Entity lookup miss"
+    - name: "InvalidInput"
+      wraps: "String"
+      origin: "API boundary validation"
+    - name: "Serialization"
+      wraps: "serde_json::Error"
+      origin: "JSON round-trip"
+    - name: "Provider"
+      wraps: "String"
+      origin: "Developer's ConsolidationProvider"
+  principles:
+    - "Every error answers: what happened, why, what to do"
+    - "Provider errors attributed to developer code"
+    - "Data safety always communicated"
+    - "Compilation errors preferred over runtime errors"
+    - "Silent failures worse than loud errors"
+
+consistency_rules:
+  - "Timestamps: i64 (Unix seconds)"
+  - "IDs: newtype around i64"
+  - "Text content: String in public API, never &str"
+  - "Optional fields: Option<T>, never sentinel values"
+  - "Collections: Vec<T> in returns, never iterators"
+  - "Retrieval scores: f64 (RRF precision)"
+  - "Weights and strengths: f32"
+  - "Report counts: u32"
+  - "Status counts: u64"
+  - "#[non_exhaustive] on all public enums (pending)"
+  - "FTS5 input always sanitized"
+  - "WAL mode always enabled"
+  - "Cascading cleanup on delete"
+
+code_example_levels:
+  - level: 1
+    name: "Quickstart"
+    lines: 10
+    shows: "store_episode + Query::simple + query"
+  - level: 2
+    name: "Lifecycle"
+    shows: "Dream cycle: consolidate + forget + transform + status"
+  - level: 3
+    name: "Custom Provider"
+    shows: "Implement ConsolidationProvider with LLM"
+  - level: 4
+    name: "Advanced Retrieval"
+    shows: "QueryContext, embeddings, neighbors, knowledge, preferences"
+  - level: 5
+    name: "Production"
+    shows: "Path management, backup, Arc<AlayaStore>, periodic dream, purge"
+
+future_types:
+  - name: "QueryExplanation"
+    purpose: "Debug empty/poor retrieval results"
+    fields: ["bm25_matches", "vector_matches", "graph_activated", "fused", "reranked", "tokens_matched", "tokens_missed"]
+    phase: "v0.2"
+
+doc_patterns:
+  - "First line: imperative mood summary"
+  - "Blank line, then description with behavior/performance notes"
+  - "# Examples with compilable doctests for every pub method"
+  - "Research citations for non-obvious mechanisms (author, year, theory name)"
+  - "Cross-reference links: [`AlayaStore`] syntax"
+  - "Module docs explain role in cognitive lifecycle"

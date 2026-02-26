@@ -1,0 +1,228 @@
+# Alaya Developer Accessibility - Structured Extract
+# Generated: 2026-02-26 | Phase: 5c
+
+skill_levels:
+  beginner:
+    methods: 3
+    surface: ["AlayaStore::open()", "store_episode()", "query()"]
+    docs_entry: "README quickstart"
+    imports: 5
+    must_never_encounter: ["lifetime errors", "empty results on first query"]
+  intermediate:
+    methods: 12
+    surface_adds: ["consolidate()", "forget()", "transform()", "perfume()", "status()", "preferences()", "knowledge()", "purge()"]
+    docs_entry: "examples/ directory, docs.rs"
+    must_never_encounter: ["silent data loss from lifecycle"]
+  advanced:
+    methods: 15+
+    surface_adds: ["ConsolidationProvider trait (3 methods)", "EmbeddingProvider trait", "AlayaConfig::builder()"]
+    docs_entry: "Architecture docs, trait documentation"
+    must_never_encounter: ["opaque provider errors"]
+  expert:
+    methods: 17+
+    surface_adds: ["neighbors()", "NodeStrength", "QueryExplanation (planned)"]
+    docs_entry: "Research citations, benchmarks"
+    must_never_encounter: ["undocumented algorithm parameters"]
+
+error_accessibility:
+  contract: "Every error answers: what happened, why, what to do"
+  variants:
+    - name: "AlayaError::Db"
+      current_display: "database error: {inner}"
+      strategy: "Contextualize at call site with path, operation, and recovery steps"
+      scenarios: ["file not found", "permission denied", "database locked", "disk full", "corrupt database", "FTS5 syntax (should never reach developer)", "schema version mismatch"]
+    - name: "AlayaError::NotFound"
+      current_display: "not found: {0}"
+      strategy: "Include entity type, ID, why it might be missing, and alternative approaches"
+      planned: "Replace String with structured { entity: &'static str, id: i64 }"
+    - name: "AlayaError::InvalidInput"
+      current_display: "invalid input: {0}"
+      strategy: "Specific validation messages with correct value examples"
+      validations: ["empty content", "zero-length embedding", "negative timestamp", "empty session_id", "max_results = 0"]
+    - name: "AlayaError::Serialization"
+      current_display: "serialization error: {0}"
+      strategy: "Explain internal JSON issue, suggest migration if version mismatch"
+    - name: "AlayaError::Provider"
+      current_display: "provider error: {0}"
+      strategy: "Attribute boundary (YOUR implementation), include lifecycle phase, confirm data safety"
+  principles:
+    - "Answer 'what do I do?' before 'what went wrong?'"
+    - "Attribute the boundary (Alaya vs provider)"
+    - "Communicate data safety explicitly"
+    - "Prefer compilation errors over runtime errors"
+    - "Never expose raw SQLite errors to Level 1 developers"
+    - "Silent failures are worse than loud errors"
+  planned_improvements:
+    - version: "v0.1"
+      items: ["Contextual Db wrapping", "SchemaVersion variant", "NotFound structured fields", "Provider phase context"]
+    - version: "v0.2"
+      items: ["Capacity variant for disk-full scenarios"]
+
+documentation:
+  layers:
+    - level: 1
+      name: "README.md"
+      time: "30 seconds"
+      content: "positioning, quickstart code, feature list, privacy guarantee"
+      rules: ["code above the fold", "zero specialized terminology", "every claim verifiable"]
+    - level: 2
+      name: "Quickstart example"
+      time: "2 minutes"
+      content: "single-file example that compiles, runs, produces output"
+      rules: ["lexical overlap in query/content", "no LLM required", "5 imports max"]
+    - level: 3
+      name: "docs.rs / examples/"
+      time: "10-30 minutes"
+      content: "module docs, doctests, staged examples"
+      rules: ["cross-referencing between types", "keyword optimization", "lifecycle stage links"]
+    - level: 4
+      name: "Architecture docs"
+      time: "1-2 hours"
+      content: "pipeline diagrams, schema design, design decisions with rationale"
+    - level: 5
+      name: "Research citations"
+      time: "hours-days"
+      content: "papers for Bjork, CLS, Hebbian, Vasana, RRF"
+  glossary_terms: 16
+  learning_styles:
+    - "Read-write (textual): doc comments, README, architecture docs"
+    - "Example-first (code): doctests, examples/ directory"
+    - "Visual-spatial (diagrams): pipeline diagrams, lifecycle flow, type hierarchy"
+    - "Reference (lookup): glossary, type tables, method signatures"
+
+platform_accessibility:
+  tiers:
+    - tier: 1
+      method: "Rust native (cargo add alaya)"
+      version: "v0.1"
+      audience: "Rust developers"
+      effort: "minutes"
+    - tier: "2a"
+      method: "MCP server (alaya-mcp binary)"
+      version: "v0.2"
+      audience: "Any MCP client (Claude, agents, IDEs)"
+      effort: "configuration only"
+    - tier: "2b"
+      method: "C/C++ via FFI (libalaya.h)"
+      version: "v0.2"
+      audience: "C/C++ developers, any language with C FFI"
+      effort: "hours"
+    - tier: 3
+      method: "Python via PyO3 (pip install alaya)"
+      version: "v0.3"
+      audience: "Python developers"
+      effort: "minutes"
+    - tier: 4
+      method: "Mobile/Edge (ARM cross-compilation)"
+      version: "v0.3+"
+      audience: "Mobile and IoT developers"
+      effort: "hours"
+  no_std_feasibility: "Not feasible for v0.x (rusqlite, serde require std). Target musl for static linking instead."
+
+cognitive_accessibility:
+  public_method_count: 13
+  target_max: 20
+  crud_symmetry: "store_*/get_*/list_*/delete_* pattern for all entities"
+  sensible_defaults:
+    provider: "NoOpProvider (no LLM)"
+    query_results: 5
+    embedding: "None (BM25-only)"
+    context: "EpisodeContext::default() (empty)"
+    feature_flags: "default features = full working system"
+  complexity_curve:
+    - "Step 1: CRUD (open, store, query)"
+    - "Step 2: Lifecycle (consolidate, forget, transform)"
+    - "Step 3: Providers (ConsolidationProvider, EmbeddingProvider)"
+    - "Step 4: Tuning (weights, thresholds, graph parameters)"
+  mental_model: "Storehouse metaphor (alaya-vijnana): put things in, find them, organize periodically, notice patterns"
+  consistency_patterns:
+    - "All fallible methods return Result<T, AlayaError>"
+    - "Input types are New*, output types are entity name"
+    - "Lifecycle methods return *Report types"
+    - "ID types are newtypes around i64"
+    - "All public types derive Debug, Clone"
+    - "Output types derive Serialize, Deserialize"
+    - "&self on all methods (no &mut self)"
+
+diagnostics:
+  levels:
+    - name: "Status"
+      api: "store.status() -> MemoryStatus"
+      version: "v0.1"
+      audience: "All levels"
+    - name: "Reports"
+      api: "Return values from consolidate/forget/transform/perfume"
+      version: "v0.1"
+      audience: "Level 2+"
+    - name: "QueryExplanation"
+      api: "store.explain_query() -> QueryExplanation (planned)"
+      version: "v0.2"
+      audience: "Level 3+"
+    - name: "Tracing"
+      api: "tracing crate integration (planned)"
+      version: "v0.2"
+      audience: "Level 4 / production"
+
+onboarding:
+  time_to_first_success: "< 2 minutes"
+  two_minute_budget:
+    - step: "cargo add alaya"
+      time: "5 seconds"
+    - step: "cargo build (incremental)"
+      time: "15-30 seconds"
+    - step: "copy quickstart"
+      time: "15 seconds"
+    - step: "cargo run"
+      time: "5 seconds"
+  quickstart_constraints:
+    - "compiles without modification"
+    - "produces visible output"
+    - "avoids BM25 empty-result trap (lexical overlap)"
+    - "uses EpisodeContext::default()"
+    - "no external dependencies"
+    - "fits in single screen (< 30 lines)"
+  no_panic_guarantee: "All public code paths return Result::Err, never panic in release mode"
+  migration_path: "Schema versioning, backup before migration, semver discipline"
+
+testing:
+  doctest_coverage: "100% of pub methods"
+  integration_tests: "Every CRUD path, every error variant, every lifecycle with NoOp and Mock"
+  cross_platform_ci: ["Ubuntu 22.04 x86_64", "macOS 14 aarch64", "Windows Server 2022 x86_64"]
+  quickstart_regression: "CI job extracts README quickstart, compiles as standalone project, verifies output"
+  error_path_testing: "Every AlayaError variant exercised, .to_string() verified actionable"
+
+anti_patterns:
+  - name: "Jargon Wall"
+    description: "Leading with specialized terminology before value proposition"
+    rule: "README and quickstart use zero specialized terms"
+  - name: "Configuration Prerequisite"
+    description: "Requiring setup before basic operations work"
+    rule: "open + store_episode + query works with zero configuration"
+  - name: "Debugging Black Box"
+    description: "No way to understand why results are unexpected"
+    rule: "MemoryStatus from v0.1, reports from v0.1, QueryExplanation from v0.2"
+  - name: "Platform Prison"
+    description: "Only accessible from one language"
+    rule: "MCP + FFI from v0.2, Python from v0.3"
+  - name: "Stale Example"
+    description: "Documentation examples that don't compile"
+    rule: "All examples compiled in CI via doctests; README quickstart regression test"
+
+metrics:
+  onboarding:
+    time_to_first_query: "< 2 minutes"
+    quickstart_compilation_errors: "0 per release"
+    first_try_success_rate: "> 80%"
+  documentation:
+    api_coverage: "100%"
+    doctest_pass_rate: "100%"
+    glossary_coverage: "100% of specialized terms"
+  errors:
+    actionable_messages: "100% of variants"
+    self_service_resolution: "> 90%"
+    boundary_attribution: "100% for Provider errors"
+  platform:
+    cross_platform_ci: "100% (Linux, macOS, Windows)"
+  cognitive:
+    public_methods: "< 20"
+    quickstart_imports: "<= 5"

@@ -1,0 +1,226 @@
+# Resilience Patterns - Structured Output for Cross-Referencing
+# Generated: 2026-02-26 | Phase: 10
+# Source: north-star-advisor/docs/architecture/RESILIENCE_PATTERNS.md
+
+model: "embedded library resilience (not distributed system)"
+core_invariant: "Every public method returns Result<T, AlayaError> and never panics"
+
+capability_detection:
+  description: "Runtime probing for available retrieval signals"
+  capabilities:
+    - name: "BM25 (FTS5)"
+      condition: "episodes table has rows"
+      probe: "search_bm25() returns non-empty vec"
+      fallback: "empty result set excluded from RRF"
+    - name: "Vector (cosine similarity)"
+      condition: "embeddings table has rows AND query.embedding is Some"
+      probe: "search_vector() returns non-empty vec"
+      fallback: "empty result set excluded from RRF"
+    - name: "Graph (spreading activation)"
+      condition: "links table has rows AND seed_nodes is non-empty"
+      probe: "spread_activation() returns non-empty HashMap"
+      fallback: "empty result set excluded from RRF"
+    - name: "Consolidation (LLM)"
+      condition: "ConsolidationProvider is not NoOpProvider"
+      probe: "provider.extract_knowledge() returns non-empty vec"
+      fallback: "NoOpProvider returns empty results, no error"
+  capability_states:
+    - state: "Empty"
+      signals: []
+    - state: "Episodes only"
+      signals: ["BM25"]
+    - state: "With embeddings"
+      signals: ["BM25", "Vector"]
+    - state: "With graph"
+      signals: ["BM25", "Graph"]
+    - state: "Full capability"
+      signals: ["BM25", "Vector", "Graph"]
+
+degradation_chain:
+  description: "Six-level retrieval fallback from full hybrid to empty result"
+  levels:
+    - level: 1
+      name: "Full hybrid"
+      signals: ["BM25", "Vector", "Graph"]
+      pipeline: "BM25 + Vector + Graph -> RRF (k=60) -> Rerank"
+      trigger: "All data present, embedding provided in query"
+    - level: 2
+      name: "No embeddings"
+      signals: ["BM25", "Graph"]
+      pipeline: "BM25 + Graph -> RRF (k=60) -> Rerank"
+      trigger: "query.embedding is None OR embeddings table empty"
+    - level: 3
+      name: "No graph links"
+      signals: ["BM25", "Vector"]
+      pipeline: "BM25 + Vector -> RRF (k=60) -> Rerank"
+      trigger: "links table empty OR no links from seed nodes"
+    - level: 4
+      name: "No FTS matches"
+      signals: ["Vector", "Graph"]
+      pipeline: "Vector + Graph -> RRF (k=60) -> Rerank"
+      trigger: "FTS5 MATCH returns no documents"
+    - level: 5
+      name: "BM25 only (minimal)"
+      signals: ["BM25"]
+      pipeline: "BM25 -> Rerank (recency only)"
+      trigger: "No embeddings, no links, BM25 has results"
+    - level: 6
+      name: "Empty result"
+      signals: []
+      pipeline: "Ok(vec![])"
+      trigger: "Empty database OR completely unmatched query"
+  enabler: "RRF fusion accepts variable-length result set lists"
+  self_healing: "Co-retrieval links form during every query, promoting lower levels toward Level 1"
+
+transaction_resilience:
+  wal_mode: true
+  synchronous: "NORMAL"
+  foreign_keys: true
+  known_gaps:
+    - id: "no-begin-immediate"
+      description: "Write transactions use implicit BEGIN DEFERRED, risking deadlock with multiple connections"
+      risk: "medium"
+      mitigation_planned: "BEGIN IMMEDIATE for all write transactions"
+      version: "v0.1"
+    - id: "no-wal-checkpoint"
+      description: "No PRAGMA wal_autocheckpoint or journal_size_limit configured"
+      risk: "low"
+      mitigation_planned: "wal_autocheckpoint=1000, journal_size_limit=64MB, compact() method"
+      version: "v0.1"
+    - id: "no-explicit-transactions"
+      description: "Multi-statement operations (store_episode, consolidate) lack explicit transaction boundaries"
+      risk: "medium"
+      mitigation_planned: "Wrap multi-statement operations in BEGIN IMMEDIATE...COMMIT"
+      version: "v0.1"
+  busy_handling:
+    current: "AlayaError::Db(rusqlite::Error) propagated to consumer"
+    consumer_responsibility: "Retry with backoff for SQLITE_BUSY; abort for SQLITE_CORRUPT"
+    rationale: "Retry strategy depends on consumer's concurrency model"
+
+operation_idempotency:
+  - operation: "consolidate()"
+    idempotent: "convergent"
+    re_execution: "Picks up remaining unconsolidated episodes; previously consolidated excluded by link check"
+    caveat: "Non-deterministic provider may create duplicate semantic nodes on re-run of partially completed consolidation"
+  - operation: "forget()"
+    idempotent: "partial"
+    re_execution: "Decay applies multiplicatively each call (0.95 * 0.95 = 0.9025); archival is idempotent"
+    caveat: "Consumer must schedule at intervals, not loop"
+  - operation: "transform()"
+    idempotent: "mostly"
+    re_execution: "Dedup, link pruning, preference pruning, impression pruning are idempotent; preference decay is not"
+    caveat: "Consumer must schedule at intervals, not loop"
+  - operation: "perfume()"
+    idempotent: false
+    re_execution: "Stores duplicate impressions; accumulates toward false crystallization"
+    caveat: "Call exactly once per interaction"
+  - operation: "purge()"
+    idempotent: true
+    re_execution: "No-op on already-empty data"
+  - operation: "query()"
+    idempotent: "result-idempotent with side effects"
+    re_execution: "Returns same results; strength updates and co-retrieval links form as side effects"
+
+resource_budgets:
+  - resource: "Embedding scan"
+    current: "Full brute-force scan, O(N*D)"
+    budget_mechanism: "Output truncation only (results.truncate(limit))"
+    scale_ceiling: "~50K embeddings"
+    planned: "sqlite-vec ANN index (v0.2)"
+  - resource: "Graph traversal"
+    current: "Bounded by max_depth, threshold, decay_per_hop, activation cap (2.0)"
+    budget_mechanism: "Structural decay + hard caps"
+    parameters:
+      max_depth: "1 (query), 3 (neighbors)"
+      threshold: "0.05-0.1"
+      decay_per_hop: "0.6"
+      activation_cap: "2.0"
+  - resource: "Query results"
+    current: "max_results * 3 at each pipeline stage"
+    budget_mechanism: "Multi-level truncation"
+    default_max_results: 5
+  - resource: "Consolidation batch"
+    current: "10 episodes per call"
+    budget_mechanism: "CONSOLIDATION_BATCH_SIZE constant"
+  - resource: "Dedup scan"
+    current: "O(N^2) pairwise comparison of semantic embeddings"
+    budget_mechanism: "None"
+    planned: "sqlite-vec approximate dedup (v0.2)"
+
+data_integrity:
+  cascade_deletion:
+    current: "Manual cascade in delete_node(); partial cascade in delete_episodes()"
+    gap: "Episode deletion does not cascade to embeddings, links, or strengths"
+    planned: "Complete cascade + orphan cleanup in transform() (v0.1)"
+  tombstones:
+    current: "Not implemented"
+    gap: "Deleted content can resurrect through re-consolidation"
+    planned: "Tombstone table with content-hash checking (v0.1)"
+  fts5_consistency:
+    mechanism: "Three triggers (INSERT, DELETE, UPDATE) keep episodes_fts in sync"
+    recovery: "INSERT INTO episodes_fts(episodes_fts) VALUES('rebuild')"
+  corroboration:
+    mechanism: "corroboration_count column on semantic_nodes, incremented on dedup merge and explicit corroboration"
+    signal: "Nodes with count >= 2 are independently confirmed"
+  embedding_dimensions:
+    current: "Not validated"
+    gap: "Mixed dimensions produce zero similarity (safe but useless)"
+    planned: "Dimension consistency validation (v0.1)"
+
+error_propagation:
+  error_type: "AlayaError (5 variants)"
+  classification:
+    retryable: ["AlayaError::Db with SQLITE_BUSY or SQLITE_LOCKED"]
+    recoverable: ["AlayaError::NotFound", "AlayaError::Serialization"]
+    fatal: ["AlayaError::Db with SQLITE_CORRUPT, SQLITE_NOTADB, SQLITE_FULL"]
+    permanent: ["AlayaError::InvalidInput"]
+    provider_dependent: ["AlayaError::Provider"]
+  side_effect_suppression:
+    pattern: "let _ = strengths::on_access(); let _ = links::on_co_retrieval()"
+    rationale: "Query results valid regardless of side-effect success"
+    tradeoff: "Silent failure of Hebbian evolution if DB is read-only or full"
+  panic_safety:
+    rule: "No unwrap()/expect() in library code; unwrap_or_default() for SystemTime"
+    provider_panics: "Unwind through Alaya; consumer catches at Mutex/thread boundary"
+
+recovery:
+  corrupt_db:
+    detection: "PRAGMA integrity_check (planned: store.integrity_check())"
+    indicators: ["SQLITE_CORRUPT", "SQLITE_NOTADB", "Serialization errors"]
+  schema_migration:
+    current: "CREATE TABLE IF NOT EXISTS (additive only)"
+    idempotent: true
+    planned: "schema_version table + ordered migration functions (v0.2)"
+  backup_strategies:
+    - method: "SQLite backup API"
+      consistency: "Full (handles WAL correctly)"
+      planned: "store.backup(path) method (v0.2)"
+    - method: "VACUUM INTO"
+      consistency: "Full (produces single clean file)"
+      available: "Now (via raw SQL)"
+    - method: "Filesystem copy"
+      consistency: "Requires copying .db + .db-wal + .db-shm atomically"
+      risk: "WAL file omission loses recent transactions"
+  last_resort: "Create fresh database (complete memory loss, system remains operational)"
+
+known_gaps_summary:
+  v0_1:
+    - "BEGIN IMMEDIATE for write transactions"
+    - "WAL checkpoint management"
+    - "Tombstone mechanism"
+    - "Input validation at API boundary"
+    - "Orphan cleanup in transform()"
+    - "Embedding dimension validation"
+    - "Explicit transaction boundaries for multi-statement operations"
+  v0_2:
+    - "sqlite-vec for bounded embedding search"
+    - "compact() method"
+    - "integrity_check() method"
+    - "backup() method"
+    - "Audit trait for suppressed side-effect failures"
+    - "Configurable resource budgets via AlayaConfig"
+
+cross_references:
+  architecture_blueprint: "Degradation chain, retrieval pipeline, lifecycle processes"
+  security_architecture: "Transaction deadlock, WAL corruption, memory resurrection, provider injection"
+  adr: "ADR-001 (SQLite), ADR-004 (traits/NoOp), ADR-005 (Bjork), ADR-006 (RRF), ADR-008 (sync-first), ADR-009 (zero network)"

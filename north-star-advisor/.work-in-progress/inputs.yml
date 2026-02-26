@@ -1,0 +1,18 @@
+# North Star Advisor - Project Inputs
+# Generated: 2026-02-26T12:40:00+08:00
+
+# Core (from exploration)
+application_name: "Alaya"
+one_line_description: "Embeddable Rust memory library with cognitive lifecycle processes and implicit preference emergence for privacy-first AI agents"
+target_users: "Agent developers building privacy-first, relationship-heavy agents (companions, coaches, coding agents with conversational depth)"
+core_problem: "Existing memory systems are either cloud-dependent with LLM requirements (Mem0, Supermemory) or zero-dependency but too shallow (Memvid, Engram). No system provides complete cognitive lifecycle with zero ops."
+differentiator: "Implicit preference emergence with contextual tradeoff resolution — learns how users resolve competing values from observed behavior, without LLM extraction or explicit declaration. Only system combining complete cognitive lifecycle (consolidation, forgetting, perfuming, transformation) with zero external dependencies."
+
+# Structured (from targeted questions)
+tech_stack: "Rust, SQLite (embedded), zero external dependencies. Optional LLM via traits (ConsolidationProvider). FFI-embeddable in any language."
+constraints: "Solo developer, self-funded, no fixed timeline. Urgency around OpenClaw ecosystem window. DEF CON presentation channel for research narrative."
+anti_goals: "Not building enterprise multi-user horizontal scaling. Not building procedural memory (executable skills). Not building parametric memory (model fine-tuning). Not a standalone service — Alaya is a library."
+success_metric: "1) Agent developer ships product with Alaya and users notice the difference. 2) Benchmark results beating alternatives on LoCoMo/LongMemEval. 3) Adoption by OpenClaw or similar agent project."
+
+# Phase decisions (populated during generation)
+phase_decisions: {}

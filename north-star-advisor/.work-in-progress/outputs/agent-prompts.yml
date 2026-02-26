@@ -1,0 +1,173 @@
+# Consumer Integration Patterns - Structured Output for Cross-Referencing
+# Generated: 2026-02-26 | Phase: 7
+# Source: north-star-advisor/docs/architecture/AGENT_PROMPTS.md
+
+reframing: "AGENT_PROMPTS -> Consumer Integration Patterns (Alaya is a library, not an agent)"
+
+philosophy:
+  - id: "agent-owns-identity"
+    principle: "Alaya stores seeds; the agent decides which matter"
+    implication: "Library never interprets memories, never adjusts behavior, never decides importance"
+  - id: "memory-is-process"
+    principle: "Every retrieval changes what is remembered"
+    implication: "Query updates node strengths (Bjork) and co-retrieval links (Hebbian LTP)"
+  - id: "agent-controls-clock"
+    principle: "Lifecycle processes are explicit calls, not background threads"
+    implication: "No surprising state changes; agent controls LLM API costs; deterministic testing"
+  - id: "graceful-degradation"
+    principle: "Every capability has a fallback"
+    implication: "Start with store/query (BM25-only), add lifecycle, providers, embeddings incrementally"
+
+integration_patterns:
+  rust_api:
+    initialization: "AlayaStore::open(path)"
+    conversation_loop:
+      before_response: ["query(&Query::simple(user_message))", "preferences(None)"]
+      after_response: ["store_episode(&NewEpisode { ... })"]
+      periodic: ["consolidate(provider)", "forget()", "transform()"]
+    thread_safety: "Send but not Sync; wrap in Arc<Mutex<AlayaStore>> for multi-thread"
+    day_1_methods: ["open()", "store_episode()", "query()"]
+    day_2_methods: ["consolidate()", "forget()", "transform()"]
+    week_1_methods: ["perfume()", "preferences()", "knowledge()"]
+
+  mcp_server:
+    version: "v0.2 (planned)"
+    installation: "cargo install alaya-mcp"
+    tools:
+      - name: "alaya_store_episode"
+        maps_to: "store_episode()"
+        required_params: ["content", "role", "session_id"]
+      - name: "alaya_query"
+        maps_to: "query()"
+        required_params: ["text"]
+      - name: "alaya_dream"
+        maps_to: "consolidate() + forget() + transform()"
+        required_params: []
+      - name: "alaya_status"
+        maps_to: "status()"
+        required_params: []
+      - name: "alaya_preferences"
+        maps_to: "preferences()"
+        required_params: []
+    default_provider: "NoOpProvider (full lifecycle requires configured LLM provider)"
+
+system_prompt_templates:
+  - section: "Memory Context"
+    content: "Retrieved memories formatted with relevance score and age"
+    injection: "After query(), before LLM call"
+  - section: "User Preferences (Emerged)"
+    content: "Preferences with confidence and evidence count"
+    injection: "After preferences(), filtered by confidence > 0.5"
+  - section: "Memory Guidelines"
+    content: "Instructions for LLM on how to use memory context"
+    injection: "Base system prompt (always present)"
+    rules:
+      - "Reference past conversations when they add value"
+      - "Never fabricate memories not in context"
+      - "Apply preferences as context, not commands"
+      - "Ask about potentially outdated information"
+  - section: "Known Facts (Advanced)"
+    content: "Consolidated semantic nodes with confidence"
+    injection: "After knowledge(), for agents that use consolidation"
+
+provider_guides:
+  consolidation_provider:
+    trait_methods:
+      - "extract_knowledge(&[Episode]) -> Vec<NewSemanticNode>"
+      - "extract_impressions(&Interaction) -> Vec<NewImpression>"
+      - "detect_contradiction(&SemanticNode, &SemanticNode) -> bool"
+    batch_size: 10
+    error_handling: "AlayaError::Provider skips batch, no data loss"
+    cost_control: "Provider only called during consolidate() and perfume(), never during store/query"
+    default: "NoOpProvider returns empty results, everything degrades gracefully"
+  embedding:
+    v0_1: "Manual embedding via NewEpisode.embedding and Query.embedding fields"
+    v0_2_planned: "EmbeddingProvider trait, embed-ort and embed-fastembed feature flags"
+
+agent_patterns:
+  - name: "Retrieval-Augmented Response"
+    summary: "Query before responding, inject context into system prompt"
+    frequency: "Every turn"
+    cost: "Sub-ms for BM25-only at <10K episodes"
+  - name: "Post-Interaction Storage"
+    summary: "Store episode after each meaningful conversation turn"
+    frequency: "Every turn (skip greetings, acknowledgments)"
+  - name: "Periodic Consolidation"
+    summary: "Dream cycle: consolidate + forget + transform"
+    frequency: "Every 10-50 episodes or on schedule"
+  - name: "Preference-Aware Generation"
+    summary: "Adjust response style based on emerged preferences"
+    frequency: "Start of each session"
+  - name: "Contradiction Detection"
+    summary: "Compare new info against existing semantic nodes"
+    frequency: "When maintaining long-term factual accuracy"
+  - name: "Session-Aware Context"
+    summary: "Track session boundaries for within/cross-session recall"
+    frequency: "Conversation start and turn boundaries"
+
+anti_patterns:
+  - name: "Storing Everything"
+    symptom: "Query returns internal tool output and system messages"
+    fix: "Store only user-facing conversation turns"
+  - name: "Query-Per-Token"
+    symptom: "Excessive SQLite reads on partial text"
+    fix: "Batch queries at turn boundaries"
+  - name: "Skipping the Lifecycle"
+    symptom: "No semantic nodes or preferences emerge; retrieval degrades"
+    fix: "Run dream cycle regularly; lifecycle IS the value proposition"
+  - name: "Treating Preferences as Facts"
+    symptom: "User confusion from low-confidence preferences presented as certainties"
+    fix: "Apply silently; qualify low-confidence; explicit request overrides"
+  - name: "Ignoring Scoping"
+    symptom: "Cross-user memory leakage"
+    fix: "Separate SQLite files per user"
+  - name: "Lazy NoOp Forever"
+    symptom: "Empty knowledge and preference stores in production"
+    fix: "Implement ConsolidationProvider before shipping to real users"
+
+safety_considerations:
+  - threat: "Memory Poisoning"
+    mitigation: "Validate content before storage; memories are observations, not authority grants"
+  - threat: "PII in Memories"
+    mitigation: "Scrub before storage; PurgeFilter for deletion; filesystem encryption"
+  - threat: "Cross-User Leakage"
+    mitigation: "Separate SQLite files per user; never share AlayaStore across users"
+  - threat: "Memory Manipulation"
+    mitigation: "Verify claims against retrieved memories; system prompt guidelines"
+  - threat: "Stale Memories"
+    mitigation: "Regular forget() and transform(); system prompt asks about outdated info"
+  - threat: "Adversarial Retrieval"
+    mitigation: "Per-user databases; application-layer query scoping"
+
+dream_cycle_recommendations:
+  - agent_type: "Personal companion"
+    volume: "5-20 episodes/day"
+    frequency: "Once daily, during idle"
+  - agent_type: "Customer support"
+    volume: "50-200 episodes/day"
+    frequency: "Every 50 episodes or hourly"
+  - agent_type: "Coding assistant"
+    volume: "10-50 episodes/session"
+    frequency: "End of each session"
+  - agent_type: "Research agent"
+    volume: "Bursty, 100+ in sprints"
+    frequency: "After each research sprint"
+
+integration_checklist:
+  minimum_viable:
+    - "AlayaStore::open() with persistent path"
+    - "store_episode() after each turn"
+    - "query() before each response"
+    - "Query results in system prompt"
+    - "Session ID tracking"
+  lifecycle:
+    - "Dream cycle (consolidate + forget + transform)"
+    - "Triggered on threshold or schedule"
+    - "perfume() for preference extraction"
+    - "status() for monitoring"
+  production:
+    - "Per-user database isolation"
+    - "PII scrubbing (if applicable)"
+    - "Backup strategy (copy SQLite file)"
+    - "Memory status monitoring"
+    - "System prompt includes memory guidelines"

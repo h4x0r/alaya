@@ -1,0 +1,77 @@
+# Brand Guidelines - Structured Output for Cross-Referencing
+# Generated: 2026-02-26
+# Source: north-star-advisor/docs/BRAND_GUIDELINES.md
+
+product_name: "Alaya"
+tagline: "Memory is a process, not a database."
+positioning: "Embeddable Rust memory library with cognitive lifecycle processes and implicit preference emergence for privacy-first AI agents"
+
+etymology:
+  source: "Sanskrit alaya-vijnana (storehouse consciousness)"
+  tradition: "Yogacara Buddhist psychology"
+  significance: "Persistent substrate holding seeds of experience that transform through interaction"
+
+beliefs:
+  - id: "memory-is-process"
+    statement: "Memory is a process, not a database"
+    implication: "Every retrieval changes what is remembered; the graph reshapes through use"
+  - id: "forgetting-is-feature"
+    statement: "Forgetting is a feature"
+    implication: "Strategic decay improves retrieval quality; Bjork dual-strength model"
+  - id: "preferences-emerge"
+    statement: "Preferences emerge, they are not declared"
+    implication: "Vasana perfuming crystallizes behavioral patterns from accumulated observations"
+  - id: "agent-owns-identity"
+    statement: "The agent owns identity"
+    implication: "Alaya stores seeds; the agent decides which matter and how to present them"
+  - id: "graceful-degradation"
+    statement: "Graceful degradation"
+    implication: "No embeddings? BM25-only. No LLM? Episodes accumulate. Everything works independently."
+
+kill_list:
+  - "Not cloud-dependent (zero network calls, privacy by architecture)"
+  - "Not enterprise (no multi-tenant, no RBAC, no horizontal scaling)"
+  - "Not LLM-coupled (works without any LLM via trait-based optional providers)"
+  - "Not hype-driven (no AI marketing language, research-grounded terminology)"
+  - "Not a standalone service (library only, cargo add alaya)"
+  - "Not procedural memory (stores observations, not executable skills)"
+  - "Not parametric memory (non-parametric domain only, no model fine-tuning)"
+
+voice:
+  attributes:
+    - "Technical but accessible"
+    - "Research-grounded, not research-heavy"
+    - "Honest about tradeoffs"
+    - "Quiet confidence"
+  rules:
+    - "Active voice"
+    - "Present tense for features"
+    - "Second person for guides"
+    - "No superlatives without evidence"
+    - "No filler words"
+    - "Concrete over abstract"
+
+terminology:
+  preferred:
+    - term: "memory engine"
+      context: "When describing Alaya as a whole"
+    - term: "memory system"
+      context: "Alternative to memory engine"
+    - term: "cognitive lifecycle"
+      context: "The four lifecycle processes collectively"
+    - term: "preference emergence"
+      context: "The vasana/perfuming process"
+  avoid:
+    - term: "memory database"
+      reason: "Contradicts Belief 1"
+    - term: "memory store"
+      reason: "Implies static storage, not process"
+    - term: "AI-powered"
+      reason: "Alaya powers the AI, not the reverse"
+    - term: "intelligent"
+      reason: "Hype language; describe the specific mechanism"
+    - term: "self-evolving"
+      reason: "Describe the Hebbian LTP/LTD mechanism instead"
+
+license: "MIT"
+privacy_model: "architectural (no network calls, single SQLite file, no telemetry)"

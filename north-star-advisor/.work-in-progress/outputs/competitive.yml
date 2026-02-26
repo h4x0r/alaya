@@ -1,0 +1,166 @@
+# Competitive Landscape - Structured Output for Cross-Referencing
+# Generated: 2026-02-26 | Phase: 3
+
+market_shifts:
+  - name: "Privacy regulation tightening"
+    implication: "Zero-network architecture becomes compliance strategy, not just feature"
+    timeline: "Active now, enforcement intensifying through 2027"
+  - name: "Edge AI and on-device models"
+    implication: "Embedded memory is only viable architecture for edge AI agents"
+    timeline: "Accelerating 2026-2027"
+  - name: "MCP protocol standardization"
+    implication: "MCP server lowers Alaya adoption barrier from Rust FFI to universal interface"
+    timeline: "MCP adoption accelerating 2026, planned for v0.2"
+  - name: "Agent framework proliferation"
+    implication: "Framework-agnostic memory becomes more valuable as fragmentation increases"
+    timeline: "Ongoing, no signs of slowing"
+  - name: "Open-source agent ecosystems"
+    implication: "OpenClaw window is time-sensitive; open-source agents need open-source memory"
+    timeline: "2026 is critical adoption window"
+
+direct_competitors:
+  - name: "Mem0"
+    positioning: "Production-ready scalable long-term memory for AI agents (cloud SaaS)"
+    weakness: "Requires LLM for every write, cloud-dependent, simple exponential decay forgetting"
+    benchmark: "68.5% LoCoMo"
+  - name: "Zep / Graphiti"
+    positioning: "Temporal knowledge graph for AI agents on Neo4j"
+    weakness: "Requires Neo4j infrastructure, LLM for entity extraction, static knowledge graph"
+    benchmark: "94.8% DMR, 18.5% improvement on LongMemEval"
+  - name: "Letta (MemGPT)"
+    positioning: "LLM OS with self-editing memory"
+    weakness: "Memory quality entirely LLM-dependent, crude eviction, requires persistent infrastructure"
+    benchmark: "74% LoCoMo"
+  - name: "Supermemory"
+    positioning: "Fast brain-inspired memory (VC-backed, 16.6K stars)"
+    weakness: "Ad-hoc forgetting (not research-grounded), static graph, cloud-optimized, TypeScript"
+    benchmark: "N/A"
+  - name: "Hindsight (Vectorize)"
+    positioning: "Agent memory with opinion tracking and belief evolution"
+    weakness: "Requires LLM and external infrastructure, no graph overlay, no principled forgetting"
+    benchmark: "91.4% LongMemEval, 89.61% LoCoMo (claimed)"
+
+adjacent_competitors:
+  - name: "Memvid"
+    overlap: "Same deployment model (Rust, single file, zero dep)"
+    gap: "Append-only, no forgetting/consolidation/preferences/graph/semantic store"
+  - name: "Engram"
+    overlap: "Zero-dependency philosophy, SQLite + FTS5"
+    gap: "Flat key-value store, no vector search/graph/forgetting/consolidation/preferences"
+  - name: "Cortex-Mem"
+    overlap: "Both Rust, memory focus"
+    gap: "Standalone service not embeddable library, LLM required, no lifecycle processes"
+  - name: "Vector databases (Chroma, Qdrant, Pinecone)"
+    overlap: "Vector search primitive"
+    gap: "Infrastructure not memory; no lifecycle/forgetting/consolidation/preferences/graph"
+
+emerging_threats:
+  - name: "SYNAPSE"
+    risk: "Closest retrieval architecture (spreading activation + lateral inhibition)"
+    mitigation: "Lacks preference learning, CLS consolidation, Bjork forgetting; Python research code"
+  - name: "RL-trained memory (Memory-R1, Mem-alpha, AgeMem)"
+    risk: "May discover management strategies that hand-crafted processes miss"
+    mitigation: "Require training data, opaque; Alaya's processes are interpretable and zero-training"
+  - name: "MAGMA"
+    risk: "Multi-graph decomposition with SOTA benchmarks"
+    mitigation: "No preference learning or Bjork forgetting; Python research code"
+
+differentiators:
+  - "Implicit preference emergence without LLM (vasana/perfuming) -- unique in field"
+  - "Bjork dual-strength forgetting with RIF -- only dual-strength model in any shipping system"
+  - "Hebbian graph with LTP/LTD -- only dynamic, use-shaped graph without LLM involvement"
+  - "Complete cognitive lifecycle + zero external dependencies -- no other system in this intersection"
+  - "Graceful degradation -- every feature works independently (no embeddings? BM25-only still works)"
+  - "Rust + single SQLite file + FFI -- embeddable in any language, any environment"
+
+whitespace:
+  - position: "High cognitive completeness + high operational simplicity"
+    status: "Unoccupied -- Alaya's target quadrant"
+  - segment: "Privacy-first companion agent developers"
+    status: "Current options: Engram (too shallow) or build from scratch"
+  - segment: "Performance-obsessed Rust/systems developers"
+    status: "Current Rust options (Memvid, Cortex-Mem) lack cognitive depth"
+  - segment: "Open-source agent ecosystem contributors"
+    status: "Need MIT-licensed, embeddable, zero-dep components"
+  - segment: "Edge/mobile AI agent developers"
+    status: "No memory system optimized for ARM/mobile/edge deployment"
+
+novelty_innovations:
+  - name: "Vasana preference emergence"
+    research_basis: "Yogacara Buddhist psychology (Vasubandhu); implicit memory in cognitive science"
+    competitive_status: "No other system does this without LLM"
+  - name: "Bjork dual-strength forgetting"
+    research_basis: "Bjork & Bjork (1992); Anderson, Bjork, & Bjork (1994) on RIF"
+    competitive_status: "Only dual-strength model in any agent memory system"
+  - name: "Hebbian graph (LTP/LTD)"
+    research_basis: "Hebb (1949); CLS theory (McClelland et al., 1995)"
+    competitive_status: "Only dynamic graph that reshapes through use without LLM"
+  - name: "Complete lifecycle + zero deps"
+    research_basis: "CLS theory for consolidation; combination is architectural, not theoretical"
+    competitive_status: "Intersection is empty except for Alaya"
+
+forward_opportunities:
+  six_month:
+    - "LoCoMo benchmark leadership (target >75%, publish latency alongside accuracy)"
+    - "MCP server as adoption wedge (lower barrier from Rust FFI to universal interface)"
+    - "Published reproducible benchmark comparisons against Mem0, Letta, LangMem"
+  twelve_to_eighteen_month:
+    - "Python bindings via PyO3 (opens Python developer market)"
+    - "DEF CON credibility (security community positioning)"
+    - "Edge AI memory standard (ARM validation, battery/memory benchmarks)"
+
+strategic_moves:
+  offensive:
+    - "O1: Benchmark-first credibility -- publish numbers before marketing"
+    - "O2: OpenClaw integration -- become default memory component"
+    - "O3: Zero dependencies as brand identity -- make this the first thing anyone learns"
+    - "O4: Research paper on vasana preference emergence"
+  defensive:
+    - "D1: RL-readiness -- pluggable traits for future RL policy integration"
+    - "D2: Benchmark parity monitoring -- reproducible suite, rerun per release"
+    - "D3: Anti-lock-in messaging -- memory is portable, outlives frameworks"
+    - "D4: Scale story -- honest about envelope, document extension path"
+
+rejected_moves:
+  - move: "Building a managed cloud service"
+    reason: "Contradicts core positioning; Mem0/Supermemory own this space"
+  - move: "Enterprise features (multi-tenant, RBAC, horizontal scaling)"
+    reason: "Serves 2024 buyer not 2026 buyer; on kill list"
+  - move: "Building an agent framework"
+    reason: "Market has too many frameworks; framework-agnostic is a strength"
+  - move: "Competing on GitHub stars or social media hype"
+    reason: "Leads to feature bloat; brand voice is quiet confidence backed by benchmarks"
+  - move: "Adding procedural memory"
+    reason: "Different problem; on kill list"
+  - move: "Adopting complex external backend as default"
+    reason: "Destroys zero-dependency value proposition"
+
+gaps_to_address:
+  - "Benchmarks are unproven (LoCoMo target >75% but no results yet)"
+  - "No Python bindings until v0.3"
+  - "Solo developer (limited iteration speed and support)"
+  - "SQLite scale ceiling at >50K embeddings (trait extension path exists but not implemented)"
+  - "Community traction is zero (pre-release)"
+
+monitoring:
+  competitor_signals:
+    - "Mem0 ships zero-dependency or edge mode"
+    - "Supermemory implements principled (dual-strength/Ebbinghaus) forgetting"
+    - "SYNAPSE productionizes (shipping package, not just paper)"
+    - "Hindsight ships zero-dependency mode"
+    - "Memvid adds forgetting or consolidation"
+    - "RL-trained systems ship production packages"
+  market_signals:
+    - "GDPR/privacy enforcement actions against AI agents"
+    - "On-device model capability milestones"
+    - "MCP adoption metrics"
+    - "OpenClaw ecosystem component decisions"
+    - "LoCoMo/LongMemEval benchmark updates"
+    - "RL-for-memory papers at top venues"
+  cadence:
+    competitor_scan: "Monthly"
+    benchmark_evaluation: "Per Alaya release"
+    market_assessment: "Quarterly"
+    full_landscape_update: "Every 6 months"
+    arxiv_scan: "Bi-weekly"
+    openclaw_check: "Weekly during adoption window"

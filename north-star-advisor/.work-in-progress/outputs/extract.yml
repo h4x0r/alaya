@@ -1,0 +1,135 @@
+# North Star Extract - Structured Output for Cross-Referencing
+# Generated: 2026-02-26 | Phase: 4
+# Source: north-star-advisor/docs/NORTHSTAR_EXTRACT.md
+
+axioms:
+  - id: "privacy-over-features"
+    statement: "Privacy > Features"
+    resolution: "Never introduce a feature requiring network access in the core crate"
+  - id: "process-over-storage"
+    statement: "Process > Storage"
+    resolution: "Memory transforms through use; the lifecycle is the product, not the database"
+  - id: "correctness-over-speed"
+    statement: "Correctness > Speed"
+    resolution: "Research grounding before shipping velocity; every mechanism maps to cited research"
+  - id: "simplicity-over-completeness"
+    statement: "Simplicity > Completeness"
+    resolution: "Single SQLite file, zero deps, 4-6 feature flags max, builder defaults"
+  - id: "honesty-over-marketing"
+    statement: "Honesty > Marketing"
+    resolution: "Publish benchmarks even when numbers are bad; document scale ceilings"
+
+non_goals:
+  features:
+    - "Cloud deployment / managed service"
+    - "Multi-tenant isolation, RBAC, horizontal scaling"
+    - "LLM-required operations"
+    - "AI marketing language"
+    - "Standalone memory service"
+    - "Procedural memory (executable skills)"
+    - "Parametric memory (model fine-tuning)"
+  approaches:
+    - rejected: "External vector database (Pinecone, Qdrant, Chroma)"
+      instead: "Tiered brute-force/sqlite-vec/EmbeddingProvider trait"
+    - rejected: "LLM-required entity/knowledge extraction"
+      instead: "Rule-based extraction with optional ConsolidationProvider trait"
+    - rejected: "Network-dependent features"
+      instead: "Everything local to single SQLite file; remote only via developer trait impl"
+    - rejected: "Complex configuration / environment variables"
+      instead: "AlayaConfig::builder() with sensible defaults, 4-6 feature flags"
+    - rejected: "Framework-specific integration"
+      instead: "Framework-agnostic trait API + MCP server"
+    - rejected: "Custom binary storage format"
+      instead: "SQLite with WAL mode"
+  strategic:
+    - rejected: "Building a managed cloud service"
+      reason: "Contradicts positioning; Mem0/Supermemory own cloud"
+    - rejected: "Enterprise features"
+      reason: "Wrong buyer (2024 enterprise vs 2026 solo dev)"
+    - rejected: "Building an agent framework"
+      reason: "Market saturated; framework-agnostic is a strength"
+    - rejected: "Competing on GitHub stars / social hype"
+      reason: "Leads to feature bloat; brand is quiet confidence"
+    - rejected: "Adding procedural memory"
+      reason: "On kill list; different problem domain"
+    - rejected: "Adopting complex external backend"
+      reason: "Destroys zero-dependency value proposition"
+
+patterns:
+  - name: "Graceful Degradation Chain"
+    description: "Every capability has a fallback path: full pipeline -> BM25+graph -> BM25-only -> recency scan -> empty result (not error)"
+    instances: ["retrieval pipeline", "consolidation", "perfuming", "embedding search"]
+  - name: "Trait Extension Pattern"
+    description: "Core behavior in library, optional enhancement via trait, agent provides implementation"
+    instances: ["ConsolidationProvider", "EmbeddingProvider", "TransformationProvider"]
+  - name: "Cognitive Lifecycle Pipeline"
+    description: "Episodes -> Consolidation -> Perfuming -> Transformation -> Forgetting, each stage independent and composable"
+    instances: ["store_episode -> consolidate -> perfume -> query", "forget cycle", "transform cycle"]
+  - name: "Conflict Resolution Hierarchy"
+    description: "Safety > Privacy > Correctness > Simplicity > Performance > Features"
+    usage: "Resolves conflicts when design values compete"
+  - name: "Single-File Invariant"
+    description: "All persistent state in one SQLite file; if it cannot go in the file, it does not persist"
+    instances: ["episodes", "semantic nodes", "impressions", "preferences", "embeddings", "graph", "FTS5 index", "node strengths"]
+
+always:
+  - "BEGIN IMMEDIATE for all write transactions (prevent WAL deadlocks)"
+  - "Cascading cleanup on delete (episode -> FTS5 + embedding + links + strengths in same transaction)"
+  - "Sanitize all FTS5 MATCH input (escape special characters or quote-wrap)"
+  - "Validate content at API boundary (empty episodes, zero-length embeddings rejected early)"
+  - "#[non_exhaustive] on all public enums"
+  - "Builder pattern with sensible defaults (zero-config start)"
+  - "Typed reports from lifecycle processes (ConsolidationReport, ForgettingReport, etc.)"
+  - "Compilable doctests on every public method"
+  - "Integration tests for every CRUD operation"
+  - "Research citations for non-obvious mechanisms"
+  - "Honest performance characterization in doc comments"
+  - "Zero runtime deps beyond rusqlite, serde, serde_json, thiserror (feature flags for extras)"
+
+never:
+  - "Make network calls in core crate (no HTTP, no DNS, no sockets)"
+  - "Phone home (no telemetry, no analytics, no crash reporting)"
+  - "Require LLM for basic operations (store/query/get/delete/session_history work with NoOpProvider)"
+  - "Embed LLM API keys or model references in core crate"
+  - "Delete without tombstone consideration (forget decays strength; purge is explicit hard delete)"
+  - "Allow cross-user data leakage (every query scoped by user_id + agent_id)"
+  - "Expose SQLite internals through public API (no raw SQL, no connection handles)"
+  - "Break semver without major version bump"
+  - "Claim unreproducible benchmark results"
+  - "Use competitor names in marketing copy (state facts only)"
+
+triggers:
+  metric:
+    - trigger: "MACC below phase target for 2 consecutive months"
+      response: "5 developer interviews to diagnose; adjust roadmap, not axioms"
+    - trigger: "LoCoMo stuck below 65% after 3 optimization cycles"
+      response: "Evaluate pipeline ceiling; consider embedding-default mode"
+    - trigger: "Zero adoption 90 days post-publish"
+      response: "Full strategy review; likely positioning or DX, not architecture"
+    - trigger: "Clean build exceeds 45 seconds"
+      response: "Aggressive feature-gating, workspace splitting"
+  external:
+    - trigger: "Competitor ships zero-dep + lifecycle combination"
+      response: "Accelerate v0.2; differentiate on cognitive depth (vasana, Bjork)"
+    - trigger: "Privacy regulation makes on-device mandatory"
+      response: "Tailwind -- double down on positioning"
+    - trigger: "MCP deprecated or replaced"
+      response: "Adapt access layer; core library unaffected"
+    - trigger: "OpenClaw adopts different memory system"
+      response: "Analyze why; adapt if API mismatch, accept if political"
+    - trigger: "SQLite scale ceiling hit by real user"
+      response: "Evaluate alternative embedded DBs via trait; relax single-file to single-embedded-DB"
+  strategic:
+    - trigger: "RL-trained memory demonstrates clear superiority on benchmarks"
+      response: "Evaluate MemoryPolicyProvider trait for RL plugins"
+    - trigger: "Research invalidates Bjork or CLS theory"
+      response: "Update affected mechanism; research grounding is two-way commitment"
+    - trigger: "Solo maintainer departure"
+      response: "MIT + clean architecture + docs mitigate; forkable by design"
+    - trigger: "Rust ecosystem decline"
+      response: "Core algorithms are language-agnostic; evaluate porting with same constraints"
+  not_triggers:
+    - "Competitor getting more GitHub stars"
+    - "Blog post calling Alaya 'too simple'"
+    - "Feature request for cloud sync"
+    - "Faster competitor in a different language"

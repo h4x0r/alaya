@@ -1,0 +1,245 @@
+# Architecture Decision Records - Structured Output for Cross-Referencing
+# Generated: 2026-02-27 | Phase: 9
+# Source: north-star-advisor/docs/ADR.md
+
+total_decisions: 10
+all_accepted: true
+
+decisions:
+  - id: "ADR-001"
+    title: "SQLite as Sole Storage Engine"
+    status: "accepted"
+    date: "2026-02-27"
+    primary_axiom: "Simplicity > Completeness"
+    choice: "Embedded SQLite via rusqlite 0.32 (bundled), single file, WAL mode"
+    key_consequences:
+      - "Single-file deployment (backup is cp)"
+      - "Zero-config (AlayaStore::open(path))"
+      - "FTS5 built-in for BM25"
+      - "Scale ceiling ~50K embeddings (brute-force cosine)"
+      - "Single-writer WAL (no horizontal scaling)"
+    alternatives_rejected: ["RocksDB", "Sled", "LMDB", "Separate databases per store"]
+    security_implications: ["BEGIN IMMEDIATE prevents deadlocks", "WAL checkpoint prevents corruption"]
+
+  - id: "ADR-002"
+    title: "Three-Store Memory Architecture"
+    status: "accepted"
+    date: "2026-02-27"
+    primary_axiom: "Process > Storage"
+    choice: "Episodic + Semantic + Implicit stores sharing one SQLite file"
+    key_consequences:
+      - "Clear separation: distinct CRUD, distinct lifecycle, distinct schemas"
+      - "Independent lifecycle processes per store type"
+      - "Cross-store queries via shared graph overlay"
+      - "7 core tables + 1 FTS5 + 3 triggers + 9 indexes"
+      - "Cascade deletion complexity"
+    alternatives_rejected: ["Single unified store", "Separate SQLite databases", "Two stores"]
+    security_implications: ["Cross-store cascade deletion required", "Tombstone mechanism needed"]
+
+  - id: "ADR-003"
+    title: "Hebbian Graph Overlay"
+    status: "accepted"
+    date: "2026-02-27"
+    primary_axiom: "Process > Storage"
+    choice: "Adjacency list with Hebbian LTP/LTD dynamics, spreading activation via recursive CTE"
+    key_consequences:
+      - "Self-organizing relationships (no LLM required)"
+      - "Retrieval improves over time through co-retrieval patterns"
+      - "Graph maintenance needed (LTD/pruning via transform())"
+      - "Recursive CTE efficient under 100K links"
+      - "Novel approach with limited precedent"
+    alternatives_rejected: ["Static knowledge graph (Neo4j-style)", "No graph", "Embedding-space proximity"]
+    security_implications: ["Graph link injection (low risk)", "Activation amplification"]
+    hebbian_params:
+      ltp_rate: 0.1
+      ltp_formula: "w += 0.1 * (1 - w)"
+      ltd_mechanism: "decay during transform()"
+      prune_threshold: 0.02
+      max_activation_hops: 3
+
+  - id: "ADR-004"
+    title: "Trait-Based Extension Model"
+    status: "accepted"
+    date: "2026-02-27"
+    primary_axiom: "Privacy > Features"
+    choice: "ConsolidationProvider + EmbeddingProvider traits with NoOpProvider default"
+    key_consequences:
+      - "Zero-dependency core (rusqlite, serde, serde_json, thiserror only)"
+      - "Graceful degradation chain (no LLM -> BM25 + graph; no embeddings -> BM25 only)"
+      - "Agent controls LLM connection"
+      - "Testability via NoOpProvider"
+      - "Consumer must write trait impl for full functionality"
+      - "Provider output is trust boundary"
+    alternatives_rejected: ["Built-in LLM client", "Plugin system (dynamic loading)", "Feature-flag-only", "No LLM integration"]
+    security_implications: ["Provider output injection (threat T9)", "Untrusted provider code"]
+    traits:
+      - name: "ConsolidationProvider"
+        methods: ["extract_knowledge", "extract_impressions", "detect_contradiction"]
+      - name: "EmbeddingProvider"
+        methods: ["embed", "dimension"]
+    default: "NoOpProvider (returns empty results)"
+
+  - id: "ADR-005"
+    title: "Bjork Dual-Strength Forgetting Model"
+    status: "accepted"
+    date: "2026-02-27"
+    primary_axiom: "Correctness > Speed"
+    choice: "Bjork & Bjork (1992) dual-strength with RIF"
+    key_consequences:
+      - "Research-grounded (Bjork & Bjork 1992, Storm 2011)"
+      - "Spaced-repetition-like dynamics"
+      - "Competitive differentiator (unique in shipping systems)"
+      - "Two strengths per node (more complex than single decay)"
+      - "Tuning needed based on LoCoMo benchmarks"
+      - "Memory resurrection risk (tombstone mitigation)"
+    alternatives_rejected: ["Exponential decay (Mem0)", "Time-based TTL", "No forgetting", "LRU eviction (Letta)"]
+    security_implications: ["Memory resurrection via forgetting bypass (threat T3)"]
+    params:
+      storage_strength:
+        range: "[0.0, 1.0]"
+        growth: "SS += 0.05 * (1 - SS) on access"
+        decay: "never"
+      retrieval_strength:
+        range: "[0.0, 1.0]"
+        on_access: "RS = 1.0"
+        decay: "RS *= 0.95 per forget() cycle"
+      archive_threshold:
+        ss: 0.1
+        rs: 0.05
+      rif: "competitors of retrieved memory have RS reduced"
+
+  - id: "ADR-006"
+    title: "RRF as Fusion Strategy"
+    status: "accepted"
+    date: "2026-02-27"
+    primary_axiom: "Simplicity > Completeness"
+    choice: "Reciprocal Rank Fusion with k=60 (Cormack, Clarke & Buettcher 2009)"
+    key_consequences:
+      - "Score-agnostic (operates on ranks, not raw scores)"
+      - "Well-studied (used by Elasticsearch, Azure Cognitive Search)"
+      - "Simple implementation (~20 lines)"
+      - "Graceful degradation (any subset of signals works)"
+      - "No learned personalization (potential v0.3+ optimization)"
+    alternatives_rejected: ["Weighted linear combination", "Learned fusion (LTR)", "CombMNZ", "Single best signal"]
+    security_implications: ["No query injection (operates on ranks, not user input)"]
+    formula: "RRF(d) = sum over L: 1 / (k + rank_L(d))"
+    k: 60
+    signals: ["BM25 (FTS5)", "Vector (cosine similarity)", "Graph (spreading activation)"]
+    rerank_formula: "base * (1 + 0.3*context_sim) * (1 + 0.2*recency)"
+
+  - id: "ADR-007"
+    title: "Vasana Preference Emergence"
+    status: "accepted"
+    date: "2026-02-27"
+    primary_axiom: "Process > Storage"
+    choice: "Three-stage pipeline: impression accumulation -> pattern detection -> preference crystallization"
+    key_consequences:
+      - "Novel contribution (no competitor does this without LLM)"
+      - "No LLM required for basic operation (graceful degradation)"
+      - "Confidence through repetition (5-impression threshold)"
+      - "Provenance tracking (preference -> impressions -> episodes)"
+      - "Preference decay via Bjork dual-strength"
+      - "Slow to form (multiple sessions needed)"
+      - "v0.1 uses string matching (semantic clustering planned v0.2)"
+    alternatives_rejected: ["LLM-extracted preferences (Mem0)", "Explicit preference API only", "No preference tracking", "Frequency-based heuristics"]
+    security_implications: ["Impression accumulation reveals behavioral patterns (PII risk)"]
+    stages:
+      - name: "Impression Accumulation"
+        trigger: "perfume() with ConsolidationProvider"
+        output: "Impression (subject, observation, valence, confidence)"
+      - name: "Pattern Detection"
+        threshold: 5
+        method: "subject string matching (v0.1), semantic clustering (v0.2)"
+      - name: "Preference Crystallization"
+        output: "Preference (statement, confidence, source_impressions)"
+
+  - id: "ADR-008"
+    title: "Sync-First API"
+    status: "accepted"
+    date: "2026-02-27"
+    primary_axiom: "Simplicity > Completeness"
+    choice: "Synchronous API default; async via feature flag (v0.2)"
+    key_consequences:
+      - "Simple default (no runtime dependency)"
+      - "No runtime coupling (no tokio, async-std)"
+      - "FFI-friendly (sync maps directly to C/Python)"
+      - "Consumer wraps in Arc<Mutex> for multi-thread"
+      - "Long operations block calling thread"
+    alternatives_rejected: ["Async-first (tokio)", "Both sync and async surfaces", "Async-only with sync wrapper"]
+    security_implications: ["No async race conditions in default API"]
+    threading_model:
+      send: true
+      sync: false
+      multi_thread: "Arc<Mutex<AlayaStore>>"
+      async_planned: "v0.2, tokio::task::spawn_blocking"
+
+  - id: "ADR-009"
+    title: "Zero Network Calls"
+    status: "accepted"
+    date: "2026-02-27"
+    primary_axiom: "Privacy > Features"
+    choice: "No network calls in core crate, ever, under any circumstances"
+    key_consequences:
+      - "Privacy by architecture (structural impossibility of exfiltration)"
+      - "Compliance simplification (GDPR/CCPA/SOC2)"
+      - "Edge/air-gapped deployment"
+      - "No telemetry for developer (proxy measurement only)"
+      - "Consumer provides all external connectivity"
+      - "Feature ceiling without provider"
+    alternatives_rejected: ["Optional telemetry", "Built-in embedding API calls", "Cloud sync", "Feature-flag-gated networking"]
+    security_implications: ["Structural impossibility of data exfiltration"]
+    verification: "cargo tree shows no networking dependencies; CI can enforce"
+    prohibited:
+      - "HTTP client (reqwest, hyper)"
+      - "DNS resolver"
+      - "Socket creation (std::net, tokio::net)"
+      - "Telemetry / analytics"
+      - "Crash reporting"
+      - "Update checking"
+
+  - id: "ADR-010"
+    title: "FTS5 for Full-Text Search"
+    status: "accepted"
+    date: "2026-02-27"
+    primary_axiom: "Simplicity > Completeness"
+    choice: "SQLite FTS5 with external content tables, porter stemmer, input sanitization"
+    key_consequences:
+      - "Zero additional dependencies (built into SQLite)"
+      - "BM25 scoring via bm25() auxiliary function"
+      - "Porter stemmer improves recall"
+      - "Transactional consistency via triggers"
+      - "Sanitization eliminates injection entirely"
+      - "No advanced query syntax (intentional tradeoff)"
+      - "Scales beyond 50K embedding ceiling"
+    alternatives_rejected: ["tantivy", "Custom inverted index", "No text search (vector-only)", "Elasticsearch/Meilisearch"]
+    security_implications: ["FTS5 injection fully mitigated by input sanitization"]
+    config:
+      virtual_table: "episodes_fts"
+      tokenizer: "porter unicode61"
+      content_table: "episodes"
+      triggers: 3
+      sanitization: "Strip non-alphanumeric non-whitespace; empty -> Ok(vec[])"
+
+dependency_graph:
+  root_constraint: "ADR-009 (Zero Network Calls)"
+  derivations:
+    ADR-009: ["ADR-004", "ADR-001"]
+    ADR-004: ["ADR-005", "ADR-007"]
+    ADR-001: ["ADR-010", "ADR-002", "ADR-008"]
+    ADR-002: ["ADR-003"]
+  fusion_convergence:
+    ADR-006: ["ADR-010 (BM25)", "ADR-003 (Graph)", "ADR-001 (Vector)"]
+
+axiom_mapping:
+  "Privacy > Features": ["ADR-004", "ADR-009"]
+  "Process > Storage": ["ADR-002", "ADR-003", "ADR-007"]
+  "Correctness > Speed": ["ADR-005"]
+  "Simplicity > Completeness": ["ADR-001", "ADR-006", "ADR-008", "ADR-010"]
+  "Honesty > Marketing": []
+
+cross_references:
+  architecture_blueprint: "Phase 6 - component topology, data model, retrieval pipeline, tech stack"
+  security_architecture: "Phase 8 - FTS5 injection, memory resurrection, BEGIN IMMEDIATE, provider injection"
+  northstar_extract: "Phase 4 - axioms, always/never lists, patterns"
+  competitive_landscape: "Phase 3 - differentiators, competitor weaknesses, novelty innovations"
+  brand_guidelines: "Phase 1 - kill list, positioning"

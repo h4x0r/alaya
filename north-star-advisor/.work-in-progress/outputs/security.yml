@@ -1,0 +1,264 @@
+# Security Architecture - Structured Output for Cross-Referencing
+# Generated: 2026-02-26 | Phase: 8
+# Source: north-star-advisor/docs/SECURITY_ARCHITECTURE.md
+
+security_model: "architectural (no auth in library; consumer responsibility)"
+privacy_model: "zero network calls in core crate; single SQLite file; no telemetry"
+
+threats:
+  - id: "memory-poisoning"
+    owasp: "ASI06"
+    severity: "critical"
+    likelihood: "high"
+    description: "Adversarial content injected via store_episode() persists, influences retrieval, gets amplified by consolidation"
+    status: "partially mitigated"
+    mitigations:
+      implemented:
+        - "Corroboration tracking (corroboration_count column)"
+        - "Typed lifecycle reports for audit"
+      planned_v0_1:
+        - "Content validation hooks at API boundary"
+        - "Provider output validation"
+        - "Content-hash integrity column"
+        - "Tombstone mechanism for cascade deletion"
+      planned_v0_2:
+        - "Quarantine API (flag and exclude from retrieval)"
+
+  - id: "fts5-injection"
+    owasp: "ASI04"
+    severity: "high"
+    likelihood: "high"
+    description: "FTS5 MATCH operators (AND, OR, NOT, NEAR, ^, *, quotes) alter query semantics or cause errors"
+    status: "mitigated"
+    mitigations:
+      implemented:
+        - "search_bm25() strips all non-alphanumeric non-whitespace characters"
+        - "Empty sanitized queries return Ok(vec![]) without SQL execution"
+        - "No raw SQL exposure in public API"
+
+  - id: "memory-resurrection"
+    severity: "medium"
+    likelihood: "medium"
+    description: "Deleted episode content re-emerges through semantic nodes, embeddings, or re-consolidation"
+    status: "not mitigated"
+    mitigations:
+      planned_v0_1:
+        - "Tombstone table (node_type, node_id, content_hash, deleted_at)"
+        - "Cascade deletion (episode -> embedding, links, strengths, derived nodes)"
+        - "Tombstone check during consolidation to prevent resurrection"
+        - "Orphan link cleanup in transform()"
+
+  - id: "cross-user-leakage"
+    owasp: "ASI09"
+    severity: "high"
+    likelihood: "medium"
+    description: "Without scoping, one user's memories can be retrieved for another user"
+    status: "mitigated by guidance"
+    mitigations:
+      guidance:
+        - "Separate SQLite files per user (strongest isolation)"
+        - "Never share AlayaStore across users"
+        - "Session ID scoping at consumer level"
+      not_enforced:
+        - "No library-level multi-user isolation within single file"
+
+  - id: "pii-persistence"
+    severity: "critical"
+    likelihood: "high"
+    description: "PII in episodes, semantic nodes, impressions, preferences, embeddings, FTS5 index persists indefinitely"
+    status: "partially mitigated"
+    mitigations:
+      implemented:
+        - "purge() with session, time, and all filters"
+        - "FTS5 trigger cascade on episode deletion"
+        - "Surrogate key architecture (no PII in keys or indexes)"
+        - "All types implement Serialize for data export"
+      consumer_responsibility:
+        - "PII detection and scrubbing before store_episode()"
+        - "VACUUM after large deletions"
+        - "Crypto-shredding via per-user encryption keys"
+      not_provided:
+        - "Encryption at rest (requires SQLCipher or filesystem encryption)"
+        - "Automatic PII detection"
+
+  - id: "embedding-poisoning"
+    severity: "medium"
+    likelihood: "low"
+    description: "Manipulated embedding vectors distort retrieval results"
+    status: "partially mitigated"
+    mitigations:
+      implemented:
+        - "Metadata tracking (model, created_at)"
+        - "Re-generation capability (delete and re-embed from source)"
+      planned_v0_1:
+        - "Dimension consistency validation"
+        - "NaN/infinity rejection"
+        - "Zero-norm rejection"
+
+  - id: "wal-corruption"
+    severity: "medium"
+    likelihood: "low"
+    description: "WAL files grow unbounded or corrupt on crash"
+    status: "partially mitigated"
+    mitigations:
+      implemented:
+        - "PRAGMA synchronous = NORMAL"
+        - "PRAGMA journal_mode = WAL"
+      planned_v0_1:
+        - "PRAGMA wal_autocheckpoint = 1000"
+        - "PRAGMA journal_size_limit = 67108864"
+        - "compact() method for VACUUM + WAL checkpoint"
+
+  - id: "transaction-deadlock"
+    severity: "medium"
+    likelihood: "medium"
+    description: "BEGIN DEFERRED transactions can deadlock in WAL mode with concurrent writers"
+    status: "not mitigated"
+    mitigations:
+      planned_v0_1:
+        - "BEGIN IMMEDIATE for all write transactions"
+
+  - id: "provider-output-injection"
+    severity: "high"
+    likelihood: "medium"
+    description: "Malicious or buggy ConsolidationProvider returns invalid data stored directly"
+    status: "not mitigated"
+    mitigations:
+      planned_v0_1:
+        - "Validate non-empty content"
+        - "Validate content length"
+        - "Verify source_episodes exist"
+        - "Clamp confidence to [0.0, 1.0]"
+        - "Limit returned nodes per batch"
+
+  - id: "file-theft"
+    severity: "high"
+    likelihood: "medium"
+    description: "Unencrypted SQLite file readable by any process with filesystem access"
+    status: "consumer responsibility"
+    mitigations:
+      guidance:
+        - "File permissions 0600"
+        - "Filesystem encryption (FileVault, LUKS, BitLocker)"
+        - "SQLCipher for application-level encryption"
+        - "Full-disk encryption as baseline"
+
+guardrails:
+  structural:
+    - "Zero network calls in core (no HTTP, DNS, socket dependencies)"
+    - "No telemetry, analytics, or crash reporting"
+    - "No API keys stored or transmitted"
+    - "No raw SQL in public API"
+    - "Single-File Invariant (all state in one SQLite file)"
+  implemented:
+    - "FTS5 input sanitization (strip non-alphanumeric)"
+    - "Parameterized queries everywhere (no string interpolation in SQL)"
+    - "Typed error model (AlayaError, no panics in library code)"
+    - "Corroboration tracking on semantic nodes"
+    - "Surrogate key architecture (no PII in keys)"
+    - "FTS5 cascade via triggers on episode deletion"
+  planned_v0_1:
+    - "BEGIN IMMEDIATE for all write transactions"
+    - "Input validation at API boundary"
+    - "Tombstone mechanism for deletions"
+    - "Content-hash integrity"
+    - "Provider output validation"
+    - "Orphan link cleanup"
+    - "WAL checkpoint management"
+    - "#[non_exhaustive] on public enums"
+  planned_v0_2:
+    - "Quarantine API"
+    - "SQLCipher feature flag"
+    - "Audit trait (consumer logging hook)"
+    - "compact() method"
+    - "Foreign key constraints in schema"
+  planned_v0_3:
+    - "Formal security audit"
+    - "Fuzz testing (cargo-fuzz)"
+    - "Memory-safe API audit"
+
+data_classification:
+  high_sensitivity:
+    - table: "episodes"
+      pii_risk: "high"
+      reason: "Raw conversation text"
+    - table: "semantic_nodes"
+      pii_risk: "high"
+      reason: "Extracted facts about user"
+    - table: "episodes_fts"
+      pii_risk: "high"
+      reason: "Tokenized content index"
+  medium_sensitivity:
+    - table: "impressions"
+      pii_risk: "medium"
+      reason: "Behavioral observations"
+    - table: "preferences"
+      pii_risk: "medium"
+      reason: "Crystallized behavioral patterns"
+    - table: "embeddings"
+      pii_risk: "medium"
+      reason: "Invertible to approximate content"
+  low_sensitivity:
+    - table: "links"
+      pii_risk: "low"
+      reason: "Structural relationships only"
+    - table: "node_strengths"
+      pii_risk: "low"
+      reason: "Access frequency metadata"
+
+compliance:
+  gdpr:
+    right_to_access: "query(), knowledge(), preferences(), status()"
+    right_to_erasure: "purge() + VACUUM"
+    right_to_portability: "All types implement Serialize"
+    data_minimization: "forget() and transform()"
+    crypto_shredding: "Per-user encryption key outside SQLite; delete key to erase"
+  ccpa:
+    right_to_know: "query(), knowledge(), preferences()"
+    right_to_delete: "purge() + VACUUM"
+  soc2:
+    note: "Simplified scope -- no cloud dependencies, no network calls, single file"
+  hipaa:
+    status: "Not designed for HIPAA. Requires SQLCipher + audit logging + access controls."
+
+consumer_checklist:
+  pre_deployment:
+    - "File permissions 0600"
+    - "Encryption configured (filesystem or SQLCipher)"
+    - "User isolation (separate files or strict session scoping)"
+    - "PII scrubbing before storage"
+    - "Provider output validation"
+    - "Content validation before store_episode()"
+  runtime:
+    - "Lifecycle report monitoring"
+    - "Error handling for SQLITE_BUSY"
+    - "Periodic transform() and forget()"
+    - "SQLite backup API on schedule"
+  data_deletion:
+    - "Purge all user sessions on deletion request"
+    - "VACUUM after large deletions"
+    - "Delete backups containing deleted user data"
+    - "Tombstone check during consolidation"
+
+dependency_tree:
+  core:
+    - crate: "rusqlite"
+      version: "0.32"
+      network: false
+      unsafe_code: true
+      notes: "FFI to bundled SQLite C library"
+    - crate: "serde"
+      version: "1.x"
+      network: false
+      unsafe_code: true
+      notes: "Proc macro; most-downloaded on crates.io"
+    - crate: "serde_json"
+      version: "1.x"
+      network: false
+      unsafe_code: false
+      notes: "Standard JSON parser"
+    - crate: "thiserror"
+      version: "2.x"
+      network: false
+      unsafe_code: false
+      notes: "Compile-time only"
