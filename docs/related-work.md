@@ -156,6 +156,72 @@ cognitive structures via a 3D-8Q model (Object x Form x Time).
 
 ---
 
+### Standalone Memory Servers
+
+#### Motorhead (Metal)
+
+- **Citation:** Metal. GitHub: getmetal/motorhead. Apache 2.0. YC-backed.
+- **Architecture:** Flat conversation buffer with incremental summarization.
+  Stores messages per session with a configurable window size (default 12). When
+  the window fills, the oldest half is summarized and the summary is
+  incrementally updated.
+- **CoALA mapping:** Working memory (buffer) with rudimentary episodic
+  (summaries).
+- **Storage:** Redis (required). Redisearch VSS for long-term retrieval.
+- **Language:** Rust server with Python/JS client libraries.
+- **Retrieval:** Session-based retrieval (GET messages). Vector similarity via
+  Redisearch VSS. Three simple REST endpoints.
+- **LLM dependency:** Required for incremental summarization (default:
+  gpt-3.5-turbo).
+- **Forgetting:** Window-based eviction — oldest half summarized and removed.
+  No time-based decay.
+- **Key context:** Written in Rust for performance. Extremely simple API.
+  LangChain integration via MotorheadMemory class. Less actively maintained as
+  of 2025.
+
+#### Engram
+
+- **Citation:** Gentleman-Programming. GitHub: Gentleman-Programming/engram.
+- **Architecture:** Flat, agent-directed memory. The agent (Claude Code, Gemini
+  CLI, etc.) decides what to save. Session-based with automatic context
+  injection on session start and summary generation on session end.
+- **CoALA mapping:** Working memory + agent-directed episodic writes.
+- **Storage:** SQLite + FTS5 (full-text search). Single binary, single file.
+- **Language:** Go.
+- **Retrieval:** Full-text search via FTS5. No vector search. Agent proactively
+  saves relevant memories.
+- **LLM dependency:** None for storage/retrieval. The LLM client decides what to
+  remember.
+- **Forgetting:** No built-in mechanism.
+- **Key context:** Zero dependencies — single Go binary. MCP server + HTTP API +
+  CLI + TUI. Designed for coding agents. Agent-trusting philosophy (agent
+  decides what is worth remembering). Closest in spirit to Alaya's
+  zero-dependency approach, though without vector search, graph, or lifecycle
+  processes.
+
+#### OpenViking (ByteDance / Volcengine)
+
+- **Citation:** Volcengine. GitHub: volcengine/OpenViking. Open-sourced January
+  2026.
+- **Architecture:** Virtual filesystem paradigm. Abandons fragmented vector
+  storage in favor of a `viking://` protocol that maps all context (memories,
+  resources, skills) to virtual directories. Three-tier structure: L0 (immediate
+  context), L1 (session-level), L2 (persistent/archival).
+- **CoALA mapping:** Working memory (L0) + episodic (L1) + semantic (L2).
+- **Storage:** Custom virtual filesystem built on VikingDB vector database
+  infrastructure.
+- **Retrieval:** Directory recursive retrieval combining directory positioning
+  with semantic search. Hierarchical context delivery.
+- **LLM dependency:** Required for context processing and agent interaction.
+- **Forgetting:** Not explicitly documented. Tiered loading implicitly
+  deprioritizes unused context.
+- **Key context:** Novel filesystem metaphor for context management. Built by
+  the team behind VikingDB (serves all ByteDance production workloads since
+  2019). Designed for coding agents (e.g., OpenClaw). Strongly opinionated
+  against traditional RAG fragmentation. ~2.9K GitHub stars.
+
+---
+
 ### Framework-Level Memory
 
 #### LangChain Memory
@@ -320,6 +386,9 @@ How each system maps to CoALA's memory module taxonomy:
 | **Voyager** | Yes (current task) | No | No | Yes (skill library) | No |
 | **MemoryBank** | Yes (current dialogue) | Yes (conversations) | Yes (user portraits) | No | Yes (Ebbinghaus-gated) |
 | **A-MEM** | Agent-managed | No | Yes (Zettelkasten notes) | No | Evolution-based |
+| **Motorhead** | Yes (buffer) | Partial (summaries) | No | No | No |
+| **Engram** | Agent-managed | Yes (agent-directed) | No | No | No |
+| **OpenViking** | Yes (L0 context) | Yes (L1 sessions) | Yes (L2 persistent) | No | No |
 
 **Key observation:** Alaya and Generative Agents are the only systems that
 implement principled cross-memory learning (episodic -> semantic consolidation).
@@ -338,6 +407,8 @@ formal consolidation model.
 | **Generative Agents** | In-memory | 0 services | Research code | Local (ephemeral) |
 | **MemoryBank** | External memory bank | 1 service | Research code | Configurable |
 | **Motorhead** | Redis + Redisearch | 1 service | Docker + Redis | Redis-dependent |
+| **Engram** | SQLite + FTS5 | 0 services | Single Go binary | Fully local |
+| **OpenViking** | VikingDB (virtual filesystem) | 1 service | VikingDB setup | Configurable |
 | **ChromaDB** | Embedded HNSW | 0 services | pip install | Local |
 | **Weaviate** | Custom engine | 0-1 services | Docker or cloud | Configurable |
 
@@ -355,6 +426,9 @@ Mapped to Gao et al.'s taxonomy (Naive / Advanced / Modular RAG):
 | **Generative Agents** | No | Cosine | No | Weighted sum | Recency + importance | Advanced |
 | **MemoryBank** | No | Likely | No | Not specified | Not specified | Naive |
 | **A-MEM** | No | Yes | Link traversal | Not specified | Not specified | Advanced |
+| **Motorhead** | No | Yes (Redisearch VSS) | No | N/A | N/A | Naive |
+| **Engram** | FTS5 | No | No | N/A | N/A | Naive |
+| **OpenViking** | No | Yes (VikingDB) | No | Directory positioning | Hierarchical | Advanced |
 
 **Key observation:** Only Alaya and Zep/Graphiti implement full three-signal
 retrieval (sparse + dense + graph) with principled fusion (RRF). Most systems
@@ -375,6 +449,9 @@ axis:
 | **Generative Agents** | Observation logging | Reflection generation | Recency decay | Not built-in | Emergent from reflections |
 | **MemoryBank** | Writer module | Not built-in | Ebbinghaus curve (R = e^(-t/S)) | Not built-in | User portrait synthesis |
 | **A-MEM** | LLM note construction | Evolution-based | Evolution (not deletion) | LLM-driven merge | Not built-in |
+| **Motorhead** | Direct buffer append | Incremental summarization | Window eviction | Not built-in | Not built-in |
+| **Engram** | Agent-directed save | Session summaries on end | Not built-in | Not built-in | Not built-in |
+| **OpenViking** | Virtual file write | Tiered L0 -> L1 -> L2 | Implicit (tiered deprioritization) | Not built-in | Not built-in |
 
 **Key observation:** Alaya is the only system that combines CLS-inspired
 consolidation, dual-strength forgetting with RIF suppression, explicit
