@@ -21,6 +21,7 @@ fn init_db(conn: &Connection) -> Result<()> {
     conn.execute_batch("PRAGMA journal_mode = WAL;")?;
     conn.execute_batch("PRAGMA foreign_keys = ON;")?;
     conn.execute_batch("PRAGMA synchronous = NORMAL;")?;
+    conn.execute_batch("PRAGMA user_version = 1;")?;
 
     conn.execute_batch(
         "
@@ -234,5 +235,14 @@ mod tests {
         let conn = open_memory_db().unwrap();
         // Second init should not fail
         init_db(&conn).unwrap();
+    }
+
+    #[test]
+    fn test_schema_version_is_set() {
+        let conn = open_memory_db().unwrap();
+        let version: i64 = conn
+            .pragma_query_value(None, "user_version", |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, 1, "schema version should be 1 after init");
     }
 }
