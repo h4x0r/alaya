@@ -7,14 +7,14 @@
 //! activation, and adaptive lifecycle processes — all without coupling to any
 //! specific LLM or agent framework.
 
-pub mod error;
-pub mod types;
-pub mod schema;
-pub mod store;
-pub mod graph;
-pub mod retrieval;
-pub mod lifecycle;
-pub mod provider;
+pub(crate) mod error;
+pub(crate) mod types;
+pub(crate) mod schema;
+pub(crate) mod store;
+pub(crate) mod graph;
+pub(crate) mod retrieval;
+pub(crate) mod lifecycle;
+pub(crate) mod provider;
 
 use rusqlite::Connection;
 use std::path::Path;
