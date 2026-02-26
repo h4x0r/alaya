@@ -25,40 +25,31 @@ providers. Alaya takes a different approach.
 
 ### Comparison with Alternatives
 
-#### Memory Systems
+Systems ordered by adoption. All Python unless noted.
 
-| | **Alaya** | **mem0** | **Zep / Graphiti** | **Letta (MemGPT)** | **LangChain** | **LlamaIndex** |
-|---|---|---|---|---|---|---|
-| **Language** | Rust | Python | Python | Python | Python | Python |
-| **Storage** | SQLite (single file) | Qdrant/Pinecone + Postgres + Neo4j | Neo4j + Lucene | Postgres + Chroma/Qdrant | In-memory / Redis | SQLite / Postgres |
-| **External infra** | None | 2-3 services | 1-2 services | 1-2 services | 0-1 services | 0-1 services |
-| **LLM coupling** | None — traits | Required | Required for extraction | Required (LLM = memory manager) | Optional | Optional |
-| **Memory model** | Three-store (episodic, semantic, implicit) | Tiered + optional graph | Temporal knowledge graph | OS-inspired (core, recall, archival) | Buffer / summary / entity | Composable blocks |
-| **Graph** | Hebbian — reshapes through use | Optional (Mem0g) | Static temporal KG | No | No | No |
-| **Retrieval** | BM25 + vector + graph + RRF | Vector + graph (Mem0g) | Cosine + BM25 + graph + RRF | Agent-driven tool calls | Direct injection | Block-dependent |
-| **Forgetting** | Bjork dual-strength + RIF | Exponential decay | Temporal invalidation | Eviction + summarization | Window / truncation | FIFO eviction |
-| **Preferences** | Vasana (emergent) | LLM-extracted profiles | Indirect (graph) | Agent-edited blocks | Minimal | Basic (facts) |
-| **Privacy** | Fully local | Cloud-dependent | Configurable | Configurable | Configurable | Configurable |
-
-#### Rising Stars and Noteworthy Systems
-
-| System | Type | Language | Key Idea | Traction |
-|--------|------|----------|----------|----------|
-| **Supermemory** | Memory API | TypeScript | Graph + vector + decay curves; claims 10x faster than Zep | 16.6K stars, $2.6M seed |
-| **Memvid** | Single-file memory | Rust | Video-encoding-inspired Smart Frames; 0.025ms P50 | 13.2K stars |
-| **Cortex-Mem** | Memory service | Rust | Auto-extraction + dedup; REST/MCP/CLI | Production-ready |
-| **Hindsight** | Memory engine | Python | Four memory networks; opinion tracking with belief evolution | 91.4% LongMemEval |
-| **HippoRAG** | Neuroscience RAG | Python | Hippocampal indexing theory; Personalized PageRank | NeurIPS 2024 + ICML 2025 |
-| **SYNAPSE** | Research | Python | Spreading activation + lateral inhibition on episodic-semantic graph | SOTA LoCoMo |
-| **LangMem SDK** | Memory SDK | Python | LangChain's production memory engine (replaces deprecated classes) | 1.3K stars |
-| **Cognee** | Knowledge engine | Python | Vector + graph hybrid; 70+ companies in production | $7.5M seed |
-| **A-MEM** | Research | Python | Zettelkasten-inspired note memory; 2x multi-hop reasoning | NeurIPS 2025 |
-| **MemoryOS** | Research | Python | Three-tier OS hierarchy; 49% F1 improvement on LoCoMo | EMNLP 2025 Oral |
-| **LightMem** | Research | Python | Atkinson-Shiffrin inspired; 38x token reduction; sleep-time consolidation | ICLR 2026 |
-| **Mem-alpha** | Research | Python | Core + episodic + semantic with RL-learned management | Apache 2.0 |
-| **OpenViking** | Context DB | Python | Virtual filesystem paradigm; tiered loading (ByteDance) | 2.9K stars |
-| **Generative Agents** | Research | Python | Recency x importance x relevance (seminal paper) | UIST 2023 |
-| **Redis Memory** | Memory server | Python | Official Redis agent memory; HNSW + topic extraction | Redis Labs |
+| System | Storage | Infra | LLM | Memory Model | Graph | Retrieval | Forgetting | Preferences |
+|--------|---------|:-----:|:---:|-------------|:-----:|-----------|:----------:|:-----------:|
+| **Alaya** (Rust) | SQLite single file | None | Optional (traits) | Three-store: episodic, semantic, implicit | Hebbian (reshapes through use) | BM25 + vector + graph + RRF | Bjork dual-strength + RIF | Vasana (emergent) |
+| **mem0** | Qdrant/Pinecone + Postgres + Neo4j | 2-3 | Required | Tiered + optional graph | Optional (Mem0g) | Vector + graph | Exponential decay | LLM-extracted |
+| **Supermemory** (TS) | KG + vector + graph DB | 2-3 | Required | Graph + vector with decay | Yes | Hybrid vector + graph | Decay curves + expiry | LLM-extracted |
+| **Memvid** (Rust) | Single `.mv2` file | None | None (local ONNX) | Append-only Smart Frames | No | Tantivy FTS + HNSW | None (immutable) | No |
+| **Zep / Graphiti** | Neo4j + Lucene | 1-2 | Required | Temporal knowledge graph | Static temporal KG | Cosine + BM25 + graph + RRF | Temporal invalidation | Indirect (graph) |
+| **Letta (MemGPT)** | Postgres + Chroma/Qdrant | 1-2 | Required (LLM = manager) | OS-inspired: core, recall, archival | No | Agent-driven tool calls | Eviction + summarization | Agent-edited blocks |
+| **Cognee** | Neo4j + vectors | 1-2 | Required | Vector + graph knowledge engine | Yes | Hybrid vector + graph | Not documented | Via graph |
+| **Hindsight** | Configurable | 1-2 | Required | Four networks: world, experience, opinion, observation | No | Temporal priming + adaptive reasoning | Belief confidence evolution | Opinion memory (novel) |
+| **HippoRAG** | In-memory KG | 0 | Required | Hippocampal indexing + open KG | Personalized PageRank | PPR on knowledge graph | No | No |
+| **SYNAPSE** | In-memory | 0 | Required | Unified episodic-semantic graph | Spreading activation + lateral inhibition | Activation-based graph traversal | Temporal decay | No |
+| **LangMem SDK** | LangGraph store | 0-1 | Required | Semantic + procedural (prompt updates) | No | Vector similarity | No | Via extracted facts |
+| **Cortex-Mem** (Rust) | Configurable | 0-1 | Required | Extracted facts with dedup | No | Vector similarity | No | No |
+| **A-MEM** | Vector + note graph | 0 | Required | Zettelkasten-inspired linked notes | Implicit links | Embedding + note traversal | Evolution-based | No |
+| **MemoryOS** | Configurable | 0-1 | Required | Three-tier OS hierarchy | No | Hierarchical cross-tier | FIFO + paging | Yes |
+| **LightMem** | Configurable | 0-1 | Required | Atkinson-Shiffrin: sensory, STM, LTM | No | Topic-grouped | Sleep-time consolidation | No |
+| **Mem-alpha** | Configurable | 0-1 | Required | Core + episodic + semantic (RL-managed) | No | RL-learned | RL-learned | No |
+| **LangChain** | In-memory / Redis | 0-1 | Optional | Buffer / summary / entity | No | Direct injection | Window / truncation | Minimal |
+| **LlamaIndex** | SQLite / Postgres | 0-1 | Optional | Composable blocks | No | Block-dependent | FIFO eviction | Basic (facts) |
+| **OpenViking** | VikingDB | 1 | Required | Virtual filesystem: L0, L1, L2 | No | Directory + semantic search | Implicit (tiered) | No |
+| **Redis Memory** | Redis + backends | 1+ | Required | Topics + entities + HNSW | No | HNSW vector + topic filter | No | No |
+| **Generative Agents** | In-memory | 0 | Required | Stream + reflections + plans | No | Recency x importance x relevance | Recency decay | Emergent |
 
 #### Vector Databases (Infrastructure Layer)
 
