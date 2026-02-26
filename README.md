@@ -42,18 +42,23 @@ providers. Alaya takes a different approach.
 
 #### Rising Stars and Noteworthy Systems
 
-| System | Type | Language | Storage | Key Idea |
-|--------|------|----------|---------|----------|
-| **Cognee** | Knowledge engine | Python | Neo4j + vectors | Vector + graph hybrid; 70+ companies in production |
-| **A-MEM** | Research (NeurIPS 2025) | Python | Vector + note graph | Zettelkasten-inspired; 2x multi-hop reasoning |
-| **MemoryOS** | Research (EMNLP 2025) | Python | Configurable | Three-tier OS hierarchy; 49% F1 improvement on LoCoMo |
-| **Motorhead** | Memory server | Rust | Redis | Simple REST API; incremental summarization |
-| **Engram** | MCP memory | Go | SQLite + FTS5 | Zero dependencies; agent-directed; single binary |
-| **OpenViking** | Context DB | Python | VikingDB | Virtual filesystem paradigm; tiered loading (ByteDance) |
-| **LangGraph** | Agent framework | Python | Configurable | Stateful graph orchestration; checkpoint-based memory |
-| **Second Me** | AI identity | Python | Model parameters | Memory encoded into model weights via fine-tuning |
-| **MemoryBank** | Research (AAAI 2024) | Python | External bank | Ebbinghaus forgetting curve; user portrait synthesis |
-| **Generative Agents** | Research (UIST 2023) | Python | In-memory | Recency x importance x relevance (seminal paper) |
+| System | Type | Language | Key Idea | Traction |
+|--------|------|----------|----------|----------|
+| **Supermemory** | Memory API | TypeScript | Graph + vector + decay curves; claims 10x faster than Zep | 16.6K stars, $2.6M seed |
+| **Memvid** | Single-file memory | Rust | Video-encoding-inspired Smart Frames; 0.025ms P50 | 13.2K stars |
+| **Cortex-Mem** | Memory service | Rust | Auto-extraction + dedup; REST/MCP/CLI | Production-ready |
+| **Hindsight** | Memory engine | Python | Four memory networks; opinion tracking with belief evolution | 91.4% LongMemEval |
+| **HippoRAG** | Neuroscience RAG | Python | Hippocampal indexing theory; Personalized PageRank | NeurIPS 2024 + ICML 2025 |
+| **SYNAPSE** | Research | Python | Spreading activation + lateral inhibition on episodic-semantic graph | SOTA LoCoMo |
+| **LangMem SDK** | Memory SDK | Python | LangChain's production memory engine (replaces deprecated classes) | 1.3K stars |
+| **Cognee** | Knowledge engine | Python | Vector + graph hybrid; 70+ companies in production | $7.5M seed |
+| **A-MEM** | Research | Python | Zettelkasten-inspired note memory; 2x multi-hop reasoning | NeurIPS 2025 |
+| **MemoryOS** | Research | Python | Three-tier OS hierarchy; 49% F1 improvement on LoCoMo | EMNLP 2025 Oral |
+| **LightMem** | Research | Python | Atkinson-Shiffrin inspired; 38x token reduction; sleep-time consolidation | ICLR 2026 |
+| **Mem-alpha** | Research | Python | Core + episodic + semantic with RL-learned management | Apache 2.0 |
+| **OpenViking** | Context DB | Python | Virtual filesystem paradigm; tiered loading (ByteDance) | 2.9K stars |
+| **Generative Agents** | Research | Python | Recency x importance x relevance (seminal paper) | UIST 2023 |
+| **Redis Memory** | Memory server | Python | Official Redis agent memory; HNSW + topic extraction | Redis Labs |
 
 #### Vector Databases (Infrastructure Layer)
 

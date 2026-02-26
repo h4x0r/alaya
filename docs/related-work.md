@@ -154,6 +154,100 @@ cognitive structures via a 3D-8Q model (Object x Form x Time).
 - **Forgetting:** Evolution-based — notes are continuously updated, not deleted.
 - **Key results:** Doubles multi-hop reasoning performance vs. baselines.
 
+#### Supermemory
+
+- **Citation:** Supermemory. GitHub: supermemoryai/supermemory. $2.6M seed
+  (Susa Ventures, backed by Google AI chief Jeff Dean).
+- **Architecture:** Knowledge graph + vector store + graph database. Brain-
+  inspired with smart forgetting, decay curves, recency bias, and context
+  rewriting. Memories are indexed into both vector store and graph database.
+  Memories can update, extend, derive, and expire.
+- **CoALA mapping:** Episodic + semantic memory with graph overlay.
+- **Retrieval:** Hybrid vector + graph retrieval.
+- **LLM dependency:** Required for memory extraction and context rewriting.
+- **Forgetting:** Yes — decay curves with recency bias. Memories expire.
+- **Key context:** 16.6K GitHub stars. Claims 10x faster than Zep, 25x faster
+  than Mem0. Founded by 19-year-old Dhravya Shah. Customers include Cluely
+  (a16z-backed). TypeScript.
+
+#### Hindsight (Vectorize)
+
+- **Citation:** Latimer et al. (2025). "Hindsight is 20/20: Building Agent
+  Memory that Retains, Recalls, and Reflects." arXiv:2512.12818.
+- **Architecture:** Four logical memory networks: world (objective facts),
+  experience (agent experiences), opinion (subjective beliefs with confidence
+  scores that evolve), observation (preference-neutral entity summaries). Tempr
+  for temporal entity memory priming retrieval. Cara for coherent adaptive
+  reasoning.
+- **CoALA mapping:** Episodic + semantic + opinion memory (novel category).
+- **Retrieval:** Temporal entity priming + adaptive reasoning.
+- **LLM dependency:** Required. Supports OpenAI, Anthropic, Gemini, Groq,
+  Ollama.
+- **Forgetting:** Not explicit — belief confidence scores evolve over time.
+- **Key results:** Claims SOTA: 91.4% LongMemEval, 89.61% LoCoMo.
+  Distinguishes facts from opinions with confidence-scored belief evolution.
+
+#### Cortex-Mem
+
+- **Citation:** sopaco. GitHub: sopaco/cortex-mem. cortexmemory.dev.
+- **Architecture:** Production-ready memory framework. Automatic extraction,
+  vector search, deduplication, optimization. REST API + MCP server + CLI +
+  insights dashboard.
+- **CoALA mapping:** Semantic memory (extracted facts).
+- **Storage:** Configurable. **Written in Rust.**
+- **Retrieval:** Vector similarity search.
+- **LLM dependency:** Required for fact extraction.
+- **Forgetting:** Not documented.
+- **Key context:** The closest Rust-based competitor. Same language as Alaya,
+  but positioned as a standalone service (REST/MCP) rather than an embeddable
+  library. Claims 60-90% storage savings via deduplication.
+
+#### Memvid
+
+- **Citation:** Memvid. GitHub: memvid/memvid. memvid.com.
+- **Architecture:** Video-encoding-inspired architecture with Smart Frames as
+  append-only immutable units. Embedded WAL for crash recovery. Single `.mv2`
+  binary format file. ONNX local embeddings (bge-small, nomic-embed).
+- **CoALA mapping:** Episodic memory (append-only).
+- **Storage:** Single `.mv2` file. **Written in Rust** (V2 rewrite).
+- **Retrieval:** Tantivy full-text + HNSW vector + chronological time indexing.
+- **LLM dependency:** None for storage/retrieval. Local ONNX embeddings.
+- **Forgetting:** None — append-only, immutable.
+- **Key results:** Claims SOTA on LoCoMo (+35%). 0.025ms P50 / 0.075ms P99.
+  1,372x throughput vs. standard approaches. 13.2K GitHub stars. Python + Node
+  + Rust + CLI + MCP bindings.
+- **Key context:** The closest deployment model to Alaya (Rust, single-file,
+  zero dependencies). Key difference: Memvid is append-only with no forgetting
+  or consolidation; Alaya has cognitive lifecycle processes.
+
+#### Redis Agent Memory Server
+
+- **Citation:** Redis Labs. GitHub: redis/agent-memory-server.
+- **Architecture:** Auto-extracts, organizes, deduplicates memories. REST API +
+  MCP interfaces. Topic extraction (LLM or BERTopic), NER, HNSW vector
+  indexing. Multi-tenancy.
+- **CoALA mapping:** Semantic memory (extracted topics and entities).
+- **Storage:** Redis (default) + Pinecone/Chroma/PostgreSQL backends.
+- **Retrieval:** HNSW vector search + topic filtering.
+- **LLM dependency:** Required for extraction. 100+ providers via LiteLLM.
+- **Forgetting:** Not documented.
+- **Key context:** Official Redis project (v0.13.1). Docker deployment.
+  Represents a major infrastructure company entering the memory space.
+
+#### LangMem SDK
+
+- **Citation:** LangChain team. GitHub: langchain-ai/langmem.
+- **Architecture:** Dedicated long-term memory SDK, distinct from the deprecated
+  LangChain Memory classes. Semantic memory (facts/preferences) + procedural
+  memory (saved as updated prompt instructions). Functional primitives +
+  LangGraph storage integration. Namespace-based multi-tenancy.
+- **CoALA mapping:** Semantic + procedural memory.
+- **Retrieval:** Vector similarity via LangGraph store.
+- **LLM dependency:** Required for extraction.
+- **Forgetting:** Not documented.
+- **Key context:** LangChain's actual memory engine for production use.
+  48.72 F1 on LoCoMo. 1.3K GitHub stars.
+
 ---
 
 ### Standalone Memory Servers
@@ -367,6 +461,119 @@ retrieval.
 - **Significance:** Unique "memory as model parameters" approach. Parametric
   memory eliminates retrieval latency for deeply learned knowledge.
 
+#### HippoRAG / HippoRAG 2 (OSU NLP, 2024-2025)
+
+- **Citation:** Gutierrez et al. (2024). "HippoRAG: Neurobiologically Inspired
+  Long-Term Memory for Large Language Models." NeurIPS 2024. arXiv:2405.14831.
+  Gutierrez et al. (2025). "From RAG to Memory." ICML 2025. arXiv:2502.14802.
+- **Architecture:** Inspired by hippocampal indexing theory. LLM acts as
+  neocortex, PHR encoder detects synonymy, open knowledge graph acts as
+  hippocampus. Retrieval via Personalized PageRank on the KG.
+- **Forgetting:** Not built-in.
+- **Key results:** 20% improvement on multi-hop QA. 10-30x cheaper than
+  iterative retrieval. ~3.7K GitHub stars.
+- **Significance:** Top-venue neuroscience-inspired memory. PPR on KG is
+  comparable to Alaya's spreading activation on Hebbian graph — different
+  mechanisms, similar cognitive inspiration.
+
+#### SYNAPSE (Jiang et al., 2026)
+
+- **Citation:** Jiang et al. (2026). "SYNAPSE: Empowering LLM Agents with
+  Episodic-Semantic Memory via Spreading Activation." arXiv:2601.02744.
+- **Architecture:** Unified episodic-semantic graph with spreading activation
+  AND lateral inhibition (biological mechanisms). Triple hybrid retrieval fusing
+  geometric embeddings with activation-based graph traversal. Temporal decay.
+- **Key results:** +7.2 F1 on LoCoMo (SOTA at publication). 23% improvement on
+  multi-hop reasoning. 95% token reduction vs. full context.
+- **Significance:** The most directly comparable system to Alaya's retrieval
+  approach. Both use spreading activation over episodic-semantic graphs. SYNAPSE
+  adds lateral inhibition (analogous to Alaya's RIF suppression).
+
+#### Mem-alpha (Wang et al., 2025)
+
+- **Citation:** Wang et al. (2025). "Mem-alpha: Learning Memory Construction
+  via Reinforcement Learning." arXiv:2509.25911.
+- **Architecture:** RL framework training agents to manage core, episodic, and
+  semantic memory. Reward signal from downstream QA accuracy. Trained on 30K
+  tokens, generalizes to 400K+ (13x extrapolation).
+- **Key results:** Apache 2.0. GitHub: wangyu-ustc/Mem-alpha.
+- **Significance:** Nearly identical three-component memory decomposition to
+  Alaya (core + episodic + semantic). Key difference: Mem-alpha learns
+  management via RL; Alaya uses cognitive principles.
+
+#### MAGMA (Jiang et al., 2026)
+
+- **Citation:** Jiang et al. (2026). "MAGMA: A Multi-Graph based Agentic Memory
+  Architecture." arXiv:2601.03236.
+- **Architecture:** Four orthogonal graphs per memory item: semantic, temporal,
+  causal, and entity. Adaptive traversal policy routes retrieval based on query
+  intent. Dual-stream write: fast ingestion + async consolidation.
+- **Key results:** SOTA on LoCoMo and LongMemEval.
+- **Significance:** Multi-graph decomposition is a different approach from
+  Alaya's single Hebbian graph with multiple edge types. MAGMA separates
+  graph types; Alaya unifies them with typed, weighted edges.
+
+#### LightMem (Fang et al., 2025)
+
+- **Citation:** Fang et al. (2025). "LightMem: Lightweight and Efficient
+  Memory-Augmented Generation." ICLR 2026. arXiv:2510.18866.
+- **Architecture:** Atkinson-Shiffrin-inspired three-stage pipeline: sensory
+  memory (compression + topic grouping), short-term (topic-aware consolidation),
+  long-term with "sleep-time" offline consolidation.
+- **Key results:** 38x token reduction, 30x fewer API calls, 12.4x faster.
+- **Significance:** Best efficiency profile. Sleep-time consolidation pattern
+  parallels Alaya's offline lifecycle processes. Both inspired by
+  complementary learning systems.
+
+#### MemTree (Rezazadeh et al., 2025)
+
+- **Citation:** Rezazadeh et al. (2025). "MemTree: Dynamic Tree Memory." ICLR
+  2025. arXiv:2410.14052.
+- **Architecture:** Dynamic tree-structured memory mimicking cognitive schemas.
+  Hierarchical nodes at varying abstraction levels. New information routes from
+  root to matching leaf. Ancestor nodes integrate via summarization.
+- **Significance:** Tree vs. graph is a fundamental structural difference from
+  Alaya. MemTree's hierarchical schemas enable top-down reasoning; Alaya's flat
+  stores + graph overlay enable lateral associative reasoning.
+
+#### RMM (Tan et al., 2025)
+
+- **Citation:** Tan et al. (2025). "In Prospect and Retrospect: Reflective
+  Memory Management for Long-term Personalized Dialogue Agents." ACL 2025.
+  arXiv:2503.08026.
+- **Architecture:** Prospective reflection (dynamic summarization across
+  utterance/turn/session granularities) + retrospective reflection (online RL
+  refinement of retrieval based on cited evidence).
+- **Key results:** 10%+ accuracy improvement on LongMemEval.
+- **Significance:** Explicitly designed for personalized conversational agents
+  — the same target as Alaya.
+
+### Additional Notable Systems
+
+Systems with significant community traction or novel ideas, presented in
+summary form:
+
+| System | Type | Key Idea | Stars / Venue |
+|--------|------|----------|---------------|
+| **EverMemOS** | Memory OS | Self-organizing memory; encoding/consolidation/retrieval pipeline; 93% LoCoMo | 2.2K stars |
+| **MemOS** | Memory OS | Textual + activation (KV cache) + parametric (LoRA) memory types | 5.9K stars |
+| **OpenMemory** | Cognitive engine | Hierarchical Memory Decomposition + temporal graph; MCP native | 3.4K stars |
+| **SimpleMem** | Compression | Semantic lossless compression via implicit density gating | 3.0K stars |
+| **Memobase** | User profiling | Extracts user profiles from conversations; top LoCoMo scores | 2.6K stars |
+| **IronClaw** | Rust agent | OpenClaw-inspired Rust agent with persistent hybrid-search memory | 3.5K stars |
+| **LightRAG** | Graph RAG | Simple, fast graph-based RAG with KG extraction | 28.7K stars, EMNLP 2025 |
+| **Memory-R1** | RL memory | RL-trained ADD/UPDATE/DELETE/NOOP; 48% F1 improvement over Mem0 | arXiv:2508.19828 |
+| **MemRL** | RL memory | Runtime RL on episodic memory; MDP formalization of memory use | arXiv:2601.03192 |
+| **AgeMem** | RL memory | Unified LTM/STM via progressive RL; SOTA on 5 long-horizon benchmarks | arXiv:2601.01885 |
+| **G-Memory** | Multi-agent | Three-tier graph hierarchy for multi-agent systems | NeurIPS 2025 Spotlight |
+| **CAM** | Constructivist | Piaget-inspired assimilation/accommodation of memory schemas | NeurIPS 2025 |
+| **SGMem** | Lightweight | Sentence-level graphs; no LLM extraction needed; strong LoCoMo/LongMemEval | arXiv:2509.21212 |
+| **RGMem** | Physics-inspired | Renormalization group multi-scale memory with phase transitions | arXiv:2510.16392 |
+| **Memoria** | Weighted KG | Exponential weighted average for conflict resolution; 87.1% LongMemEvals | arXiv:2512.12686 |
+| **CortexGraph** | Forgetting | Ebbinghaus forgetting curves; Markdown-compatible storage | GitHub |
+| **PowerMem** | Hybrid | Vector + FTS + graph with Ebbinghaus forgetting; backed by OceanBase | GitHub |
+| **Papr Memory** | Multi-DB | MongoDB + Qdrant + Neo4j; GraphQL API; 91% STARK accuracy | GitHub |
+
 ---
 
 ## Comparative Matrices
@@ -389,11 +596,19 @@ How each system maps to CoALA's memory module taxonomy:
 | **Motorhead** | Yes (buffer) | Partial (summaries) | No | No | No |
 | **Engram** | Agent-managed | Yes (agent-directed) | No | No | No |
 | **OpenViking** | Yes (L0 context) | Yes (L1 sessions) | Yes (L2 persistent) | No | No |
+| **Supermemory** | Agent-managed | Yes | Yes (graph) | No | Yes (extraction) |
+| **Hindsight** | Agent-managed | Yes (experience) | Yes (world + opinion) | No | Yes (reflection) |
+| **Memvid** | Agent-managed | Yes (Smart Frames) | No | No | No |
+| **HippoRAG** | Agent-managed | No | Yes (KG as hippocampus) | No | No |
+| **SYNAPSE** | Agent-managed | Yes | Yes (unified graph) | No | Yes (activation-based) |
+| **Mem-alpha** | Yes (core) | Yes | Yes | No | Yes (RL-learned) |
+| **LangMem** | Agent-managed | No | Yes (extracted facts) | Yes (prompt updates) | No |
 
-**Key observation:** Alaya and Generative Agents are the only systems that
-implement principled cross-memory learning (episodic -> semantic consolidation).
-Most others either store everything flat or rely on LLM extraction without a
-formal consolidation model.
+**Key observation:** Cross-memory learning (episodic -> semantic) remains rare.
+Alaya, Generative Agents, SYNAPSE, and Mem-alpha implement principled
+consolidation. Hindsight adds a novel "opinion" memory type with belief
+evolution. Most systems still store everything flat or rely on one-shot LLM
+extraction.
 
 ### Storage and Infrastructure
 
@@ -409,6 +624,12 @@ formal consolidation model.
 | **Motorhead** | Redis + Redisearch | 1 service | Docker + Redis | Redis-dependent |
 | **Engram** | SQLite + FTS5 | 0 services | Single Go binary | Fully local |
 | **OpenViking** | VikingDB (virtual filesystem) | 1 service | VikingDB setup | Configurable |
+| **Supermemory** | KG + vector + graph DB | 2-3 services | Docker or cloud | Cloud-dependent |
+| **Hindsight** | Configurable | 1-2 services | Docker | Configurable |
+| **Cortex-Mem** | Configurable (Rust) | 0-1 services | `cargo install` or Docker | Configurable |
+| **Memvid** | Single `.mv2` file (Rust) | 0 services | Single binary | Fully local |
+| **Redis Memory** | Redis + optional backends | 1+ services | Docker + Redis | Redis-dependent |
+| **LangMem** | LangGraph store | 0-1 services | pip install | Configurable |
 | **ChromaDB** | Embedded HNSW | 0 services | pip install | Local |
 | **Weaviate** | Custom engine | 0-1 services | Docker or cloud | Configurable |
 
@@ -429,10 +650,18 @@ Mapped to Gao et al.'s taxonomy (Naive / Advanced / Modular RAG):
 | **Motorhead** | No | Yes (Redisearch VSS) | No | N/A | N/A | Naive |
 | **Engram** | FTS5 | No | No | N/A | N/A | Naive |
 | **OpenViking** | No | Yes (VikingDB) | No | Directory positioning | Hierarchical | Advanced |
+| **Supermemory** | No | Yes | Yes (graph) | Not specified | Yes | Advanced |
+| **Hindsight** | No | Yes | No | Tempr (temporal priming) | Cara (adaptive) | Advanced |
+| **Memvid** | Tantivy FTS | HNSW | No | Not specified | Chronological | Advanced |
+| **HippoRAG** | No | Yes | Personalized PageRank | PPR scores | None | Modular |
+| **SYNAPSE** | No | Yes | Spreading activation + lateral inhibition | Triple hybrid | Activation-based | Modular |
+| **Mem-alpha** | No | Yes | No | RL-learned | RL-learned | Advanced |
+| **LangMem** | No | Yes | No | N/A | N/A | Naive |
 
-**Key observation:** Only Alaya and Zep/Graphiti implement full three-signal
-retrieval (sparse + dense + graph) with principled fusion (RRF). Most systems
-rely on vector similarity alone.
+**Key observation:** Full three-signal retrieval (sparse + dense + graph) with
+principled fusion is implemented by Alaya (RRF), Zep/Graphiti (RRF + MMR), and
+SYNAPSE (triple hybrid). HippoRAG achieves comparable associative retrieval via
+PPR on a knowledge graph. Most systems rely on vector similarity alone.
 
 ### Memory Lifecycle
 
@@ -452,11 +681,22 @@ axis:
 | **Motorhead** | Direct buffer append | Incremental summarization | Window eviction | Not built-in | Not built-in |
 | **Engram** | Agent-directed save | Session summaries on end | Not built-in | Not built-in | Not built-in |
 | **OpenViking** | Virtual file write | Tiered L0 -> L1 -> L2 | Implicit (tiered deprioritization) | Not built-in | Not built-in |
+| **Supermemory** | LLM extraction | Not specified | Decay curves + expiry | Not specified | LLM-extracted |
+| **Hindsight** | LLM extraction | Tempr (temporal priming) | Belief confidence evolution | Not specified | Opinion memory (novel) |
+| **Memvid** | Append-only frames | Not built-in | None (immutable) | Not built-in | Not built-in |
+| **HippoRAG** | LLM KG extraction | Not built-in | Not built-in | Not built-in | Not built-in |
+| **SYNAPSE** | Direct storage | Activation-based | Temporal decay + lateral inhibition | Not built-in | Not built-in |
+| **Mem-alpha** | RL-learned | RL-learned | RL-learned | Not built-in | Not built-in |
+| **LangMem** | LLM extraction | Background manager | Not built-in | Not built-in | Via extracted facts |
+| **LightMem** | Sensory compression | Sleep-time offline consolidation | Not specified | Not specified | Not built-in |
 
-**Key observation:** Alaya is the only system that combines CLS-inspired
+**Key observation:** Alaya remains the only system combining CLS-inspired
 consolidation, dual-strength forgetting with RIF suppression, explicit
-contradiction resolution, and preference crystallization in a single
-architecture. Most systems implement at most one of these lifecycle processes.
+contradiction resolution, and preference crystallization. SYNAPSE comes closest
+with temporal decay + lateral inhibition (analogous to RIF). LightMem's
+sleep-time consolidation parallels Alaya's offline lifecycle. Hindsight
+introduces opinion memory with belief evolution — a capability Alaya's vasana
+model partially addresses from a different angle.
 
 ---
 
@@ -464,61 +704,68 @@ architecture. Most systems implement at most one of these lifecycle processes.
 
 ### Dominant Paradigms
 
-Three architectural paradigms have emerged in the field:
+Five architectural paradigms have emerged:
 
 1. **Vector store** (flat semantic retrieval): ChromaDB, Pinecone, LangChain
-   memory. Simple, fast, but no structural understanding of relationships.
+   memory, Memvid. Simple, fast, but no structural understanding of
+   relationships.
 
-2. **Knowledge graph** (structured relationships): Zep/Graphiti, Mem0g, Cognee.
-   Rich relational reasoning, but requires external graph DB and LLM for
-   construction.
+2. **Knowledge graph** (structured relationships): Zep/Graphiti, Mem0g, Cognee,
+   HippoRAG, Supermemory. Rich relational reasoning, but typically requires
+   external graph DB and LLM for construction.
 
-3. **OS-inspired tiering** (RAM/disk metaphor): Letta, MemoryOS, SCM.
-   Hierarchical management with promotion/eviction, but typically lacks graph
-   structure and forgetting.
+3. **OS-inspired tiering** (RAM/disk metaphor): Letta, MemoryOS, SCM, MemOS,
+   EverMemOS. Hierarchical management with promotion/eviction.
 
-A fourth paradigm is emerging:
+4. **RL-trained memory policies** (learned management): Mem-alpha, Memory-R1,
+   MemRL, AgeMem. Instead of hand-crafted heuristics, train the memory policy
+   via reinforcement learning. This is the strongest emerging trend in 2025-2026
+   academic research.
 
-4. **Parametric memory** (embedded in model weights): Second Me's L2 layer.
-   Zero retrieval latency for deeply learned knowledge, but requires
-   fine-tuning infrastructure.
+5. **Parametric memory** (embedded in model weights): Second Me's L2 layer,
+   MemoryLLM/M+. Zero retrieval latency for deeply learned knowledge, but
+   requires fine-tuning infrastructure.
 
 ### Underserved Areas
 
-The survey literature consistently identifies these gaps:
+**Forgetting:** MemoryBank (Ebbinghaus), Mem0 (exponential decay), Generative
+Agents (recency decay), Supermemory (decay curves), SYNAPSE (temporal decay +
+lateral inhibition), CortexGraph/PowerMem (Ebbinghaus), and Alaya (Bjork
+dual-strength + RIF) implement principled forgetting. The Bjork model remains
+the most theoretically grounded (distinguishing storage vs. retrieval strength),
+but the field is catching up — Ebbinghaus-based decay is becoming common.
 
-**Forgetting:** Only MemoryBank (Ebbinghaus), Mem0 (exponential decay),
-Generative Agents (recency decay), and Alaya (Bjork dual-strength + RIF)
-implement principled forgetting. Du et al. (2025) lists forgetting as one of
-six fundamental memory operations, yet most systems treat it as an afterthought.
-
-**Preference emergence:** Most systems either don't model preferences at all or
-rely on LLM extraction (Mem0). Alaya's vasana/perfuming model — where
-preferences crystallize from accumulated impressions without explicit extraction
-— is unique in the landscape.
+**Preference emergence:** Most systems either don't model preferences or rely on
+LLM extraction (Mem0, Supermemory). Hindsight's opinion memory with confidence-
+scored belief evolution is a notable new entrant. Alaya's vasana/perfuming model
+— where preferences crystallize from accumulated impressions without explicit
+extraction — remains unique.
 
 **Adaptive retrieval:** CoALA identifies this as a major underexplored
-direction. Most systems use fixed retrieval strategies. Alaya's spreading
-activation provides one form of adaptive retrieval (graph paths reshape through
-Hebbian strengthening), though fully learned retrieval strategies remain an open
-problem.
+direction. SYNAPSE's spreading activation + lateral inhibition and HippoRAG's
+Personalized PageRank are the closest to Alaya's approach. RL-trained systems
+(Mem-alpha, MemRL) learn retrieval policies from reward signals. Alaya's
+Hebbian graph provides organic adaptation (paths reshape through use) without
+explicit training.
 
-**Cross-memory consolidation:** Generative Agents' reflection mechanism and
-Alaya's CLS-inspired consolidation are rare examples. Most systems treat
-episodic and semantic stores as independent.
+**Cross-memory consolidation:** Now better represented: Alaya (CLS-inspired),
+Generative Agents (reflection), SYNAPSE (activation-based), LightMem (sleep-
+time), and EverMemOS (encoding/consolidation/retrieval pipeline). Still rare
+relative to the total number of systems.
 
 ### The Graph Question
 
-Graph memory is becoming table stakes (Mem0 added Mem0g, Zep/Graphiti built on
-Neo4j, Cognee combines vectors + graph, A-MEM creates implicit link graphs).
-Flat vector search alone is increasingly seen as insufficient for multi-hop
-reasoning.
+Graph memory is table stakes in 2026. The field has split into three approaches:
 
-However, most graph implementations are **static knowledge graphs** — they
-record relationships extracted by an LLM and don't change unless the LLM
-updates them. Alaya's Hebbian graph is **dynamic** — links strengthen through
-co-retrieval (LTP) and weaken through disuse (LTD), naturally developing
-small-world topology without LLM intervention.
+1. **Static knowledge graphs** (Zep/Graphiti, HippoRAG): LLM extracts entities
+   and relationships. Graph doesn't change unless the LLM updates it.
+
+2. **Multi-graph decomposition** (MAGMA): Separate semantic, temporal, causal,
+   and entity graphs with query-adaptive traversal policies.
+
+3. **Dynamic/Hebbian graphs** (Alaya, SYNAPSE): Links reshape through use —
+   co-retrieval strengthens (LTP), disuse weakens (LTD). SYNAPSE adds lateral
+   inhibition. No LLM intervention required for graph evolution.
 
 ---
 
@@ -552,13 +799,14 @@ In Hu et al.'s Forms-Functions-Dynamics taxonomy:
 
 | Capability | Alaya | Closest Alternative | Difference |
 |-----------|-------|-------------------|------------|
-| **Three-store architecture** | Episodic + semantic + implicit | Letta (core + recall + archival) | Alaya's stores are cognitively grounded; Letta's are operationally grounded (RAM/disk) |
-| **Hebbian graph** | Dynamic, reshapes through use | Zep/Graphiti (static temporal KG) | Alaya's graph learns from retrieval patterns; Zep's graph records LLM extractions |
-| **Bjork forgetting** | Dual-strength decay + RIF suppression | MemoryBank (Ebbinghaus curve) | Alaya models storage and retrieval strength independently; MemoryBank uses single-curve decay |
-| **Vasana preferences** | Impressions crystallize into preferences | Mem0 (LLM-extracted profiles) | Alaya's preferences emerge from patterns; Mem0's are explicitly extracted by LLM |
-| **CLS consolidation** | Episodic -> semantic pipeline | Generative Agents (observation -> reflection) | Alaya's is provider-driven and configurable; Gen Agents' is hardcoded threshold-based |
-| **Zero external dependencies** | Single SQLite file | Engram (SQLite + FTS5) | Comparable simplicity, but Alaya adds vector, graph, lifecycle |
-| **LLM-agnostic** | Agent provides via traits | Letta (model-agnostic) | Both agnostic, but Alaya also works with NO LLM (BM25-only) |
+| **Three-store architecture** | Episodic + semantic + implicit | Mem-alpha (core + episodic + semantic) | Nearly identical decomposition; Mem-alpha learns management via RL, Alaya uses cognitive principles |
+| **Hebbian graph** | Dynamic, reshapes through use | SYNAPSE (spreading activation + lateral inhibition) | Both bio-inspired; SYNAPSE adds lateral inhibition, Alaya adds Hebbian LTP/LTD weight evolution |
+| **Bjork forgetting** | Dual-strength decay + RIF suppression | MemoryBank / CortexGraph (Ebbinghaus) | Alaya models storage and retrieval strength independently; Ebbinghaus uses single-curve decay |
+| **Vasana preferences** | Impressions crystallize into preferences | Hindsight (opinion memory with belief evolution) | Alaya's preferences emerge without LLM; Hindsight tracks opinions explicitly with confidence scores |
+| **CLS consolidation** | Episodic -> semantic pipeline | LightMem (sleep-time offline consolidation) | Both inspired by CLS theory; LightMem adds sensory compression stage |
+| **Zero external dependencies** | Single SQLite file, Rust | Memvid (single .mv2 file, Rust) | Both Rust, single-file, zero-dep; Memvid is append-only (no lifecycle), Alaya has full cognitive lifecycle |
+| **LLM-agnostic** | Agent provides via traits, works with NO LLM | Memvid (ONNX local embeddings) | Both work without cloud LLM; Alaya degrades to BM25-only, Memvid uses local ONNX models |
+| **RRF multi-signal fusion** | BM25 + vector + graph | Zep/Graphiti (cosine + BM25 + graph BFS) | Both three-signal + RRF; Zep adds MMR, Alaya adds spreading activation |
 
 ---
 
@@ -707,6 +955,42 @@ is: **start simple, extend when you must, not when you might.**
 
 - Liu, et al. (2023). Think-in-Memory: Recalling and Post-Thinking Enable LLMs
   with Long-Term Memory. arXiv:2311.08719.
+
+- Gutierrez, B. J., Shu, Y., Gu, Y., Yasunaga, M., & Su, Y. (2024).
+  HippoRAG: Neurobiologically Inspired Long-Term Memory for Large Language
+  Models. *NeurIPS 2024*. arXiv:2405.14831.
+
+- Gutierrez, B. J., Shu, Y., Qi, W., Zhou, S., & Su, Y. (2025). From RAG to
+  Memory: Non-Parametric Continual Learning for Large Language Models. *ICML
+  2025*. arXiv:2502.14802.
+
+- Jiang, H., et al. (2026). SYNAPSE: Empowering LLM Agents with Episodic-
+  Semantic Memory via Spreading Activation. arXiv:2601.02744.
+
+- Wang, Y., et al. (2025). Mem-alpha: Learning Memory Construction via
+  Reinforcement Learning. arXiv:2509.25911.
+
+- Jiang, D., et al. (2026). MAGMA: A Multi-Graph based Agentic Memory
+  Architecture for AI Agents. arXiv:2601.03236.
+
+- Fang, J., et al. (2025). LightMem: Lightweight and Efficient Memory-Augmented
+  Generation. *ICLR 2026*. arXiv:2510.18866.
+
+- Rezazadeh, et al. (2025). MemTree: Dynamic Tree Memory. *ICLR 2025*.
+  arXiv:2410.14052.
+
+- Tan, Z., et al. (2025). In Prospect and Retrospect: Reflective Memory
+  Management for Long-term Personalized Dialogue Agents. *ACL 2025*.
+  arXiv:2503.08026.
+
+- Latimer, C., et al. (2025). Hindsight is 20/20: Building Agent Memory that
+  Retains, Recalls, and Reflects. arXiv:2512.12818.
+
+- Zhang, G., et al. (2025). G-Memory: Tracing Hierarchical Memory for Multi-
+  Agent Systems. *NeurIPS 2025 Spotlight*. arXiv:2506.07398.
+
+- Zhang, S., et al. (2026). MemRL: Self-Evolving Agents via Runtime
+  Reinforcement Learning on Episodic Memory. arXiv:2601.03192.
 
 ### Neuroscience and Psychology
 
