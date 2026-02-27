@@ -25,51 +25,169 @@ use, like a biological memory system.
 - **Zero infrastructure** — one SQLite file, no external services, no network calls
 - **Embeddable** — Rust with C FFI; runs anywhere with no runtime overhead
 
-### Comparison with Alternatives
+## Getting Started
 
-Systems ordered by adoption. All Python unless noted.
+### Installation
 
-| System | Storage | Infra | LLM | Memory Model | Graph | Retrieval | Forgetting | Preferences |
-|--------|---------|:-----:|:---:|-------------|:-----:|-----------|:----------:|:-----------:|
-| **Alaya** (Rust) | SQLite single file | None | Optional (traits) | Three-store: episodic, semantic, implicit | Hebbian (reshapes through use) | BM25 + vector + graph + RRF | Bjork dual-strength + RIF | Vasana (emergent) |
-| **mem0** | Qdrant/Pinecone + Postgres + Neo4j | 2-3 | Required | Tiered + optional graph | Optional (Mem0g) | Vector + graph | Exponential decay | LLM-extracted |
-| **Supermemory** (TS) | KG + vector + graph DB | 2-3 | Required | Graph + vector with decay | Yes | Hybrid vector + graph | Decay curves + expiry | LLM-extracted |
-| **PageIndex** | JSON tree index | 0 | Required (OpenAI) | Hierarchical ToC tree | Tree (DAG) | LLM reasoning over tree | No | No |
-| **Memvid** (Rust) | Single `.mv2` file | None | None (local ONNX) | Append-only Smart Frames | No | Tantivy FTS + HNSW | None (immutable) | No |
-| **Zep / Graphiti** | Neo4j + Lucene | 1-2 | Required | Temporal knowledge graph | Static temporal KG | Cosine + BM25 + graph + RRF | Temporal invalidation | Indirect (graph) |
-| **Letta (MemGPT)** | Postgres + Chroma/Qdrant | 1-2 | Required (LLM = manager) | OS-inspired: core, recall, archival | No | Agent-driven tool calls | Eviction + summarization | Agent-edited blocks |
-| **Cognee** | Neo4j + vectors | 1-2 | Required | Vector + graph knowledge engine | Yes | Hybrid vector + graph | Not documented | Via graph |
-| **Hindsight** | Configurable | 1-2 | Required | Four networks: world, experience, opinion, observation | No | Temporal priming + adaptive reasoning | Belief confidence evolution | Opinion memory (novel) |
-| **HippoRAG** | In-memory KG | 0 | Required | Hippocampal indexing + open KG | Personalized PageRank | PPR on knowledge graph | No | No |
-| **SYNAPSE** | In-memory | 0 | Required | Unified episodic-semantic graph | Spreading activation + lateral inhibition | Activation-based graph traversal | Temporal decay | No |
-| **LangMem SDK** | LangGraph store | 0-1 | Required | Semantic + procedural (prompt updates) | No | Vector similarity | No | Via extracted facts |
-| **Cortex-Mem** (Rust) | Configurable | 0-1 | Required | Extracted facts with dedup | No | Vector similarity | No | No |
-| **A-MEM** | Vector + note graph | 0 | Required | Zettelkasten-inspired linked notes | Implicit links | Embedding + note traversal | Evolution-based | No |
-| **MemoryOS** | Configurable | 0-1 | Required | Three-tier OS hierarchy | No | Hierarchical cross-tier | FIFO + paging | Yes |
-| **LightMem** | Configurable | 0-1 | Required | Atkinson-Shiffrin: sensory, STM, LTM | No | Topic-grouped | Sleep-time consolidation | No |
-| **Mem-alpha** | Configurable | 0-1 | Required | Core + episodic + semantic (RL-managed) | No | RL-learned | RL-learned | No |
-| **LangChain** | In-memory / Redis | 0-1 | Optional | Buffer / summary / entity | No | Direct injection | Window / truncation | Minimal |
-| **LlamaIndex** | SQLite / Postgres | 0-1 | Optional | Composable blocks | No | Block-dependent | FIFO eviction | Basic (facts) |
-| **OpenViking** | VikingDB | 1 | Required | Virtual filesystem: L0, L1, L2 | No | Directory + semantic search | Implicit (tiered) | No |
-| **Redis Memory** | Redis + backends | 1+ | Required | Topics + entities + HNSW | No | HNSW vector + topic filter | No | No |
-| **Generative Agents** | In-memory | 0 | Required | Stream + reflections + plans | No | Recency x importance x relevance | Recency decay | Emergent |
+Add Alaya to your `Cargo.toml`:
 
-#### Vector Databases (Infrastructure Layer)
+```toml
+[dependencies]
+alaya = { git = "https://github.com/h4x0r/alaya" }
+```
 
-These provide storage and retrieval but not memory semantics (lifecycle,
-forgetting, preference learning, graph dynamics).
+### Run the Demo
 
-| System | Language | Hybrid Search | Managed Cloud | Open Source |
-|--------|----------|:------------:|:-------------:|:----------:|
-| **Pinecone** | Cloud-native | No native BM25 | Yes (only option) | No |
-| **ChromaDB** | Python | FTS + vector | Chroma Cloud | Yes |
-| **Weaviate** | Go | BM25 + vector | Weaviate Cloud | Yes |
-| **Milvus** | Go/C++ | Dense + sparse | Zilliz Cloud | Yes |
-| **Cloudflare Vectorize** | Cloud-native | Via Workers AI | Yes (only option) | No |
+The included demo walks through all six core capabilities with annotated output
+and no external dependencies (uses a rule-based provider instead of an LLM):
 
-For a comprehensive analysis grounded in the CoALA taxonomy (Sumers et al.,
-2024) and RAG survey literature (Gao et al., 2023; Zhang et al., 2024), see
-[docs/related-work.md](docs/related-work.md).
+```bash
+git clone https://github.com/h4x0r/alaya.git
+cd alaya
+cargo run --example demo
+```
+
+The demo covers:
+
+1. **Episodic Memory** — storing and querying conversation episodes
+2. **Hebbian Graph** — temporal links, co-retrieval strengthening, spreading activation
+3. **Consolidation** — extracting semantic knowledge from episodes (CLS replay)
+4. **Perfuming** — accumulating impressions, crystallizing preferences (vasana)
+5. **Transformation** — deduplication, pruning, decay
+6. **Forgetting** — Bjork dual-strength decay, memory revival
+
+### Quick Start
+
+```rust
+use alaya::{AlayaStore, NewEpisode, Role, EpisodeContext, Query, NoOpProvider};
+
+// Open a persistent database (or use open_in_memory() for tests)
+let store = AlayaStore::open("memory.db")?;
+
+// Store a conversation episode
+store.store_episode(&NewEpisode {
+    content: "I've been learning Rust for about six months now".into(),
+    role: Role::User,
+    session_id: "session-1".into(),
+    timestamp: 1740000000,
+    context: EpisodeContext::default(),
+    embedding: None, // pass Some(vec![...]) if you have embeddings
+})?;
+
+// Query with hybrid retrieval (BM25 + vector + graph + RRF)
+let results = store.query(&Query::simple("Rust experience"))?;
+for mem in &results {
+    println!("[{:.2}] {}", mem.score, mem.content);
+}
+
+// Get crystallized preferences
+let prefs = store.preferences(Some("communication_style"))?;
+
+// Run lifecycle (use NoOpProvider, or implement ConsolidationProvider for LLM-backed extraction)
+store.consolidate(&NoOpProvider)?;
+store.transform()?;
+store.forget()?;
+```
+
+## Integration Guide
+
+### The Integration Pattern
+
+Alaya is a library, not a framework. Your agent owns the conversation loop,
+the LLM connection, and the embedding model. Alaya owns memory storage,
+retrieval, and lifecycle.
+
+```
+Your Agent                          Alaya
+─────────                           ─────
+receive message
+  ├── store_episode()           ──▶ episodic store + graph links
+  ├── query()                   ──▶ BM25 + vector + graph → RRF → rerank
+  ├── preferences()             ──▶ crystallized behavioral patterns
+  ├── knowledge()               ──▶ consolidated semantic nodes
+  ├── assemble context + prompt
+  ├── call LLM
+  └── respond
+
+periodic background tasks:
+  ├── consolidate(provider)     ──▶ episodes → semantic knowledge
+  ├── perfume(interaction, provider) ──▶ impressions → preferences
+  ├── transform()               ──▶ dedup, prune, decay
+  └── forget()                  ──▶ Bjork strength decay + archival
+```
+
+### Implementing ConsolidationProvider
+
+The `ConsolidationProvider` trait is how your agent teaches Alaya to extract
+knowledge. You implement three methods backed by your LLM of choice:
+
+```rust
+use alaya::*;
+
+struct MyProvider { /* your LLM client */ }
+
+impl ConsolidationProvider for MyProvider {
+    fn extract_knowledge(&self, episodes: &[Episode]) -> Result<Vec<NewSemanticNode>> {
+        // Ask your LLM: "What facts/relationships can you extract from these episodes?"
+        // Return structured NewSemanticNode values
+        todo!()
+    }
+
+    fn extract_impressions(&self, interaction: &Interaction) -> Result<Vec<NewImpression>> {
+        // Ask your LLM: "What behavioral signals does this interaction contain?"
+        // Return domain + observation + valence
+        todo!()
+    }
+
+    fn detect_contradiction(&self, a: &SemanticNode, b: &SemanticNode) -> Result<bool> {
+        // Ask your LLM: "Do these two facts contradict each other?"
+        todo!()
+    }
+}
+```
+
+Use `NoOpProvider` if you don't have an LLM available — episodes accumulate
+and BM25 retrieval works without consolidation.
+
+### Lifecycle Scheduling
+
+Call lifecycle methods on a schedule that suits your application:
+
+| Method | When to call | What it does |
+|--------|-------------|--------------|
+| `consolidate()` | After accumulating 10+ episodes | Extracts semantic knowledge from episodes |
+| `perfume()` | On every user interaction | Extracts behavioral impressions, crystallizes preferences |
+| `transform()` | Daily or weekly | Deduplicates, prunes weak links, decays stale preferences |
+| `forget()` | Daily or weekly | Decays retrieval strength, archives truly forgotten nodes |
+
+## API Reference
+
+```rust
+impl AlayaStore {
+    // Open / create
+    pub fn open(path: impl AsRef<Path>) -> Result<Self>;
+    pub fn open_in_memory() -> Result<Self>;
+
+    // Write
+    pub fn store_episode(&self, episode: &NewEpisode) -> Result<EpisodeId>;
+
+    // Read
+    pub fn query(&self, q: &Query) -> Result<Vec<ScoredMemory>>;
+    pub fn preferences(&self, domain: Option<&str>) -> Result<Vec<Preference>>;
+    pub fn knowledge(&self, filter: Option<KnowledgeFilter>) -> Result<Vec<SemanticNode>>;
+    pub fn neighbors(&self, node: NodeRef, depth: u32) -> Result<Vec<(NodeRef, f32)>>;
+
+    // Lifecycle
+    pub fn consolidate(&self, provider: &dyn ConsolidationProvider) -> Result<ConsolidationReport>;
+    pub fn perfume(&self, interaction: &Interaction, provider: &dyn ConsolidationProvider) -> Result<PerfumingReport>;
+    pub fn transform(&self) -> Result<TransformationReport>;
+    pub fn forget(&self) -> Result<ForgettingReport>;
+
+    // Admin
+    pub fn status(&self) -> Result<MemoryStatus>;
+    pub fn purge(&self, filter: PurgeFilter) -> Result<PurgeReport>;
+}
+```
 
 ## Architecture
 
@@ -141,66 +259,6 @@ flowchart LR
 | **Transformation** | Asraya-paravrtti | Deduplicates, resolves contradictions, prunes |
 | **Forgetting** | Bjork & Bjork (1992) | Decays retrieval strength, archives weak nodes |
 
-## Quick Start
-
-```rust
-use alaya::{AlayaStore, NewEpisode, Role, EpisodeContext, Query, NoOpProvider};
-
-// Open a persistent database
-let store = AlayaStore::open("memory.db")?;
-
-// Store a conversation episode
-store.store_episode(&NewEpisode {
-    content: "I've been learning Rust for about six months now".into(),
-    role: Role::User,
-    session_id: "session-1".into(),
-    timestamp: 1740000000,
-    context: EpisodeContext::default(),
-    embedding: None, // pass Some(vec![...]) if you have embeddings
-})?;
-
-// Query with hybrid retrieval
-let results = store.query(&Query::simple("Rust experience"))?;
-for mem in &results {
-    println!("[{:.2}] {}", mem.score, mem.content);
-}
-
-// Get crystallized preferences
-let prefs = store.preferences(Some("communication_style"))?;
-
-// Run lifecycle with a no-op provider (or implement ConsolidationProvider)
-let noop = NoOpProvider;
-store.consolidate(&noop)?;
-store.transform()?;
-store.forget()?;
-```
-
-## Research Foundations
-
-### Neuroscience
-
-- **Hebbian LTP/LTD** — synapses strengthen on co-activation (Hebb 1949, Bliss & Lomo 1973)
-- **Complementary Learning Systems** — fast hippocampus + slow neocortex (McClelland et al. 1995)
-- **Spreading Activation** — associative retrieval beyond embedding similarity (Collins & Loftus 1975)
-- **Encoding Specificity** — context-dependent retrieval (Tulving & Thomson 1973)
-- **Dual-Strength Forgetting** — storage vs retrieval strength (Bjork & Bjork 1992)
-- **Retrieval-Induced Forgetting** — retrieving some memories suppresses competitors (Anderson et al. 1994)
-- **Working Memory Limits** — 4 +/- 1 chunks (Cowan 2001)
-
-### Yogacara Buddhist psychology
-
-- **Alaya-vijnana** — the storehouse consciousness, persistent substrate for all seeds
-- **Bija (seeds)** — living potentials that ripen when conditions align
-- **Vasana (perfuming)** — gradual accumulation of impressions that shape behavior
-- **Asraya-paravrtti** — periodic transformation toward clarity
-- **Vijnaptimatrata** — memory is perspective-relative, not objective
-
-### Information Retrieval
-
-- **Reciprocal Rank Fusion** — merging multiple ranked result sets (Cormack et al. 2009)
-- **BM25 via FTS5** — keyword matching with relevance scoring
-- **Cosine Similarity** — semantic vector search
-
 ## Design Principles
 
 1. **Memory is a process, not a database.** Every retrieval changes what is
@@ -218,30 +276,82 @@ store.forget()?;
 5. **Graceful degradation.** No embeddings? BM25-only. No LLM for
    consolidation? Episodes accumulate. Every feature works independently.
 
-## API Overview
+## Research Foundations
 
-```rust
-impl AlayaStore {
-    // Write
-    pub fn store_episode(&self, episode: &NewEpisode) -> Result<EpisodeId>;
+### Neuroscience
 
-    // Read
-    pub fn query(&self, q: &Query) -> Result<Vec<ScoredMemory>>;
-    pub fn preferences(&self, domain: Option<&str>) -> Result<Vec<Preference>>;
-    pub fn knowledge(&self, filter: Option<KnowledgeFilter>) -> Result<Vec<SemanticNode>>;
-    pub fn neighbors(&self, node: NodeRef, depth: u32) -> Result<Vec<(NodeRef, f32)>>;
+- **Hebbian LTP/LTD** — synapses strengthen on co-activation (Hebb 1949, Bliss & Lomo 1973)
+- **Complementary Learning Systems** — fast hippocampus + slow neocortex (McClelland et al. 1995)
+- **Spreading Activation** — associative retrieval beyond embedding similarity (Collins & Loftus 1975)
+- **Encoding Specificity** — context-dependent retrieval (Tulving & Thomson 1973)
+- **Dual-Strength Forgetting** — storage vs retrieval strength (Bjork & Bjork 1992)
+- **Retrieval-Induced Forgetting** — retrieving some memories suppresses competitors (Anderson et al. 1994)
+- **Working Memory Limits** — 4 +/- 1 chunks (Cowan 2001)
 
-    // Lifecycle
-    pub fn consolidate(&self, provider: &dyn ConsolidationProvider) -> Result<ConsolidationReport>;
-    pub fn perfume(&self, interaction: &Interaction, provider: &dyn ConsolidationProvider) -> Result<PerfumingReport>;
-    pub fn transform(&self) -> Result<TransformationReport>;
-    pub fn forget(&self) -> Result<ForgettingReport>;
+### Yogacara Buddhist Psychology
 
-    // Admin
-    pub fn status(&self) -> Result<MemoryStatus>;
-    pub fn purge(&self, filter: PurgeFilter) -> Result<PurgeReport>;
-}
-```
+- **Alaya-vijnana** — the storehouse consciousness, persistent substrate for all seeds
+- **Bija (seeds)** — living potentials that ripen when conditions align
+- **Vasana (perfuming)** — gradual accumulation of impressions that shape behavior
+- **Asraya-paravrtti** — periodic transformation toward clarity
+- **Vijnaptimatrata** — memory is perspective-relative, not objective
+
+### Information Retrieval
+
+- **Reciprocal Rank Fusion** — merging multiple ranked result sets (Cormack et al. 2009)
+- **BM25 via FTS5** — keyword matching with relevance scoring
+- **Cosine Similarity** — semantic vector search
+
+## Comparison with Alternatives
+
+<details>
+<summary>Click to expand comparison table</summary>
+
+Systems ordered by adoption. All Python unless noted.
+
+| System | Storage | Infra | LLM | Memory Model | Graph | Retrieval | Forgetting | Preferences |
+|--------|---------|:-----:|:---:|-------------|:-----:|-----------|:----------:|:-----------:|
+| **Alaya** (Rust) | SQLite single file | None | Optional (traits) | Three-store: episodic, semantic, implicit | Hebbian (reshapes through use) | BM25 + vector + graph + RRF | Bjork dual-strength + RIF | Vasana (emergent) |
+| **mem0** | Qdrant/Pinecone + Postgres + Neo4j | 2-3 | Required | Tiered + optional graph | Optional (Mem0g) | Vector + graph | Exponential decay | LLM-extracted |
+| **Supermemory** (TS) | KG + vector + graph DB | 2-3 | Required | Graph + vector with decay | Yes | Hybrid vector + graph | Decay curves + expiry | LLM-extracted |
+| **PageIndex** | JSON tree index | 0 | Required (OpenAI) | Hierarchical ToC tree | Tree (DAG) | LLM reasoning over tree | No | No |
+| **Memvid** (Rust) | Single `.mv2` file | None | None (local ONNX) | Append-only Smart Frames | No | Tantivy FTS + HNSW | None (immutable) | No |
+| **Zep / Graphiti** | Neo4j + Lucene | 1-2 | Required | Temporal knowledge graph | Static temporal KG | Cosine + BM25 + graph + RRF | Temporal invalidation | Indirect (graph) |
+| **Letta (MemGPT)** | Postgres + Chroma/Qdrant | 1-2 | Required (LLM = manager) | OS-inspired: core, recall, archival | No | Agent-driven tool calls | Eviction + summarization | Agent-edited blocks |
+| **Cognee** | Neo4j + vectors | 1-2 | Required | Vector + graph knowledge engine | Yes | Hybrid vector + graph | Not documented | Via graph |
+| **Hindsight** | Configurable | 1-2 | Required | Four networks: world, experience, opinion, observation | No | Temporal priming + adaptive reasoning | Belief confidence evolution | Opinion memory (novel) |
+| **HippoRAG** | In-memory KG | 0 | Required | Hippocampal indexing + open KG | Personalized PageRank | PPR on knowledge graph | No | No |
+| **SYNAPSE** | In-memory | 0 | Required | Unified episodic-semantic graph | Spreading activation + lateral inhibition | Activation-based graph traversal | Temporal decay | No |
+| **LangMem SDK** | LangGraph store | 0-1 | Required | Semantic + procedural (prompt updates) | No | Vector similarity | No | Via extracted facts |
+| **Cortex-Mem** (Rust) | Configurable | 0-1 | Required | Extracted facts with dedup | No | Vector similarity | No | No |
+| **A-MEM** | Vector + note graph | 0 | Required | Zettelkasten-inspired linked notes | Implicit links | Embedding + note traversal | Evolution-based | No |
+| **MemoryOS** | Configurable | 0-1 | Required | Three-tier OS hierarchy | No | Hierarchical cross-tier | FIFO + paging | Yes |
+| **LightMem** | Configurable | 0-1 | Required | Atkinson-Shiffrin: sensory, STM, LTM | No | Topic-grouped | Sleep-time consolidation | No |
+| **Mem-alpha** | Configurable | 0-1 | Required | Core + episodic + semantic (RL-managed) | No | RL-learned | RL-learned | No |
+| **LangChain** | In-memory / Redis | 0-1 | Optional | Buffer / summary / entity | No | Direct injection | Window / truncation | Minimal |
+| **LlamaIndex** | SQLite / Postgres | 0-1 | Optional | Composable blocks | No | Block-dependent | FIFO eviction | Basic (facts) |
+| **OpenViking** | VikingDB | 1 | Required | Virtual filesystem: L0, L1, L2 | No | Directory + semantic search | Implicit (tiered) | No |
+| **Redis Memory** | Redis + backends | 1+ | Required | Topics + entities + HNSW | No | HNSW vector + topic filter | No | No |
+| **Generative Agents** | In-memory | 0 | Required | Stream + reflections + plans | No | Recency x importance x relevance | Recency decay | Emergent |
+
+#### Vector Databases (Infrastructure Layer)
+
+These provide storage and retrieval but not memory semantics (lifecycle,
+forgetting, preference learning, graph dynamics).
+
+| System | Language | Hybrid Search | Managed Cloud | Open Source |
+|--------|----------|:------------:|:-------------:|:----------:|
+| **Pinecone** | Cloud-native | No native BM25 | Yes (only option) | No |
+| **ChromaDB** | Python | FTS + vector | Chroma Cloud | Yes |
+| **Weaviate** | Go | BM25 + vector | Weaviate Cloud | Yes |
+| **Milvus** | Go/C++ | Dense + sparse | Zilliz Cloud | Yes |
+| **Cloudflare Vectorize** | Cloud-native | Via Workers AI | Yes (only option) | No |
+
+For a comprehensive analysis grounded in the CoALA taxonomy (Sumers et al.,
+2024) and RAG survey literature (Gao et al., 2023; Zhang et al., 2024), see
+[docs/related-work.md](docs/related-work.md).
+
+</details>
 
 ## License
 
