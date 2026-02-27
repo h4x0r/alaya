@@ -2,7 +2,7 @@
 
 A neuroscience and Buddhist psychology-inspired memory engine for conversational AI agents.
 
-**Alaya** (Sanskrit: *alaya-vijnana*, "storehouse consciousness") is a Rust
+**Alaya** (Sanskrit: *alaya-vijnana* · आलयविज्ञान · Chinese: 阿賴耶識, "storehouse consciousness") is a Rust
 library that provides three-tier memory, a Hebbian graph overlay, hybrid
 retrieval with spreading activation, and adaptive lifecycle processes. It is
 headless and LLM-agnostic — the consuming agent owns identity, embeddings,
