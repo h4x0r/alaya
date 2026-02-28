@@ -310,34 +310,63 @@ see [docs/theoretical-foundations.md](docs/theoretical-foundations.md).
 <details>
 <summary>Click to expand comparison table</summary>
 
-Systems ordered by adoption.
+Grouped by category. Within each category, sorted by feature richness
+(graph, forgetting, preferences, hybrid retrieval, multi-store
+architecture), then by adoption where richness is comparable.
+
+#### Dedicated Memory Systems
+
+Purpose-built memory engines you integrate into your agent.
 
 | System | Lang | Storage | Infra | LLM | Memory Model | Graph | Retrieval | Forgetting | Preferences |
 |--------|:----:|---------|:-----:|:---:|-------------|:-----:|-----------|:----------:|:-----------:|
 | **Alaya** | Rust | SQLite single file | None | Optional (traits) | Three-store: episodic, semantic, implicit | Hebbian (reshapes through use) | BM25 + vector + graph + RRF | Bjork dual-strength + RIF | Vasana (emergent) |
-| **OpenClaw** | Python | Markdown + SQLite FTS5 | None | Required (agent-authored) | Two-layer: MEMORY.md + daily logs | No | grep + FTS5 | No (append-only) | Agent-authored |
-| **Claudesidian** | TS | Obsidian vault (markdown) | Obsidian | Required (Claude Code) | PARA folders + daily/weekly notes | Obsidian links (static) | Obsidian search + file scan | Manual summarization | No |
 | **mem0** | Python | Qdrant/Pinecone + Postgres + Neo4j | 2-3 | Required | Tiered + optional graph | Optional (Mem0g) | Vector + graph | Exponential decay | LLM-extracted |
+| **Zep / Graphiti** | Python | Neo4j + Lucene | 1-2 | Required | Temporal knowledge graph | Static temporal KG | Cosine + BM25 + graph + RRF | Temporal invalidation | Indirect (graph) |
 | **Supermemory** | TS | KG + vector + graph DB | 2-3 | Required | Graph + vector with decay | Yes | Hybrid vector + graph | Decay curves + expiry | LLM-extracted |
+| **Hindsight** | Python | Configurable | 1-2 | Required | Four networks: world, experience, opinion, observation | No | Temporal priming + adaptive reasoning | Belief confidence evolution | Opinion memory (novel) |
+| **MemoryOS** | Python | Configurable | 0-1 | Required | Three-tier OS hierarchy | No | Hierarchical cross-tier | FIFO + paging | Yes |
+| **Cognee** | Python | Neo4j + vectors | 1-2 | Required | Vector + graph knowledge engine | Yes | Hybrid vector + graph | Not documented | Via graph |
+| **Redis Memory** | Python | Redis + backends | 1+ | Required | Topics + entities + HNSW | No | HNSW vector + topic filter | No | No |
+| **Cortex-Mem** | Rust | Configurable | 0-1 | Required | Extracted facts with dedup | No | Vector similarity | No | No |
 | **PageIndex** | Python | JSON tree index | 0 | Required (OpenAI) | Hierarchical ToC tree | Tree (DAG) | LLM reasoning over tree | No | No |
 | **Memvid** | Rust | Single `.mv2` file | None | None (local ONNX) | Append-only Smart Frames | No | Tantivy FTS + HNSW | None (immutable) | No |
-| **Zep / Graphiti** | Python | Neo4j + Lucene | 1-2 | Required | Temporal knowledge graph | Static temporal KG | Cosine + BM25 + graph + RRF | Temporal invalidation | Indirect (graph) |
+| **OpenViking** | Python | VikingDB | 1 | Required | Virtual filesystem: L0, L1, L2 | No | Directory + semantic search | Implicit (tiered) | No |
+
+#### Framework Memory Modules
+
+Memory features built into larger agent frameworks.
+
+| System | Lang | Storage | Infra | LLM | Memory Model | Graph | Retrieval | Forgetting | Preferences |
+|--------|:----:|---------|:-----:|:---:|-------------|:-----:|-----------|:----------:|:-----------:|
 | **Letta (MemGPT)** | Python | Postgres + Chroma/Qdrant | 1-2 | Required (LLM = manager) | OS-inspired: core, recall, archival | No | Agent-driven tool calls | Eviction + summarization | Agent-edited blocks |
-| **Cognee** | Python | Neo4j + vectors | 1-2 | Required | Vector + graph knowledge engine | Yes | Hybrid vector + graph | Not documented | Via graph |
-| **Hindsight** | Python | Configurable | 1-2 | Required | Four networks: world, experience, opinion, observation | No | Temporal priming + adaptive reasoning | Belief confidence evolution | Opinion memory (novel) |
-| **HippoRAG** | Python | In-memory KG | 0 | Required | Hippocampal indexing + open KG | Personalized PageRank | PPR on knowledge graph | No | No |
-| **SYNAPSE** | Python | In-memory | 0 | Required | Unified episodic-semantic graph | Spreading activation + lateral inhibition | Activation-based graph traversal | Temporal decay | No |
-| **LangMem SDK** | Python | LangGraph store | 0-1 | Required | Semantic + procedural (prompt updates) | No | Vector similarity | No | Via extracted facts |
-| **Cortex-Mem** | Rust | Configurable | 0-1 | Required | Extracted facts with dedup | No | Vector similarity | No | No |
-| **A-MEM** | Python | Vector + note graph | 0 | Required | Zettelkasten-inspired linked notes | Implicit links | Embedding + note traversal | Evolution-based | No |
-| **MemoryOS** | Python | Configurable | 0-1 | Required | Three-tier OS hierarchy | No | Hierarchical cross-tier | FIFO + paging | Yes |
-| **LightMem** | Python | Configurable | 0-1 | Required | Atkinson-Shiffrin: sensory, STM, LTM | No | Topic-grouped | Sleep-time consolidation | No |
-| **Mem-alpha** | Python | Configurable | 0-1 | Required | Core + episodic + semantic (RL-managed) | No | RL-learned | RL-learned | No |
 | **LangChain** | Python | In-memory / Redis | 0-1 | Optional | Buffer / summary / entity | No | Direct injection | Window / truncation | Minimal |
 | **LlamaIndex** | Python | SQLite / Postgres | 0-1 | Optional | Composable blocks | No | Block-dependent | FIFO eviction | Basic (facts) |
-| **OpenViking** | Python | VikingDB | 1 | Required | Virtual filesystem: L0, L1, L2 | No | Directory + semantic search | Implicit (tiered) | No |
-| **Redis Memory** | Python | Redis + backends | 1+ | Required | Topics + entities + HNSW | No | HNSW vector + topic filter | No | No |
+| **LangMem SDK** | Python | LangGraph store | 0-1 | Required | Semantic + procedural (prompt updates) | No | Vector similarity | No | Via extracted facts |
+
+#### File-Based Memory (MEMORY.md Pattern)
+
+Agent reads and writes memory as markdown files. Simple to implement but
+no automated lifecycle, retrieval ranking, or emergent structure.
+
+| System | Lang | Storage | Infra | LLM | Memory Model | Graph | Retrieval | Forgetting | Preferences |
+|--------|:----:|---------|:-----:|:---:|-------------|:-----:|-----------|:----------:|:-----------:|
+| **OpenClaw** | Python | Markdown + SQLite FTS5 | None | Required (agent-authored) | Two-layer: MEMORY.md + daily logs | No | grep + FTS5 | No (append-only) | Agent-authored |
+| **Claudesidian** | TS | Obsidian vault (markdown) | Obsidian | Required (Claude Code) | PARA folders + daily/weekly notes | Obsidian links (static) | Obsidian search + file scan | Manual summarization | No |
+
+#### Research Architectures
+
+Academic papers with reference implementations. Often influential
+designs but not packaged as production libraries.
+
+| System | Lang | Storage | Infra | LLM | Memory Model | Graph | Retrieval | Forgetting | Preferences |
+|--------|:----:|---------|:-----:|:---:|-------------|:-----:|-----------|:----------:|:-----------:|
 | **Generative Agents** | Python | In-memory | 0 | Required | Stream + reflections + plans | No | Recency x importance x relevance | Recency decay | Emergent |
+| **SYNAPSE** | Python | In-memory | 0 | Required | Unified episodic-semantic graph | Spreading activation + lateral inhibition | Activation-based graph traversal | Temporal decay | No |
+| **A-MEM** | Python | Vector + note graph | 0 | Required | Zettelkasten-inspired linked notes | Implicit links | Embedding + note traversal | Evolution-based | No |
+| **LightMem** | Python | Configurable | 0-1 | Required | Atkinson-Shiffrin: sensory, STM, LTM | No | Topic-grouped | Sleep-time consolidation | No |
+| **Mem-alpha** | Python | Configurable | 0-1 | Required | Core + episodic + semantic (RL-managed) | No | RL-learned | RL-learned | No |
+| **HippoRAG** | Python | In-memory KG | 0 | Required | Hippocampal indexing + open KG | Personalized PageRank | PPR on knowledge graph | No | No |
 
 #### Vector Databases (Infrastructure Layer)
 
