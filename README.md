@@ -305,6 +305,29 @@ see [docs/theoretical-foundations.md](docs/theoretical-foundations.md).
 - **BM25 via FTS5** — keyword matching with relevance scoring
 - **Cosine Similarity** — semantic vector search
 
+## Coming from MEMORY.md?
+
+If you're using file-based memory (OpenClaw, Claudesidian, or a
+hand-rolled `MEMORY.md`), you already understand the core idea: agents
+need to remember things across sessions. Alaya solves the same problem
+but with structure underneath.
+
+| What changes | MEMORY.md pattern | Alaya |
+|---|---|---|
+| **Storage** | Markdown files the agent reads/writes | SQLite with typed stores (episodes, knowledge, preferences) |
+| **Retrieval** | `grep`, file scan, or dump everything into context | Ranked hybrid search: BM25 + vector + graph traversal + RRF fusion |
+| **What gets remembered** | Whatever the agent decides to write down | Everything is stored; retrieval quality determines what surfaces |
+| **Forgetting** | Manual cleanup or unbounded growth | Automatic: weak memories decay, strong ones persist (Bjork model) |
+| **Associations** | None — flat files | Hebbian graph links memories that are retrieved together |
+| **Preferences** | Agent-authored summary, easily drifts | Emerge from accumulated impressions (vasana), crystallize at threshold |
+| **Context window cost** | Grows linearly — eventually you hit the limit | Ranked retrieval returns only the most relevant memories |
+| **LLM dependency** | Required for writing and organizing | Optional — works without an LLM, gets better with one |
+
+The tradeoff: MEMORY.md is zero-setup and human-readable. Alaya
+requires `cargo add alaya` and a few trait implementations. In return
+you get retrieval that improves with use, memories that self-organize,
+and a context window that stays clean.
+
 ## Comparison with Alternatives
 
 Alaya is compared against 40+ memory systems across six categories
