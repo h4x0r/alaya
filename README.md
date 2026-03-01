@@ -422,8 +422,7 @@ cargo run --example demo
 
 If Alaya saves your agent tokens and money, consider supporting development:
 
-[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=github)](https://github.com/sponsors/SecurityRonin)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/securityronin)
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=github)](https://github.com/sponsors/h4x0r)
 
 Star the repo if you find it useful — it helps others discover Alaya.
 
