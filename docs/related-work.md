@@ -998,6 +998,108 @@ against Alaya's architecture.
 
 ---
 
+## How the Categories Fit Together
+
+```mermaid
+graph TB
+    subgraph USER["User / Conversation"]
+        U[Human or External System]
+    end
+
+    subgraph AGENT["AI Agent (LLM)"]
+        direction TB
+        A_CORE[Agent Core — reasoning, planning, tool use]
+        A_CTX[Context Window — working memory]
+        A_CORE --> A_CTX
+    end
+
+    subgraph FRAMEWORK["Framework Memory Modules"]
+        direction LR
+        F_DESC["Built into agent frameworks<br/><i>LangChain · CrewAI · Letta · LlamaIndex</i>"]
+        F_MEM["Buffer / Summary / Entity memory<br/>managed by the framework"]
+    end
+
+    subgraph DEDICATED["Dedicated Memory Systems"]
+        direction TB
+        D_DESC["Standalone engines the agent integrates<br/><i>Alaya · Vestige · mem0 · Zep · MemOS</i>"]
+        subgraph LIFECYCLE["Memory Lifecycle"]
+            direction LR
+            LC1[Formation]
+            LC2[Consolidation]
+            LC3[Forgetting]
+            LC4[Transformation]
+            LC1 --> LC2 --> LC3 --> LC4
+        end
+        subgraph RETRIEVAL["Retrieval Pipeline"]
+            direction LR
+            R1["BM25<br/>sparse"]
+            R2["Vector<br/>dense"]
+            R3["Graph<br/>traversal"]
+            R4["Fusion<br/>RRF"]
+            R1 --> R4
+            R2 --> R4
+            R3 --> R4
+        end
+    end
+
+    subgraph CODING["Coding Agent Memory"]
+        direction LR
+        C_DESC["MCP servers for IDE agents<br/><i>Beads · Engram · Memsearch</i>"]
+        C_MCP["Exposed via MCP protocol<br/>to Claude Code, Cursor, etc."]
+    end
+
+    subgraph FILEBASED["File-Based Memory"]
+        direction LR
+        FB_DESC["Agent reads/writes flat files<br/><i>OpenClaw · Claudesidian · MEMORY.md</i>"]
+        FB_FILES["Markdown / JSON / YAML<br/>no automated lifecycle"]
+    end
+
+    subgraph VECTORDB["Vector Databases — Infrastructure Layer"]
+        direction LR
+        V_DESC["Storage + retrieval primitives<br/><i>Pinecone · Chroma · Weaviate · Milvus · pgvector</i>"]
+        V_OPS["HNSW / IVF / PQ indexing<br/>cosine · dot · L2 search"]
+    end
+
+    subgraph RESEARCH["Research Architectures"]
+        direction LR
+        RS_DESC["Academic designs with reference implementations<br/><i>Generative Agents · SYNAPSE · HippoRAG · A-MEM</i>"]
+        RS_INFLUENCE["Influential ideas that production<br/>systems adopt and adapt"]
+    end
+
+    U <-->|conversation| A_CORE
+    A_CTX <-->|"inject/retrieve<br/>memories"| FRAMEWORK
+    A_CTX <-->|"query/store<br/>via API"| DEDICATED
+    A_CTX <-->|"MCP tool<br/>calls"| CODING
+    A_CTX <-->|"read/write<br/>files"| FILEBASED
+    DEDICATED -.->|"uses as storage<br/>backend"| VECTORDB
+    FRAMEWORK -.->|"uses as storage<br/>backend"| VECTORDB
+    RESEARCH -.->|"ideas flow into<br/>production systems"| DEDICATED
+    RESEARCH -.->|"ideas flow into<br/>frameworks"| FRAMEWORK
+
+    classDef agent fill:#1f6feb,stroke:#388bfd,color:#f0f6fc
+    classDef dedicated fill:#238636,stroke:#2ea043,color:#f0f6fc
+    classDef framework fill:#8957e5,stroke:#a371f7,color:#f0f6fc
+    classDef coding fill:#d29922,stroke:#e3b341,color:#0d1117
+    classDef filebased fill:#f0883e,stroke:#f4a460,color:#0d1117
+    classDef vectordb fill:#8b949e,stroke:#c9d1d9,color:#0d1117
+    classDef research fill:#f778ba,stroke:#ff9ec3,color:#0d1117
+
+    class A_CORE,A_CTX agent
+    class D_DESC,LIFECYCLE,RETRIEVAL,LC1,LC2,LC3,LC4,R1,R2,R3,R4 dedicated
+    class F_DESC,F_MEM framework
+    class C_DESC,C_MCP coding
+    class FB_DESC,FB_FILES filebased
+    class V_DESC,V_OPS vectordb
+    class RS_DESC,RS_INFLUENCE research
+```
+
+**Key relationships:**
+- **Dedicated systems** and **frameworks** use **vector databases** as storage backends
+- **Research architectures** feed ideas into both dedicated systems and frameworks
+- **Coding agent memory** connects via MCP protocol (tool calls), while frameworks inject directly into context
+- **File-based memory** is the simplest approach — no automated lifecycle, no ranked retrieval
+- The further right/down in the diagram, the more infrastructure and sophistication
+
 ## Consolidated Comparison
 
 Grouped by category. Within each category, sorted by feature richness
@@ -1025,6 +1127,14 @@ Purpose-built memory engines you integrate into your agent.
 | **MemoryOS** | Python | Configurable | 0-1 | Required | Three-tier OS hierarchy | No | Hierarchical cross-tier | FIFO + paging | Yes |
 | **Memary** | Python | Neo4j | 1 | Required | KG with entity tracking and depth ranking | Yes (Neo4j, multi-hop) | Recursive subgraph + multi-hop reasoning | Compression/summarization | Entity-based personalization |
 | **OpenClaw Redis** | TS/Python | Redis Stack (JSON + Search + Vector) | 1-2 | Required | Two-tier: working (session) + long-term (episodic, semantic, message) | No | Vector cosine + recency boosting | Recency scoring (soft) + GDPR deletion | Yes (dedicated extraction strategy) |
+| **memU** | Python | PostgreSQL + pgvector | 1-2 | Required | Three-layer hierarchical: resource → item → category | Yes (cross-references) | Dual-mode: RAG (vector) or LLM-based (deep reasoning with intent prediction) | No | Yes (explicit preference extraction) |
+| **Memori** | Python | Cloud-managed or BYODB | 0-1 | Required | Multi-level: entity, process, session augmentation | No | Automatic contextual recall via client wrapper | No | Yes (preference augmentation type) |
+| **MemMachine** | Python | Neo4j + SQL | 2-3 | Required | Three-type: working, episodic (graph), profile (SQL) | Yes (Neo4j episodic) | API search + graph traversal | No | Yes (profile memory) |
+| **ReMe** | Python | Markdown files + optional vector DB | 0-1 | Required | Dual: file-based (MEMORY.md + ReAct) + vector (personal, procedural, tool) | No | Hybrid vector + BM25 (0.7/0.3) | Compaction (conversations → summaries) | Yes (personal memory type) |
+| **GAM** | Python | Local filesystem (hierarchical) | 0 | Required | Hierarchical file taxonomy: chunks → memory summaries → auto-organized directories | No (tree) | Dual-agent: Memorizer (builds) + Researcher (explores) | No | No |
+| **Forgetful** | Python | SQLite or PostgreSQL | 0-1 | Optional (local FastEmbed) | Zettelkasten atomic memories (~300-400 words); 6 categories | Yes (auto-linking by semantic similarity + entity relationships) | Dense + BM25 + RRF + cross-encoder rerank | Importance-based with obsolescence marking | No |
+| **TiMem** | Python | PostgreSQL + Redis | 2-3 | Required | Temporal Memory Tree: 5-level (fragments → sessions → daily → weekly → persona) | Yes (tree) | Complexity-aware recall (adapts depth to query) | Consolidation compression (52% fewer tokens) | Yes (L5 persona profiles) |
+| **engram-rs** | Rust | SQLite single file | None | Optional | Atkinson-Shiffrin 3-layer: buffer → working → core; self-organizing topic tree | Yes (vector-clustered topic tree) | Hybrid semantic + BM25 (CJK support) | Activity-driven decay with per-kind rates + LLM quality gate | Implicit (procedural memories with slowest decay) |
 | **Cognee** | Python | Neo4j + vectors | 1-2 | Required | Vector + graph knowledge engine | Yes | Hybrid vector + graph | Not documented | Via graph |
 | **Redis Memory** | Python | Redis + backends | 1+ | Required | Topics + entities + HNSW | No | HNSW vector + topic filter | No | No |
 | **Cortex-Mem** | Rust | Configurable | 0-1 | Required | Extracted facts with dedup | No | Vector similarity | No | No |
@@ -1044,6 +1154,13 @@ Memory features built into larger agent frameworks.
 | **LangChain** | Python | In-memory / Redis | 0-1 | Optional | Buffer / summary / entity | No | Direct injection | Window / truncation | Minimal |
 | **LlamaIndex** | Python | SQLite / Postgres | 0-1 | Optional | Composable blocks | No | Block-dependent | FIFO eviction | Basic (facts) |
 | **LangMem SDK** | Python | LangGraph store | 0-1 | Required | Semantic + procedural (prompt updates) | No | Vector similarity | No | Via extracted facts |
+| **Agno** | Python | SQLite / Postgres | 0-1 | Required (LLM manages memory) | LLM-managed UserMemory records with add/update/delete | No | Semantic search over memory records | Yes (LLM-driven deletion/update) | Yes (LLM extracts preferences) |
+| **MetaGPT** | Python | In-memory + MemoryStorage | 0 | Required | Multi-type: Memory, BrainMemory (summarized), LongTermMemory, RoleZeroMemory | No | Role/action-filtered message retrieval | Partial (BrainMemory summarization) | No |
+| **CAMEL** | Python | In-memory (extensible) | 0 | Optional | Modular MemoryBlock system with ContextCreator | No | ContextCreator selects relevant records | Partial (pop/clear operations) | No |
+| **Haystack** | Python | Pluggable DocumentStores (many) | 0-1 | Optional | Pipeline-based; experimental Mem0 integration | No | BM25 + embedding + hybrid via Retriever components | No | No |
+| **Qwen-Agent** | Python | In-memory messages | 0 | Required (Qwen models) | Message-based + RAG for long documents | No | RAG + function calling | No (context window limited) | No |
+| **AutoGPT** | Python/TS | Platform-managed (Docker) | 3+ | Required | Block-based workflow state; implicit in agent execution | No (workflow DAG) | Via workflow block connections | No | No |
+| **Agency Swarm** | Python | User-provided callbacks | 0 | Required (OpenAI Agents SDK) | Thread-based with persistence callbacks | No | Thread history | No | No |
 
 ### Coding Agent Memory
 
@@ -1055,6 +1172,13 @@ exposed via MCP.
 | **Beads** | Go | Dolt (version-controlled SQL) | 0 | Agent-driven | Dependency-aware issue graph with threading | Yes (4 link types) | Graph traversal along dependency chains | Compaction of old tasks | No |
 | **Engram** | Go | SQLite + FTS5 | None | Agent-driven | Agent-curated structured summaries | No | Full-text search (FTS5) | No | Decisions/patterns |
 | **Memsearch** | Python | Milvus (vector) | 1 | Required (embeddings) | Markdown-first with vector index overlay | No | Cosine similarity + 3-layer progressive disclosure | Stale chunk auto-deletion | No |
+| **Basic Memory** | Python | Markdown files + SQLite | 0 | None (storage layer) | Structured Markdown with Observations + Relations; entities form KG | Yes (wiki-link semantic graph) | Full-text search + graph traversal via `memory://` URLs | No | No |
+| **mcp-memory-service** | Python | SQLite-vec / Cloudflare D1 | 0-1 | None (local ONNX embeddings) | 75+ memory types with emotional metadata, episode tracking | Yes (typed edges: causes, fixes, contradicts) | Hybrid BM25 + vector (5ms); autonomous consolidation | Yes (decay + compression of old memories) | No |
+| **memento-mcp** | TS | Neo4j 5.13+ | 1 | Required (OpenAI embeddings) | KG with versioned entities, typed relations with strength/confidence | Yes (Neo4j, full version history, temporal) | Hybrid semantic + keyword (adaptive selection) | Yes (confidence decay, 30-day half-life) | No |
+| **MemoryMesh** | TS | JSON file | 0 | None (storage layer) | Schema-driven KG for interactive storytelling; dynamic tools from schemas | Yes (typed nodes + edges, JSON) | Node search + full graph read | No | No |
+| **memory-graph** | Python | SQLite / Neo4j / FalkorDB | 0-1 | None (storage layer) | Graph with 7 relationship categories (causal, solution, context, learning, similarity, workflow, quality) | Yes (7 typed relationship categories) | Fuzzy matching + graph traversal + shortest path | No (importance scores, no decay) | Implicit (PREFERRED_OVER relations) |
+| **mcp-neuralmemory** | Python | KG (configurable) | 0-1 | None | Persistent KG for coding agents (goals, strategies, preferences) | Yes | Graph traversal | No | Yes (stores preferences) |
+| **ClaudeHistory Cloud** | TS | PostgreSQL | 1 | None (structured knowledge layer) | Structured knowledge entries (decisions, solutions, error→fix patterns) | No | Full-text search API | No | No |
 
 ### File-Based Memory (MEMORY.md Pattern)
 
@@ -1080,6 +1204,11 @@ designs but not packaged as production libraries.
 | **LightMem** | Python | Configurable | 0-1 | Required | Atkinson-Shiffrin: sensory, STM, LTM | No | Topic-grouped | Sleep-time consolidation | No |
 | **Mem-alpha** | Python | Configurable | 0-1 | Required | Core + episodic + semantic (RL-managed) | No | RL-learned | RL-learned | No |
 | **HippoRAG** | Python | In-memory KG | 0 | Required | Hippocampal indexing + open KG | Personalized PageRank | PPR on knowledge graph | No | No |
+| **SimpleMem** | Python | LanceDB + SQLite | 0 | Required | Three-stage: semantic compression → online synthesis → intent-aware retrieval | No | Three-index parallel: semantic + lexical (BM25) + symbolic | Yes (synthesis consolidates redundant fragments; 30x fewer tokens) | No |
+| **MemAgent** | Python | In-memory (fixed context) | 0 | Required (IS the LLM, RL-trained Qwen2.5) | RL-trained: learns when to memorize, what to remember, how to recall | No | Learned via RL (agent decides) | Learned via RL (<5% loss at 3.5M tokens) | No |
+| **MemoryLLM** | Python | In-model parameters | 0 | Required (IS the LLM, custom Llama) | Parametric: dedicated memory pool (1.67B params) updated via inject_memory() | No | Implicit via forward pass (modified attention) | Implicit (new injections overwrite older info) | No |
+| **AriGraph** | Python | In-memory KG | 0 | Required (GPT-4) | Semantic + episodic KG built from interaction (TextWorld games) | Yes (triplet-based semantic + episodic) | Graph traversal + RAG | No | No |
+| **GoG** | Python | Freebase SPARQL | 2 | Required | Generate-on-Graph: LLM as agent + KG for incomplete KGQA | Yes (external KG traversal) | Graph traversal + LLM-generated missing triples | N/A (static KG) | No |
 
 ### Vector Databases (Infrastructure Layer)
 
@@ -1093,6 +1222,21 @@ forgetting, preference learning, graph dynamics).
 | **Weaviate** | Go | BM25 + vector | Weaviate Cloud | Yes |
 | **Milvus** | Go/C++ | Dense + sparse | Zilliz Cloud | Yes |
 | **Cloudflare Vectorize** | Cloud-native | Via Workers AI | Yes (only option) | No |
+| **Qdrant** | Rust | Dense + sparse + multivector | Qdrant Cloud | Yes |
+| **pgvector / pgvectorscale** | C/Rust | BM25 + vector (DiskANN) | Neon, Supabase, etc. | Yes |
+| **sqlite-vec** | C | Vector only (no BM25 built-in) | No | Yes |
+| **LanceDB** | Rust | FTS + vector | LanceDB Cloud | Yes |
+| **txtai** | Python | BM25 + vector + graph | No | Yes |
+| **USearch** | C++ | Vector only (HNSW) | No | Yes |
+| **Epsilla** | C++ | Dense + sparse | Epsilla Cloud | Yes |
+| **MyScaleDB** | C++ | SQL + vector | MyScale Cloud | Yes |
+| **Vald** | Go | Distributed vector (NGT) | No | Yes |
+| **FAISS** | C++/Python | Vector only (IVF, PQ, HNSW) | No | Yes |
+| **Marqo** | Python | BM25 + vector (tensor) | Marqo Cloud | Yes |
+| **Vespa** | Java/C++ | BM25 + vector + structured | Vespa Cloud | Yes |
+| **Turbopuffer** | Rust | BM25 + vector | Yes (only option) | No |
+| **Azure AI Search** | Cloud-native | BM25 + vector + semantic | Yes (only option) | No |
+| **MongoDB Atlas Vector** | Cloud-native | Text + vector | Yes (Atlas) | Partial (Community) |
 
 ---
 

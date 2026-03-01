@@ -332,14 +332,44 @@ and a context window that stays clean.
 
 ## Comparison with Alternatives
 
-Alaya is compared against 40+ memory systems across six categories
-(dedicated engines, framework modules, coding agent memory, file-based,
-research architectures, and vector databases). The closest architectural
-peers are **Vestige** (Rust, FSRS-6 spaced repetition, spreading
-activation) and **SYNAPSE** (unified episodic-semantic graph, lateral
-inhibition). Alaya is the only system combining CLS-inspired
-consolidation, Bjork dual-strength forgetting, Hebbian graph reshaping,
-and emergent preference crystallization.
+```mermaid
+graph LR
+    AGENT["AI Agent"]
+
+    subgraph SIMPLE["Simple"]
+        FILE["File-Based<br/><i>MEMORY.md<br/>OpenClaw</i>"]
+    end
+
+    subgraph INTEGRATED["Integrated"]
+        FW["Framework Memory<br/><i>LangChain · CrewAI<br/>Letta</i>"]
+        CODE["Coding Agent<br/><i>Beads · Engram<br/>via MCP</i>"]
+    end
+
+    subgraph ENGINES["Memory Engines"]
+        DED["Dedicated Systems<br/><i><b>Alaya</b> · Vestige<br/>mem0 · Zep</i>"]
+    end
+
+    subgraph INFRA["Infrastructure"]
+        VDB["Vector DBs<br/><i>Pinecone · Chroma<br/>Weaviate</i>"]
+    end
+
+    RESEARCH["Research<br/><i>Generative Agents<br/>SYNAPSE · HippoRAG</i>"]
+
+    AGENT <--> FILE
+    AGENT <--> FW
+    AGENT <--> CODE
+    AGENT <--> DED
+    DED -.->|storage| VDB
+    FW -.->|storage| VDB
+    RESEARCH -.->|ideas| DED
+    RESEARCH -.->|ideas| FW
+```
+
+Alaya is a **dedicated memory engine** — the richest category, with
+lifecycle management, hybrid retrieval, and graph dynamics that simpler
+approaches lack. The closest architectural peers are **Vestige** (Rust,
+FSRS-6, spreading activation) and **SYNAPSE** (unified episodic-semantic
+graph, lateral inhibition).
 
 - [Full comparison tables and system-by-system analysis](docs/related-work.md) — grounded in the CoALA taxonomy (Sumers et al., 2024) and RAG survey literature
 - [Interactive landscape visualization](https://h4x0r.github.io/alaya/docs/memory-landscape.html) — D3.js force-directed graph of the memory system ecosystem
