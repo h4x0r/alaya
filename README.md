@@ -420,7 +420,7 @@ cargo run --example demo
 
 ## Support
 
-If Alaya saves your agent tokens and money, consider supporting development:
+If Alaya is useful to you, consider supporting development:
 
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=github)](https://github.com/sponsors/h4x0r)
 
