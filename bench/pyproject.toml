@@ -9,6 +9,7 @@ dependencies = [
     "huggingface_hub>=0.20",
     "tqdm>=4.66",
     "click>=8.1",
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]

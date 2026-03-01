@@ -1,12 +1,17 @@
 """CLI entrypoint for the benchmark harness."""
 
 import json
+import os
 import sys
 import time
 from dataclasses import asdict
 from pathlib import Path
 
 import click
+from dotenv import load_dotenv
+
+# Load .env from bench/ directory
+load_dotenv(Path(__file__).parent / ".env")
 
 from adapters.base import MemoryAdapter
 from judge.llm_judge import make_llm_call, score_answer
