@@ -3,13 +3,41 @@
 
 We organize the landscape along four axes (\Cref{fig:taxonomy}).
 
-% TODO: Create taxonomy figure
-% \begin{figure}[t]
-%     \centering
-%     \includegraphics[width=\columnwidth]{figures/taxonomy-axes.pdf}
-%     \caption{Four-axis taxonomy for AI agent memory systems.}
-%     \label{fig:taxonomy}
-% \end{figure}
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    axis/.style={draw, rounded corners, minimum width=2.8cm, minimum height=0.7cm,
+                 font=\small\bfseries, align=center, fill=blue!8},
+    sub/.style={font=\scriptsize, align=left, text width=2.6cm},
+    >=Stealth
+]
+% Four axes arranged in a 2x2 grid
+\node[axis] (s) at (0, 0) {Structure};
+\node[axis] (r) at (4, 0) {Retrieval};
+\node[axis] (l) at (0, -2.2) {Lifecycle};
+\node[axis] (p) at (4, -2.2) {Preference};
+
+% Sub-labels
+\node[sub, below=2pt of s.south west, anchor=north west]
+    {Working, Episodic,\\Semantic, Procedural,\\Implicit};
+\node[sub, below=2pt of r.south west, anchor=north west]
+    {Na\"ive RAG,\\Advanced RAG,\\Modular RAG};
+\node[sub, below=2pt of l.south west, anchor=north west]
+    {Formation,\\Consolidation,\\Forgetting, Transform.};
+\node[sub, below=2pt of p.south west, anchor=north west]
+    {None, Extracted,\\Opinion-tracked,\\Emergent};
+
+% Orthogonality indicators
+\draw[<->, gray, dashed] (s.east) -- (r.west);
+\draw[<->, gray, dashed] (s.south) -- (l.north);
+\draw[<->, gray, dashed] (r.south) -- (p.north);
+\draw[<->, gray, dashed] (l.east) -- (p.west);
+\end{tikzpicture}
+\caption{Four-axis taxonomy for AI agent memory systems. Dashed arrows
+indicate orthogonality: a system's position on one axis places no
+constraint on the others.}
+\label{fig:taxonomy}
+\end{figure}
 
 \subsection{Axis 1: Memory Structure}
 

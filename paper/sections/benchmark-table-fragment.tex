@@ -29,9 +29,9 @@ Mastra Obs.\ Memory  & GPT-5-mini        & ---                  & \textbf{94.87}
 Mastra Obs.\ Memory  & Gemini-3-Pro      & ---                  & 93.27           & ---   & \cite{mastra2026om} \\
 Backboard            & GPT-4.1\tnote{a}  & 90.10                & 93.40\tnote{b}  & ---   & \cite{backboard2025locomo,backboard2026longmemeval} \\
 EverMemOS            & GPT-4.1-mini      & 92.30\tnote{c}       & 83.00           & ---   & \cite{evermemos2025} \\
-Hindsight            & Gemini-3-Pro      & 89.61                & \textbf{91.40}  & ---   & \cite{hindsight2025} \\
-Hindsight            & OSS-120B          & 85.67                & 89.00           & ---   & \cite{hindsight2025} \\
-Hindsight            & OSS-20B           & 83.18                & 83.60           & ---   & \cite{hindsight2025} \\
+Hindsight            & Gemini-3-Pro      & 89.61                & \textbf{91.40}  & ---   & \cite{latimer2025hindsight} \\
+Hindsight            & OSS-120B          & 85.67                & 89.00           & ---   & \cite{latimer2025hindsight} \\
+Hindsight            & OSS-20B           & 83.18                & 83.60           & ---   & \cite{latimer2025hindsight} \\
 MemMachine v0.2      & GPT-4o-mini       & 84.87                & ---             & ---   & \cite{memmachine2025} \\
 EmergenceMem Int.    & GPT-4o            & ---                  & 86.00           & ---   & \cite{emergence2025longmemeval} \\
 Supermemory          & Gemini-3-Pro      & ---                  & 85.20           & ---   & \cite{supermemory2025} \\
@@ -43,28 +43,28 @@ TiMem                & GPT-4o-mini       & ---                  & 76.88         
 \midrule
 % --- Mid tier ---
 MemOS                & GPT-4o-mini       & 75.80                & ---             & ---   & \cite{memos2025} \\
-Memobase v0.0.37     & GPT-4o-mini       & 75.78                & ---             & ---   & \cite{memobase2025,hindsight2025} \\
-Zep / Graphiti       & GPT-4o            & 75.14\tnote{d}       & 71.20           & 94.80 & \cite{zep2025,rasmussen2025zep} \\
+Memobase v0.0.37     & GPT-4o-mini       & 75.78                & ---             & ---   & \cite{memobase2025,latimer2025hindsight} \\
+Zep / Graphiti       & GPT-4o            & 75.14\tnote{d}       & 71.20           & 94.80 & \cite{zep2025,dempsey2025graphiti} \\
 Letta (MemGPT)       & GPT-4o-mini       & 74.00                & ---             & 93.40\tnote{e} & \cite{letta2025benchmark,packer2023memgpt} \\
-Full-context         & GPT-4o            & ${\sim}72.9$\tnote{f}& ${\sim}60$--64  & 94.40\tnote{e} & \cite{maharana2024locomo,wu2025longmemeval,rasmussen2025zep} \\
-Mem0 (graph)         & GPT-4o-mini       & 68.44                & ---             & ---   & \cite{mem0paper2025,hindsight2025} \\
-Mem0                 & GPT-4o-mini       & 66.88                & ---             & ---   & \cite{mem0paper2025} \\
+Full-context         & GPT-4o            & ${\sim}72.9$\tnote{f}& ${\sim}60$--64  & 94.40\tnote{e} & \cite{maharana2024locomo,wu2025longmemeval,dempsey2025graphiti} \\
+Mem0 (graph)         & GPT-4o-mini       & 68.44                & ---             & ---   & \cite{choudhary2025mem0,latimer2025hindsight} \\
+Mem0                 & GPT-4o-mini       & 66.88                & ---             & ---   & \cite{choudhary2025mem0} \\
 \midrule
 % --- Lower tier / baselines ---
-LangMem              & GPT-4o-mini       & 58.10                & ---             & ---   & \cite{hindsight2025} \\
-OpenAI Memory        & GPT-4o            & 52.90                & ---             & ---   & \cite{mem0paper2025,hindsight2025} \\
+LangMem              & GPT-4o-mini       & 58.10                & ---             & ---   & \cite{latimer2025hindsight} \\
+OpenAI Memory        & GPT-4o            & 52.90                & ---             & ---   & \cite{choudhary2025mem0,latimer2025hindsight} \\
 Na\"ive RAG          & GPT-4o            & ---                  & ${\sim}52$      & ---   & \cite{emergence2025longmemeval} \\
-Zep (per Mem0)       & GPT-4o            & 65.99\tnote{g}       & ---             & ---   & \cite{mem0paper2025} \\
+Zep (per Mem0)       & GPT-4o            & 65.99\tnote{g}       & ---             & ---   & \cite{choudhary2025mem0} \\
 Zep (per Mem0 repl.) & GPT-4o            & 58.44\tnote{g}       & ---             & ---   & \cite{mem0replication2025} \\
 \midrule
 % --- DMR-only baselines ---
-Zep                  & GPT-4o-mini       & ---                  & ---             & \textbf{98.20} & \cite{rasmussen2025zep} \\
+Zep                  & GPT-4o-mini       & ---                  & ---             & \textbf{98.20} & \cite{dempsey2025graphiti} \\
 Session Summary      & GPT-4-turbo       & ---                  & ---             & 78.60 & \cite{packer2023memgpt} \\
 Recursive Summary    & GPT-4-turbo       & ---                  & ---             & 35.30 & \cite{packer2023memgpt} \\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}[flushleft]\footnotesize
-\item[a] Judge model: GPT-4.1.  Self-reported; not independently reproduced~\cite{hindsight2025}.
+\item[a] Judge model: GPT-4.1.  Self-reported; not independently reproduced~\cite{latimer2025hindsight}.
 \item[b] Evaluated by NewMathData (third party); not peer-reviewed.
 \item[c] Self-evaluated using their own open-source framework; uses GPT-4.1-mini as both generator and context.
 \item[d] Zep's corrected self-reported score (originally claimed 84.61\%, later revised to 75.14\% $\pm$ 0.17\%).  See discussion in text.
@@ -90,16 +90,16 @@ Comparing scores across rows requires care for several reasons:
 The LoCoMo LLM-as-Judge protocol requires a ``judge'' model to score each answer against a gold reference.
 The original benchmark code defaults to \texttt{gpt-4o-mini}, but some evaluators use \texttt{gpt-4o}, \texttt{gpt-4.1}, or \texttt{gpt-4-turbo} as the judge~\cite{maharana2024locomo}.
 Since different judges exhibit different false-positive and false-negative rates, a score of 90\% with one judge is not directly comparable to 90\% with another.
-No study has published a systematic judge-calibration analysis, though the Hindsight paper~\cite{hindsight2025} uses a fixed judge across all baselines.
+No study has published a systematic judge-calibration analysis, though the Hindsight paper~\cite{latimer2025hindsight} uses a fixed judge across all baselines.
 
 \item \textbf{Self-reported vs.\ independently verified scores.}
 The most dramatic illustration is Zep on LoCoMo:
 Zep originally self-reported 84.61\%~\cite{zep2025},
 later corrected to 75.14\%~\cite{zep2025};
-Mem0 evaluated Zep at 65.99\%~\cite{mem0paper2025};
+Mem0 evaluated Zep at 65.99\%~\cite{choudhary2025mem0};
 and Mem0's subsequent standardized replication yielded 58.44\%~\cite{mem0replication2025}.
 This 26-percentage-point spread for the \emph{same system} underscores the fragility of reported numbers.
-Similar concerns apply to Backboard's self-reported 90.1\% on LoCoMo, which the Hindsight authors note ``could not be independently reproduced''~\cite{hindsight2025}.
+Similar concerns apply to Backboard's self-reported 90.1\% on LoCoMo, which the Hindsight authors note ``could not be independently reproduced''~\cite{latimer2025hindsight}.
 
 \item \textbf{LoCoMo's limited dialogue length.}
 LoCoMo conversations average 16--26K tokens~\cite{maharana2024locomo}, well within the 128K--1M context windows of modern frontier models.
@@ -109,7 +109,7 @@ LongMemEval\_S (${\sim}$115K tokens per question) and LongMemEval\_M (${\sim}$1.
 
 \item \textbf{DMR's near-saturation.}
 The DMR benchmark's 60-message conversations fit within a single context window, and the full-context baseline (94.4\%) already rivals or exceeds most memory systems.
-With Zep reaching 98.2\%, DMR is effectively saturated and no longer discriminates among modern approaches~\cite{rasmussen2025zep}.
+With Zep reaching 98.2\%, DMR is effectively saturated and no longer discriminates among modern approaches~\cite{dempsey2025graphiti}.
 
 \end{enumerate}
 
@@ -123,7 +123,7 @@ The agent memory field is experiencing an acute form of what might be called \em
 vendors routinely dispute each other's evaluation results, and scores for the same system
 can vary by 20+ percentage points depending on who runs the evaluation.
 Mem0 and Zep have publicly traded accusations of implementation errors, prompt tampering,
-and category-inclusion mistakes in each other's LoCoMo evaluations~\cite{zep2025,mem0paper2025,mem0replication2025}.
+and category-inclusion mistakes in each other's LoCoMo evaluations~\cite{zep2025,choudhary2025mem0,mem0replication2025}.
 Backboard, EverMemOS, and MemMachine each claim ``state-of-the-art'' on LoCoMo using
 subtly different judge models, prompt templates, and answer-generation backends,
 making direct comparison unreliable.
