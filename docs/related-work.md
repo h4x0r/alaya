@@ -1,8 +1,12 @@
 # Related Work: AI Agent Memory Systems
 
-A comparative analysis of Alaya against existing memory architectures, organized
-around the CoALA taxonomy (Sumers et al., 2024) and recent survey literature on
-RAG and agent memory.
+A systematic survey of 90+ memory architectures for AI agents, organized
+around the CoALA taxonomy (Sumers et al., 2024) and recent survey
+literature on retrieval-augmented generation and agent memory (Gao et al.,
+2023; Zhang et al., 2024; Hu et al., 2025; Wu et al., 2025; Du et al.,
+2025; Jiang et al., 2026). This analysis bridges academic systems,
+production deployments, and practitioner-invented workarounds to identify
+convergent design principles and remaining gaps.
 
 ## Table of Contents
 
@@ -24,7 +28,14 @@ RAG and agent memory.
   - [Why Alaya: Unique Value Propositions](#why-alaya-unique-value-propositions)
   - [Closest Alternatives and Critical Differences](#closest-alternatives-and-critical-differences)
   - [What Alaya Does Not Do](#what-alaya-does-not-do)
+- [The MEMORY.md Problem: Why File-Based Memory Breaks at Scale](#the-memorymd-problem-why-file-based-memory-breaks-at-scale)
+  - [The Cost Problem](#the-cost-problem)
+  - [The Structure Problem](#the-structure-problem)
+  - [The Retrieval Problem](#the-retrieval-problem)
+  - [The Extraction Problem](#the-extraction-problem)
+  - [Synthesis: Convergent Design Principles](#synthesis-convergent-design-principles)
 - [Tradeoffs: Embedded SQLite vs. External Infrastructure](#tradeoffs-embedded-sqlite-vs-external-infrastructure)
+- [Alaya as OpenClaw Memory Plugin](#alaya-as-openclaw-memory-plugin)
 - [References](#references)
 
 ---
@@ -1075,11 +1086,12 @@ against Alaya's architecture.
 
 ## The MEMORY.md Problem: Why File-Based Memory Breaks at Scale
 
-The community around AI coding agents has converged on a shared diagnosis:
-file-based memory (MEMORY.md + daily logs) works for single sessions but
-degrades as usage grows. This section documents the problem, the community's
-pragmatic workarounds, and how each maps to Alaya's architecture. Citations
-use the format established in [References](#references) below.
+File-based memory (MEMORY.md + daily logs) works for single sessions but
+degrades as usage grows. The AI agent community has converged on this
+diagnosis through independent experience (Zilliz, 2026b; Chawla, 2026;
+Fisher, 2026; Azizi, 2026). This section documents three failure modes
+(cost, structure, retrieval), catalogs the community's pragmatic
+workarounds, and maps each to its Alaya equivalent.
 
 ### The Cost Problem
 
@@ -1185,24 +1197,30 @@ prototype (Complementary Learning Systems for Memory) achieved F1=44% on a
 context assembly — their recall was 65% but precision only 35%, meaning 65%
 of retrieved content was noise.
 
-### Synthesis
+### Synthesis: Convergent Design Principles
 
-The community has independently converged on the same architectural
-principles that Alaya implements as a unified system:
+The community has independently converged on five architectural principles:
 
-- **Ranked retrieval over full-context injection** (QMD, memsearch, index1)
-- **Typed memory stores over flat files** (decision.md, SOUL.md, USER.md)
-- **Graph traversal over text similarity** (Cognee, coolmanns KG)
-- **Temporal decay over manual curation** (coolmanns activation tiers, Fisher
-  temporal metadata)
-- **Automatic extraction over manual logging** (Fisher, gonewx)
+1. **Ranked retrieval over full-context injection** (QMD, memsearch,
+   Clawdbot-Next TGAA)
+2. **Typed memory stores over flat files** (decision.md, SOUL.md, USER.md,
+   4-layer and 12-layer architectures)
+3. **Graph traversal over text similarity** (Cognee, coolmanns KG,
+   OpenClaw Memory v2 request)
+4. **Temporal decay over manual curation** (coolmanns Hot/Warm/Cool tiers,
+   Fisher bi-temporal metadata)
+5. **Automatic extraction over manual logging** (Fisher, gonewx, Agent
+   Native's "memory contract")
 
-The critical difference is **coherence**: the community builds these
-capabilities from stitched-together Markdown files, Python scripts, cron
-jobs, and plugins. Alaya provides them in a single Rust library with a
-unified SQLite schema, IMMEDIATE-mode transactions, WAL-mode concurrent
-access, and a coherent type system (`NodeRef` polymorphism across
-Episode/Semantic/Preference nodes).
+Alaya implements all five natively. The difference is coherence. The
+community builds these capabilities from stitched-together Markdown files,
+Python scripts, cron jobs, and plugins with no shared schema or transaction
+boundaries. Alaya provides them in a single Rust library with a unified
+SQLite schema (IMMEDIATE-mode transactions, WAL-mode concurrent access) and
+a coherent type system (`NodeRef` polymorphism across
+Episode/Semantic/Preference nodes). Every workaround the community has
+invented maps to an Alaya API call that existed before the workaround was
+published.
 
 ---
 
