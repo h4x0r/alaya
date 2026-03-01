@@ -1,0 +1,51 @@
+\section{Comparative Analysis}
+\label{sec:comparison}
+
+\todo{Synthesize the four comparison matrices from
+docs/related-work.md into LaTeX tables. Add quantitative analysis:
+feature prevalence, temporal trends, benchmark cross-comparison.}
+
+\subsection{CoALA Dimension Analysis}
+
+\todo{Table: systems $\times$ memory types. Show that cross-memory
+learning (episodic $\rightarrow$ semantic) remains rare.}
+
+\subsection{Retrieval Pipeline Comparison}
+
+\todo{Table: systems $\times$ retrieval signals. Show that full
+three-signal retrieval (sparse + dense + graph) with principled fusion
+is implemented by only 3--4 systems.}
+
+\subsection{Memory Lifecycle Comparison}
+
+\todo{Table: systems $\times$ lifecycle operations. Show Alaya as the
+only system combining CLS consolidation, dual-strength forgetting,
+contradiction resolution, and preference crystallization.}
+
+\subsection{Quantitative Feature Prevalence}
+
+\todo{NEW: Add histograms showing:
+\begin{itemize}[nosep]
+    \item \% of systems with each memory type
+    \item \% with forgetting (none / single-curve / dual-strength)
+    \item \% with graph overlay (none / static / dynamic)
+    \item \% with preference learning
+    \item Temporal trend: capabilities added per year (2023--2026)
+\end{itemize}
+}
+
+\subsection{Benchmark Cross-Comparison}
+
+\todo{NEW: Table of LoCoMo, LongMemEval, DMR scores where available.
+Discuss what benchmarks reveal and their limitations.}
+
+\subsection{Dominant Paradigms}
+
+Five architectural paradigms have emerged:
+\begin{enumerate}[leftmargin=*, nosep]
+    \item \textbf{Vector store} (flat semantic retrieval)
+    \item \textbf{Knowledge graph} (structured relationships)
+    \item \textbf{OS-inspired tiering} (RAM/disk metaphor)
+    \item \textbf{RL-trained memory policies} (learned management)
+    \item \textbf{Parametric memory} (embedded in model weights)
+\end{enumerate}

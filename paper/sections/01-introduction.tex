@@ -1,0 +1,84 @@
+\section{Introduction}
+\label{sec:introduction}
+
+% Hook: The problem
+Large language model (LLM) agents face a fundamental constraint: the
+context window is finite, but experience is not. An agent that
+converses across hundreds of sessions accumulates knowledge,
+preferences, and relationships that cannot fit in a single prompt.
+Memory---the ability to store, retrieve, and manage this accumulation
+over time---is now a first-class architectural concern.
+
+% Scale of the problem
+The urgency is measurable. OpenClaw, the most widely deployed AI coding
+agent, injects approximately 35,600 tokens of workspace files into
+every message, 93.5\% of which is irrelevant to the current
+query~\cite{openclaw9157}. Heavy users report costs of \$3,600 per
+month in token waste alone~\cite{zilliz2026b}. Community tools that
+replace full-context injection with ranked retrieval report 70--96\%
+token savings~\cite{levine2026}, demonstrating that the problem is not
+the absence of memory but the absence of \emph{selective} memory.
+
+% Explosion of systems
+Over 90 memory systems have emerged since Park~\etal's seminal
+Generative Agents work in 2023~\cite{park2023generative}. These span
+from flat-file approaches (MEMORY.md) through knowledge-graph engines
+(Zep/Graphiti~\cite{dempsey2025graphiti},
+HippoRAG~\cite{gutierrez2024hipporag}) to cognitively inspired
+architectures (SYNAPSE~\cite{jiang2026synapse},
+LightMem~\cite{fang2025lightmem}). The pace of development outstrips
+synthesis: six survey papers appeared in 2024--2026
+alone~\cite{sumers2024coala, gao2023rag, zhang2024survey, hu2025memory,
+wu2025memory, du2025memory}, yet none covers the full landscape from
+production deployments through practitioner-invented workarounds.
+
+% Gap this paper fills
+This paper provides the first comprehensive taxonomy that bridges three
+communities: (1) \textbf{academic systems} published at NeurIPS, ICML,
+ICLR, ACL, and AAAI; (2) \textbf{production systems} deployed by
+companies (Mem0, Zep, Supermemory, Letta); and (3)
+\textbf{practitioner workarounds} invented by users of file-based
+memory systems (decision.md, working-context.md, 12-layer
+architectures). We organize these along four axes:
+
+\begin{enumerate}[leftmargin=*, nosep]
+    \item \textbf{Structure:} What memory types does the system
+    support? Mapped to the CoALA taxonomy~\cite{sumers2024coala}.
+    \item \textbf{Retrieval:} How does the system find relevant
+    memories? Mapped to the RAG taxonomy~\cite{gao2023rag}.
+    \item \textbf{Lifecycle:} How does the system manage memory over
+    time? Formation, consolidation, forgetting, transformation.
+    \item \textbf{Preference emergence:} How do behavioral patterns
+    crystallize from accumulated interaction?
+\end{enumerate}
+
+% The interdisciplinary thesis
+We ground this taxonomy in two traditions that have studied memory for
+far longer than computer science. Cognitive neuroscience provides
+models of Hebbian learning (LTP/LTD)~\cite{hebb1949, bliss1973},
+complementary learning systems~\cite{mcclelland1995}, spreading
+activation~\cite{collins1975}, and dual-strength
+forgetting~\cite{bjork1992}. Yogac\=ara Buddhist psychology, developed
+over 1,500 years, provides a theory of \emph{storehouse consciousness}
+(\emph{alaya-vij\~n\=ana}) with \emph{seeds} (\emph{b\=ija}) that
+strengthen through \emph{perfuming} (\emph{v\=asan\=a}) and transform
+through \emph{\=a\'sraya-par\=av\d{r}tti}. We show that both
+traditions converge on the same insight: \textbf{memory is a dynamic
+process that reshapes through use, not a static database that grows
+through append}.
+
+% Contributions
+Our contributions are:
+\begin{enumerate}[leftmargin=*, nosep]
+    \item A four-axis taxonomy covering 90+ memory systems across
+    academic, production, and practitioner categories.
+    \item Comparative matrices mapping systems to CoALA memory
+    modules, RAG retrieval categories, and lifecycle operations.
+    \item Documentation of the MEMORY.md problem and five convergent
+    design principles the community has independently discovered.
+    \item A Yogac\=ara framework that maps Buddhist psychology concepts
+    to concrete memory architecture components.
+    \item An open research agenda identifying underserved areas:
+    principled forgetting, preference emergence, adaptive retrieval,
+    and cross-memory consolidation.
+\end{enumerate}

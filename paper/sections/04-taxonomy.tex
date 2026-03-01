@@ -1,0 +1,83 @@
+\section{A Four-Axis Taxonomy}
+\label{sec:taxonomy}
+
+\todo{This section defines the taxonomy axes. Each axis should be
+illustrated with examples from the surveyed systems.}
+
+We organize the landscape along four axes (\Cref{fig:taxonomy}).
+
+% TODO: Create taxonomy figure
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=\columnwidth]{figures/taxonomy-axes.pdf}
+%     \caption{Four-axis taxonomy for AI agent memory systems.}
+%     \label{fig:taxonomy}
+% \end{figure}
+
+\subsection{Axis 1: Memory Structure}
+
+Following CoALA~\cite{sumers2024coala}, we classify memory modules as:
+
+\begin{itemize}[leftmargin=*, nosep]
+    \item \textbf{Working memory:} In-context information the LLM
+    processes directly. Managed by the agent, not the memory system.
+    \item \textbf{Episodic memory:} Raw experiences preserved with
+    full context (who, when, where, about what).
+    \item \textbf{Semantic memory:} Distilled, decontextualized
+    knowledge extracted from episodes.
+    \item \textbf{Procedural memory:} Executable skills and
+    behavioral patterns.
+    \item \textbf{Implicit memory:} Preferences and habits that
+    emerge from accumulated interaction without explicit extraction.
+    Not present in CoALA; we propose it as an extension.
+\end{itemize}
+
+\todo{Add table: distribution of memory types across all 90+ systems.
+Show that most systems support only 1--2 types.}
+
+\subsection{Axis 2: Retrieval Architecture}
+
+Following Gao~\etal~\cite{gao2023rag}, we classify retrieval as:
+
+\begin{itemize}[leftmargin=*, nosep]
+    \item \textbf{Naive RAG:} Single retrieval signal (vector or
+    keyword), direct injection. Examples: LangChain, Engram.
+    \item \textbf{Advanced RAG:} Multiple signals or reranking.
+    Examples: Generative Agents (recency $\times$ importance $\times$
+    relevance), Mem0 (vector + graph + priority).
+    \item \textbf{Modular RAG:} Composable pipeline with independent
+    retrieval, fusion, and reranking stages. Examples: Alaya (BM25 +
+    vector + graph + RRF), Zep/Graphiti (cosine + BM25 + graph + RRF
+    + MMR).
+\end{itemize}
+
+\subsection{Axis 3: Memory Lifecycle}
+
+Following Zhang~\etal~\cite{zhang2024survey} and
+Hu~\etal~\cite{hu2025memory}:
+
+\begin{itemize}[leftmargin=*, nosep]
+    \item \textbf{Formation:} How memories enter the system (direct
+    storage, LLM extraction, agent-directed).
+    \item \textbf{Consolidation:} How episodic memories transform into
+    semantic knowledge (CLS replay, LLM reflection, sleep-time
+    processing).
+    \item \textbf{Forgetting:} How memories weaken or disappear
+    (no forgetting, single-curve decay, dual-strength decay, RL-learned).
+    \item \textbf{Transformation:} How the memory store itself
+    restructures (deduplication, contradiction resolution, pruning).
+\end{itemize}
+
+\subsection{Axis 4: Preference Emergence}
+
+We propose this as a new axis not covered by existing surveys:
+
+\begin{itemize}[leftmargin=*, nosep]
+    \item \textbf{No preferences:} Most systems.
+    \item \textbf{LLM-extracted profiles:} Mem0, Supermemory, Memobase.
+    One-shot extraction, brittle.
+    \item \textbf{Explicit opinion tracking:} Hindsight. Confidence-scored
+    beliefs that evolve.
+    \item \textbf{Emergent crystallization:} Alaya. Preferences crystallize
+    from accumulated impressions without LLM involvement.
+\end{itemize}

@@ -1,0 +1,116 @@
+\documentclass[conference]{IEEEtran}
+
+% ---- Packages ----
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{balance}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{url}
+\usepackage{enumitem}
+\usepackage{CJKutf8}
+
+% ---- Hyperref setup ----
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    citecolor=blue!70!black,
+    urlcolor=blue!70!black,
+    pdfauthor={Albert K.T. Hui},
+    pdftitle={Memory as Process: A Taxonomy of Memory Architectures for LLM-Based Agents},
+}
+
+% ---- Custom commands ----
+\newcommand{\sys}[1]{\textsc{#1}}
+\newcommand{\alaya}{\sys{Alaya}}
+\newcommand{\eg}{\emph{e.g.}}
+\newcommand{\ie}{\emph{i.e.}}
+\newcommand{\etal}{\emph{et~al.}}
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{TODO:} #1}}
+
+% ---- CJK for Buddhist terms ----
+\newcommand{\cjk}[1]{\begin{CJK}{UTF8}{bsmi}#1\end{CJK}}
+
+% ---- Column type for fixed-width ----
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+\begin{document}
+
+\title{Memory as Process: A Taxonomy of Memory Architectures\\for LLM-Based Agents}
+
+\author{
+    \IEEEauthorblockN{Albert K.T. Hui}
+    \IEEEauthorblockA{
+        \textit{Independent Researcher}\\
+        albert@securityronin.com
+    }
+    % Add co-authors here as collaboration develops:
+    % \and
+    % \IEEEauthorblockN{Zhihua Yao}
+    % \IEEEauthorblockA{
+    %     \textit{Department of Philosophy}\\
+    %     \textit{The Chinese University of Hong Kong}\\
+    %     zhihuayao@cuhk.edu.hk
+    % }
+}
+
+\maketitle
+
+\begin{abstract}
+Large language model (LLM) agents increasingly require persistent memory
+that goes beyond context-window chat history. Over 90 memory systems have
+emerged since 2023, ranging from flat-file approaches (MEMORY.md) through
+knowledge-graph engines (Zep/Graphiti, HippoRAG) to cognitively inspired
+architectures (SYNAPSE, Alaya). Yet no unified taxonomy captures the full
+landscape. We survey these systems along four axes drawn from cognitive
+science and information retrieval: (1) memory \emph{structure} (episodic,
+semantic, procedural, implicit), mapped to the CoALA framework; (2)
+\emph{retrieval} architecture (sparse, dense, graph, fusion), mapped to
+the RAG taxonomy; (3) memory \emph{lifecycle} (formation, consolidation,
+forgetting, transformation); and (4) \emph{preference emergence} (how
+behavioral patterns crystallize from interaction). We ground this taxonomy
+in neuroscience (Hebbian learning, complementary learning systems, Bjork
+dual-strength forgetting) and Yogac\=ara Buddhist psychology
+(\emph{alaya-vij\~n\=ana}, \emph{v\=asan\=a}, \emph{b\=ija}), showing
+that both traditions converge on the insight that memory is a dynamic
+process, not a static store. We identify five convergent design principles
+emerging independently in the practitioner community, catalog critical
+gaps (principled forgetting, preference emergence, adaptive retrieval),
+and propose a research agenda for the next generation of agent memory
+systems.
+\end{abstract}
+
+\begin{IEEEkeywords}
+AI agents, memory systems, large language models, taxonomy, episodic
+memory, semantic memory, forgetting, Hebbian learning, reciprocal rank
+fusion, Yogac\=ara, alaya-vij\~n\=ana
+\end{IEEEkeywords}
+
+% ---- Sections ----
+\input{sections/01-introduction}
+\input{sections/02-methodology}
+\input{sections/03-background}
+\input{sections/04-taxonomy}
+\input{sections/05-systems}
+\input{sections/06-comparison}
+\input{sections/07-memory-md-problem}
+\input{sections/08-yogacara-framework}
+\input{sections/09-open-problems}
+\input{sections/10-limitations}
+\input{sections/11-conclusion}
+
+% ---- References ----
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

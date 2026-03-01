@@ -1,0 +1,79 @@
+\section{Methodology}
+\label{sec:methodology}
+
+\todo{Complete this section with systematic review methodology.}
+
+% This section is critical for acceptance. Reviewers will reject
+% without a clear search and selection protocol.
+
+\subsection{Search Protocol}
+
+We conducted a systematic search across five sources:
+
+\begin{enumerate}[leftmargin=*, nosep]
+    \item \textbf{Academic databases:} arXiv (cs.AI, cs.CL, cs.IR,
+    cs.MA), Semantic Scholar, Google Scholar. Search terms:
+    ``LLM memory,'' ``agent memory,'' ``long-term memory language
+    model,'' ``episodic semantic memory agent,'' ``forgetting LLM,''
+    ``memory-augmented generation.''
+    \item \textbf{Conference proceedings:} NeurIPS 2023--2025, ICML
+    2024--2025, ICLR 2025--2026, ACL/EMNLP 2024--2025, AAAI 2024--2025,
+    ACM UIST 2023.
+    \item \textbf{GitHub:} Repositories with $>$500 stars tagged
+    ``memory,'' ``agent memory,'' ``LLM memory,'' ``long-term memory.''
+    \item \textbf{Practitioner sources:} Medium, DEV Community, Substack,
+    Hacker News, X/Twitter threads with $>$100 engagements on AI
+    agent memory.
+    \item \textbf{Snowball sampling:} References cited by the six
+    existing survey papers~\cite{sumers2024coala, gao2023rag,
+    zhang2024survey, hu2025memory, wu2025memory, du2025memory}.
+\end{enumerate}
+
+\subsection{Inclusion and Exclusion Criteria}
+
+\begin{table}[h]
+\centering
+\caption{Inclusion and Exclusion Criteria}
+\label{tab:criteria}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Include} & \textbf{Exclude} \\
+\midrule
+Persistent memory across sessions & Session-only context management \\
+Published 2023--2026 & Before 2023 (except seminal) \\
+Usable system or reference impl. & Pure theoretical proposals \\
+LLM-agent-focused & General database systems \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Analysis Framework}
+
+Each system is analyzed along four axes using three complementary
+taxonomies:
+
+\begin{itemize}[leftmargin=*, nosep]
+    \item \textbf{CoALA}~\cite{sumers2024coala}: Memory modules
+    (working, episodic, semantic, procedural), action space, decision
+    procedure.
+    \item \textbf{RAG Taxonomy}~\cite{gao2023rag}: Naive, Advanced,
+    or Modular RAG.
+    \item \textbf{Memory Operations}~\cite{zhang2024survey}: Writing,
+    management, reading.
+\end{itemize}
+
+% TODO: Add PRISMA flow diagram (Figure 1)
+% \begin{figure}[t]
+%     \centering
+%     \includegraphics[width=\columnwidth]{figures/prisma-flow.pdf}
+%     \caption{PRISMA flow diagram showing system selection process.
+%     \todo{Generate with actual numbers.}}
+%     \label{fig:prisma}
+% \end{figure}
+
+\subsection{Threats to Validity}
+
+\todo{Add threats to validity: recency bias (field moves fast),
+selection bias (GitHub stars favor English-language projects),
+classification subjectivity (CoALA mapping requires judgment),
+completeness (new systems appear weekly).}

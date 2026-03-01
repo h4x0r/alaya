@@ -1,0 +1,61 @@
+\section{Background}
+\label{sec:background}
+
+\todo{Synthesize from docs/theoretical-foundations.md. Cover the
+theoretical foundations that ground the taxonomy.}
+
+\subsection{Cognitive Neuroscience of Memory}
+
+\subsubsection{Complementary Learning Systems}
+McClelland~\etal~\cite{mcclelland1995} proposed that the brain uses two
+complementary systems to avoid catastrophic forgetting: a fast learner
+(hippocampus) that records raw episodes and a slow learner (neocortex)
+that extracts stable patterns through interleaved replay.
+
+\subsubsection{Hebbian Learning}
+``Neurons that fire together wire together''~\cite{hebb1949}. Long-term
+potentiation (LTP) and long-term depression (LTD) provide the
+biological basis for associative memory~\cite{bliss1973}.
+
+\subsubsection{Spreading Activation}
+Collins and Loftus~\cite{collins1975} showed that activating a concept
+propagates through a weighted semantic network, priming associated
+concepts. This explains how ``doctor'' activates ``nurse'' even without
+direct keyword overlap.
+
+\subsubsection{Bjork Dual-Strength Forgetting}
+Each memory has two independent strengths: \emph{storage strength} (how
+well-encoded) and \emph{retrieval strength} (how accessible
+now)~\cite{bjork1992}. Retrieval strength decays over time; storage
+strength only increases with access. This model explains tip-of-the-tongue
+phenomena and why relearning is faster than initial
+learning. Anderson~\etal~\cite{anderson1994} showed that retrieving a
+memory suppresses competing memories sharing the same cues
+(retrieval-induced forgetting, RIF).
+
+\subsection{Information Retrieval}
+
+\subsubsection{Reciprocal Rank Fusion}
+RRF merges multiple ranked result sets without score
+calibration~\cite{cormack2009rrf}: $\text{score}(d) = \sum_i 1 / (k +
+\text{rank}_i + 1)$. Bruch~\etal~\cite{bruch2023} showed that convex
+combination outperforms RRF when tuning data is available, but RRF is
+superior in zero-shot settings---the typical case for agent memory.
+
+\subsection{Yogac\=ara Buddhist Psychology}
+
+\todo{Expand this section. This is a key differentiator of the paper.
+Draw from docs/theoretical-foundations.md.}
+
+The Yogac\=ara school of Buddhist philosophy, systematized in the
+\emph{Yogac\=arabh\=umi-\\'s\=astra} attributed to
+Maitreya/Asa\.{n}ga and the \emph{Cheng Weishi Lun} (\cjk{成唯識論})
+by Xuanzang (659~CE), proposes eight consciousnesses. The eighth,
+\emph{\=alaya-vij\~n\=ana} (\cjk{阿賴耶識}, storehouse consciousness),
+is a persistent substrate holding all \emph{b\=ija} (seeds)---latent
+potentials that ripen into experience when conditions
+converge~\cite{yogacarabhumi, chengweishilun}. Seeds are perfumed
+(\emph{v\=asan\=a}, \cjk{薰習}) by each experience, accumulating
+traces that shape behavior. Periodic transformation
+(\emph{\=a\'sraya-par\=av\d{r}tti}, \cjk{轉依}) restructures the
+storehouse itself.

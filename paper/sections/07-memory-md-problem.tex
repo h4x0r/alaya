@@ -1,0 +1,46 @@
+\section{The MEMORY.md Problem}
+\label{sec:memorymd}
+
+\todo{Synthesize from docs/related-work.md ``The MEMORY.md Problem''
+section. This is a strong, unique contribution---real-world practitioner
+data not covered by other surveys.}
+
+File-based memory (MEMORY.md + daily logs) works for single sessions
+but degrades as usage grows. The AI agent community has converged on
+this diagnosis through independent experience~\cite{zilliz2026b,
+chawla2026, fisher2026, azizi2026}.
+
+\subsection{The Cost Problem}
+
+\todo{Quantify: 35,600 tokens/message, 93.5\% waste, \$3,600/month.
+Table of community tools (QMD, memsearch, Clawdbot-Next) with token
+savings.}
+
+\subsection{The Structure Problem}
+
+\todo{Table of user-invented workarounds (decision.md, working-context.md,
+4-layer architecture, 12-layer architecture) mapped to their Alaya
+equivalents. Note: reframe as ``memory system equivalents'' rather
+than Alaya-specific.}
+
+\subsection{The Retrieval Problem}
+
+\todo{The Alice/auth canonical failure mode. Three mechanisms that
+address it (typed nodes, Hebbian links, spreading activation).}
+
+\subsection{The Extraction Problem}
+
+\todo{Fisher quote. ConsolidationProvider pattern. CLS-M prototype
+results (F1=44\%, precision matters more than recall).}
+
+\subsection{Convergent Design Principles}
+
+\todo{Five principles the community independently converged on:
+\begin{enumerate}[nosep]
+    \item Ranked retrieval over full-context injection
+    \item Typed memory stores over flat files
+    \item Graph traversal over text similarity
+    \item Temporal decay over manual curation
+    \item Automatic extraction over manual logging
+\end{enumerate}
+}
