@@ -1004,8 +1004,10 @@ against Alaya's architecture.
 - **Architecture:** Markdown-first design with SQLite as a derived index.
   Three file layers:
   - **MEMORY.md** — curated long-term knowledge, agent-authored, never decays.
-    The agent reads this on every session start and rewrites it during
-    auto-flush compaction.
+    Serves as the unified store for decisions, preferences, and durable facts
+    (no separate decision file — MEMORY.md is the decision file). Loaded into
+    the system prompt at every session start. Rewritten during auto-flush
+    compaction.
   - **memory/YYYY-MM-DD.md** — daily interaction logs with temporal decay
     (30-day half-life: `decayedScore = score × e^(−λ × ageInDays)`,
     `λ = ln(2)/30`).
