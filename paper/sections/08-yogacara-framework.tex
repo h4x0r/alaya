@@ -1,20 +1,40 @@
 \section{A Yogac\=ara Framework for Memory Taxonomy}
 \label{sec:yogacara}
 
-\todo{This section is the paper's unique interdisciplinary
-contribution. It maps Yogac\=ara Buddhist psychology concepts to the
-taxonomy categories, showing structural parallels with cognitive
-neuroscience models.}
-
-% This section should NOT be a summary of Yogacara philosophy.
-% It should be a mapping that shows how Yogacara concepts predict
-% and explain the architectural patterns we observe in AI memory
-% systems.
+The Yogac\=ara (\cjk{瑜伽行派}) school of Buddhist philosophy,
+systematized in the \emph{Yogac\=arabh\=umi-\\'s\=astra}
+(\cjk{瑜伽師地論}, attributed to Maitreya/Asa\.{n}ga, translated by
+Xuanzang 646--648~CE)~\cite{yogacarabhumi} and the \emph{Cheng Weishi
+Lun} (\cjk{成唯識論}, Xuanzang, 659~CE)~\cite{chengweishilun},
+developed a detailed phenomenology of memory more than a millennium
+before computational cognitive science.  This section does not argue
+that AI architects \emph{should} consult Buddhist texts.  Rather, we
+demonstrate that the Yogac\=ara eight-consciousness model independently
+arrived at structural distinctions that the AI memory community has
+rediscovered---and in several cases, the Yogac\=ara framework
+\emph{predicts} design choices that most production systems have not yet
+adopted.
 
 \subsection{Structural Parallels}
+\label{sec:yogacara-structural}
 
-The Yogac\=ara eight-consciousness model provides a structural parallel
-to our four-axis taxonomy:
+The Yogac\=ara model posits eight consciousnesses
+(\cjk{八識}), of which three are directly relevant to memory
+architecture.  The \emph{\=alaya-vij\~n\=ana} (\cjk{阿賴耶識},
+storehouse consciousness) is a persistent substrate that holds all
+experiential potentials as \emph{b\=ija} (\cjk{種子}, seeds).  It has
+no agency of its own; it stores and yields potentials when conditions
+converge.  The \emph{Sa\d{m}dhinirmocana S\=utra}
+(\cjk{解深密經})~\cite{samdhinirmocana} describes it as ``exceedingly
+deep and subtle; all its seeds like a torrential flood''---a continuous
+stream that underlies all mental activity.  Above it, \emph{manas}
+(\cjk{末那識}, the seventh consciousness) performs deliberative
+reflection, continuously examining and reinterpreting what the
+storehouse contains.
+
+\Cref{tab:yogacara-mapping} maps six Yogac\=ara concepts to the
+four-axis taxonomy introduced in \Cref{sec:taxonomy}.  Three
+observations make the mapping non-trivial.
 
 \begin{table}[t]
 \centering
@@ -34,35 +54,188 @@ to our four-axis taxonomy:
 \end{tabular}
 \end{table}
 
-\subsection{Predictive Power}
+First, b\=ija are not static records.  The
+\emph{Yogac\=arabh\=umi-\\'s\=astra} describes seeds as possessing
+variable strengths: seeds that are repeatedly activated through
+experience grow stronger, while those left unactivated weaken.  This
+directly parallels the dual-strength model of Bjork and
+Bjork~\cite{bjork1992}, where every memory node carries independent
+storage and retrieval strengths that change with use.
 
-\todo{Argue that the Yogac\=ara framework \emph{predicted} patterns
-that the AI community independently discovered:
-\begin{enumerate}[nosep]
-    \item Seeds ripen differently from their causes (vipaka) $\rightarrow$
-    consolidation produces semantic nodes qualitatively different from episodes
-    \item Perfuming is gradual and cumulative (vasana) $\rightarrow$
-    preferences should emerge from accumulated observations, not
-    one-shot extraction
-    \item Transformation restructures the storehouse itself
-    (asraya-paravrtti) $\rightarrow$ memory systems need periodic
-    reorganization beyond append-only growth
-    \item Memory is perspective-relative (vijnaptimatrata) $\rightarrow$
-    encoding context matters for retrieval (encoding specificity)
-\end{enumerate}
-}
+Second, the relationship between \=alaya-vij\~n\=ana and manas mirrors
+the CLS distinction between a fast-encoding episodic store and a
+slow-learning semantic store~\cite{mcclelland1995}.  The storehouse
+receives impressions rapidly and indiscriminately; manas reflects on
+those impressions deliberatively, producing structured understanding
+over time.  In AI memory architectures, this corresponds to the
+episodic--semantic separation found in systems such as Generative
+Agents~\cite{park2023generative}, SYNAPSE~\cite{jiang2026synapse}, and
+\alaya{}.
+
+Third, the Yogac\=ara model treats memory as inherently
+\emph{processual}.  Seeds do not simply sit in the storehouse; they
+ripen, perfume, condition one another, and periodically undergo
+structural transformation.  This emphasis on active lifecycle operations
+aligns with the central argument of our taxonomy: that formation and
+retrieval alone are insufficient---consolidation, transformation, and
+forgetting are equally essential axes of memory architecture design.
+
+\subsection{Predictive Power}
+\label{sec:yogacara-predictive}
+
+We identify four cases in which the Yogac\=ara framework describes a
+structural principle that the AI agent memory community has either
+independently converged upon or has not yet widely adopted.  In each
+case, the Yogac\=ara claim is not metaphorical; it is a specific,
+falsifiable assertion about how a memory system should behave.
+
+\paragraph{Heterogeneous ripening (\emph{vip\=aka}, \cjk{異熟})}
+The \emph{Cheng Weishi Lun}~\cite{chengweishilun} insists that seeds
+ripen into manifest experience that \emph{differs in nature from the
+cause}: moral seeds ripen into pleasure or pain, not into further
+morality.  The term \cjk{異熟} literally means ``differently
+ripened.''  Translated into architectural terms, this predicts that
+consolidation should produce memory nodes qualitatively different from
+the episodes that generated them---decontextualized, restructured, and
+reusable in novel contexts.  This is precisely what Complementary
+Learning Systems theory formalized in 1995~\cite{mcclelland1995}:
+hippocampal replays produce neocortical representations that differ in
+kind from the original episodes.  Among the systems we survey,
+those that implement true consolidation (Generative Agents,
+SYNAPSE, HippoRAG~\cite{gutierrez2024hipporag}, \alaya{}) produce
+semantic nodes structurally distinct from their episodic sources.  The
+many systems that store only raw episodes or only extracted facts
+implicitly assume homogeneous ripening---an assumption the Yogac\=ara
+model would reject.
+
+\paragraph{Gradual perfuming (\emph{v\=asan\=a}, \cjk{薰習})}
+Each experience leaves a subtle trace on the storehouse ``like incense
+gradually permeating cloth''~\cite{yogacarabhumi}.  No single trace is
+transformative; preferences emerge from the accumulation of many similar
+impressions.  This predicts that a memory system should derive user
+preferences from \emph{accumulated} observations, not from one-shot
+extraction.  Most production systems (Mem0~\cite{choudhary2025mem0},
+A-MEM~\cite{xu2025amem}) extract preferences at write time through a
+single LLM call per interaction.  These systems conflate signal with
+noise: a user mentioning Python once is treated identically to a user
+who has discussed Python across fifty sessions.  The Yogac\=ara model
+predicts that systems employing gradual accumulation with a
+crystallization threshold---as \alaya{} does with its five-impression
+minimum before preference formation---will produce more stable and
+accurate preference representations.
+
+\paragraph{Transformation of the basis (\emph{\=a\'sraya-par\=av\d{r}tti},
+\cjk{轉依})}
+Yogac\=ara describes a periodic structural transformation of the
+storehouse itself: not merely appending new content, but resolving
+contradictions, pruning obsolete potentials, and restructuring what
+remains toward greater clarity.  The
+\emph{Yogac\=arabh\=umi-\\'s\=astra}~\cite{yogacarabhumi} describes
+the transformation of the eight consciousnesses into the four wisdoms
+(\cjk{轉識成智}), of which the first is ``Great Mirror Wisdom''
+(\cjk{大圓鏡智})---reflecting reality without redundant distortion.
+This predicts that memory systems require periodic reorganization
+operations beyond append-only growth: deduplication, contradiction
+resolution, and decay of unreinforced entries.  Most systems in our
+survey are append-only; the few that implement transformation operations
+(\alaya{}'s \texttt{transform()} with deduplication, link pruning, and
+preference decay; Letta's~\cite{packer2023memgpt} sleep-time
+consolidation) align with the Yogac\=ara prediction.  The absence of
+transformation in most architectures is, from this perspective, a
+design gap rather than a simplification.
+
+\paragraph{Perspective-relativity (\emph{vijnapti-m\=atra}, \cjk{唯識})}
+The Yogac\=ara doctrine of ``consciousness-only'' asserts that what is
+stored is not an objective record of reality but a representation shaped
+by the conditions of its formation.  Memory is always
+\emph{perspective-relative}: the same event, encoded under different
+conditions, yields different seeds.  This directly parallels Tulving and
+Thomson's encoding specificity principle~\cite{tulving1973}: a memory is
+most accessible when the retrieval context matches the encoding context.
+In AI memory architectures, this predicts that storing rich contextual
+metadata at encoding time (topics, sentiment, entities, conversational
+role) and using that metadata at retrieval time will outperform
+context-free similarity search.  Systems that store episode context and
+use it for reranking---such as Generative Agents (recency $\times$
+importance $\times$ relevance) and \alaya{} (topic overlap, entity
+overlap, sentiment proximity)---instantiate this principle.
 
 \subsection{Convergence with Neuroscience}
+\label{sec:yogacara-neuroscience}
 
-\todo{Show that Yogac\=ara and neuroscience converge on the same
-design patterns:
-\begin{itemize}[nosep]
-    \item CLS (hippocampus/neocortex) $\leftrightarrow$
-    alaya-vijnana/manas (storehouse/deliberative)
-    \item Hebbian LTP/LTD $\leftrightarrow$ seed strengthening/weakening
-    through perfuming
-    \item Spreading activation $\leftrightarrow$ seed mutual influence
-    (seeds condition each other's ripening)
-    \item RIF $\leftrightarrow$ competitive seed dynamics
-\end{itemize}
-}
+The parallels between Yogac\=ara and cognitive neuroscience are
+especially striking because the two traditions developed independently,
+separated by fifteen centuries and entirely different methodological
+commitments.  Yogac\=ara relied on introspective phenomenology and
+philosophical analysis; neuroscience relies on experimental observation
+and computational modeling.  Their convergence on the same structural
+patterns provides independent triangulation for the design principles
+underlying our taxonomy.
+
+\paragraph{Dual-system consolidation}
+CLS theory~\cite{mcclelland1995} proposes that the brain separates a
+fast-learning hippocampal system (episodic encoding) from a
+slow-learning neocortical system (semantic integration), with
+interleaved replay during sleep transferring knowledge from the former
+to the latter.  The Yogac\=ara distinction between \=alaya-vij\~n\=ana
+(which receives all impressions rapidly) and manas (which reflects on
+them deliberatively) describes the same architectural split at the
+phenomenological level.  Both frameworks predict that a memory
+architecture combining rapid, high-fidelity encoding with gradual,
+lossy extraction of stable patterns will outperform either component
+alone.
+
+\paragraph{Hebbian strengthening and weakening}
+Hebb's principle~\cite{hebb1949}---``neurons that fire together wire
+together''---and its physiological substrate in long-term potentiation
+(LTP) and long-term depression (LTD)~\cite{bliss1973} describe a
+mechanism by which synaptic connections strengthen through co-activation
+and weaken through disuse.  The \emph{Yogac\=arabh\=umi-\\'s\=astra}
+describes seeds as strengthening through repeated activation (\cjk{增長})
+and weakening when not activated (\cjk{損減})---the same dynamics
+expressed in phenomenological rather than physiological vocabulary.
+In both frameworks, the strength of a stored association is a function
+of its history of activation, not a fixed property assigned at encoding
+time.
+
+\paragraph{Spreading activation and seed mutual conditioning}
+Collins and Loftus~\cite{collins1975} formalized spreading activation in
+semantic networks: activating one concept propagates activation to
+associated concepts through weighted links, with decay proportional to
+graph distance.  The
+\emph{Yogac\=arabh\=umi-\\'s\=astra}~\cite{yogacarabhumi} describes
+seeds as mutually conditioning (\cjk{互相薰習})---the ripening of one
+seed creates conditions for the ripening of associated seeds.  The
+structural isomorphism is precise: in both models, (1)~stored elements
+are interconnected, (2)~activation of one element facilitates activation
+of neighbors, (3)~the degree of facilitation is proportional to
+connection strength, and (4)~facilitation attenuates with distance.
+This convergence suggests that associative, graph-structured retrieval
+is not merely a useful engineering heuristic but a fundamental
+organizational principle for memory systems.
+
+\paragraph{Competitive dynamics and retrieval-induced forgetting}
+Anderson, Bjork, and Bjork~\cite{anderson1994} demonstrated that
+retrieving a memory actively suppresses competing memories sharing the
+same retrieval cues---a phenomenon termed retrieval-induced forgetting
+(RIF).  Yogac\=ara describes an analogous competitive dynamic among
+seeds: when conditions favor the ripening of certain seeds, competing
+seeds (\cjk{相違種子}, ``mutually opposed seeds'') are
+suppressed~\cite{chengweishilun}.  Both frameworks predict that
+retrieval is not a passive lookup but an active process that reshapes
+the accessibility landscape of the memory store.  In AI memory
+architectures, this implies that retrieval operations should update
+memory strengths---boosting accessed nodes and allowing competing nodes
+to decay---rather than leaving the store unchanged after a query.
+
+\medskip
+
+\noindent These convergences do not establish causal or historical
+influence.  Rather, they suggest that Yogac\=ara phenomenology,
+cognitive neuroscience, and AI memory engineering are independently
+constraining the same design space.  When three traditions separated by
+methodology, culture, and fifteen centuries arrive at the same
+structural principles---dual-system consolidation, use-dependent
+strengthening, associative spreading, and competitive retrieval
+dynamics---those principles merit attention as candidate universals of
+memory architecture.

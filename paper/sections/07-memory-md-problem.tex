@@ -1,46 +1,358 @@
 \section{The MEMORY.md Problem}
 \label{sec:memorymd}
 
-\todo{Synthesize from docs/related-work.md ``The MEMORY.md Problem''
-section. This is a strong, unique contribution---real-world practitioner
-data not covered by other surveys.}
-
-File-based memory (MEMORY.md + daily logs) works for single sessions
-but degrades as usage grows. The AI agent community has converged on
+File-based memory---MEMORY.md files, daily logs, and workspace
+documents injected into the system prompt---works for single sessions
+but degrades as usage grows.  The AI agent community has converged on
 this diagnosis through independent experience~\cite{zilliz2026b,
-chawla2026, fisher2026, azizi2026}.
+chawla2026, fisher2026, azizi2026}.  This section documents four
+failure modes (cost, structure, retrieval, extraction), catalogs the
+practitioner workarounds that emerged in response, maps each workaround
+to its equivalent in formal memory architecture, and distills five
+convergent design principles.  The evidence is drawn from GitHub issues,
+community discussions, blog posts, and open-source tools---practitioner
+data not covered by existing surveys.
 
 \subsection{The Cost Problem}
+\label{sec:memorymd-cost}
 
-\todo{Quantify: 35,600 tokens/message, 93.5\% waste, \$3,600/month.
-Table of community tools (QMD, memsearch, Clawdbot-Next) with token
-savings.}
+OpenClaw, one of the most widely deployed AI coding agents, injects the
+full contents of its workspace files (MEMORY.md, AGENTS.md, SOUL.md,
+and related documents) into the system prompt on \emph{every} API call,
+regardless of relevance.  A community analysis of token
+consumption~\cite{openclaw9157} measured the impact: approximately
+35,600 tokens per message in workspace injection alone.  In a typical
+multi-message conversation, the average message comprises 38,016 tokens,
+of which 35,600 are memory content---93.5\% of the token budget consumed
+by context that is overwhelmingly irrelevant to the current query.
+
+The financial consequences are substantial.  At current pricing of
+\$15 per million output tokens, heavy users report costs of
+\$3,600 per month attributable to memory injection
+alone~\cite{zilliz2026b, azizi2026}.  A community discussion documented
+real-world costs dropping from \$4.20/day to \$1.80/day after applying
+workarounds---a 57\% reduction that underscores how much of the baseline
+cost is pure waste.
+
+Three community tools emerged independently to replace full-context
+injection with ranked retrieval:
+
+\begin{table}[!t]
+\centering
+\caption{Community tools replacing full-context memory injection with
+ranked retrieval.  All three independently adopted Reciprocal Rank
+Fusion (RRF)~\cite{cormack2009rrf} for score combination.}
+\label{tab:community-retrieval-tools}
+\small
+\begin{tabular}{@{}L{1.4cm}L{3.0cm}C{1.2cm}@{}}
+\toprule
+\textbf{Tool} & \textbf{Retrieval Pipeline} & \textbf{Token Savings} \\
+\midrule
+QMD~\cite{lutke2026qmd, casanova2026}
+  & BM25 + vector + RRF + local cross-encoder reranking
+  & 96\%~\cite{levine2026} \\
+\addlinespace
+memsearch~\cite{zilliz2026a}
+  & BM25 + vector + RRF with top-$k$ progressive disclosure
+  & Not quantified \\
+\addlinespace
+Clawdbot-Next TGAA~\cite{azizi2026}
+  & Tiered Global Anchor Architecture + dynamic tool injection
+  & 70--90\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A striking pattern emerges from Table~\ref{tab:community-retrieval-tools}:
+all three tools independently adopted Reciprocal Rank
+Fusion~\cite{cormack2009rrf} over the default weighted linear
+combination used by the host platform.  This convergence is not
+coincidental.  RRF combines ranked lists from heterogeneous retrievers
+without requiring score normalization---a critical advantage when
+merging BM25 scores (unbounded) with vector cosine similarities
+(bounded to $[-1, 1]$)~\cite{qdrant2025, weaviate2024}.
+Bruch~\etal~\cite{bruch2023} demonstrated that convex combination
+outperforms RRF when labeled tuning data is available, but RRF is
+superior in zero-shot settings.  Agent memory is characteristically a
+zero-shot domain: labeled relevance judgments do not exist, and query
+distributions shift with each session.  The practitioner community
+arrived at this conclusion empirically, and it aligns with the same
+fusion strategy used by production systems such as
+Zep/Graphiti~\cite{dempsey2025graphiti} and multiple dedicated memory
+engines surveyed in~\S\ref{sec:systems}.
 
 \subsection{The Structure Problem}
+\label{sec:memorymd-structure}
 
-\todo{Table of user-invented workarounds (decision.md, working-context.md,
-4-layer architecture, 12-layer architecture) mapped to their Alaya
-equivalents. Note: reframe as ``memory system equivalents'' rather
-than Alaya-specific.}
+MEMORY.md conflates decisions, preferences, factual knowledge, and
+session context into a single unstructured file.  As the file grows,
+retrieval degrades (everything is a candidate for every query), and the
+agent cannot distinguish a finalized architectural decision from a
+speculative note.  Users have independently invented structured memory
+patterns to work around these limitations.
+Table~\ref{tab:structure-workarounds} catalogs six representative
+patterns and maps each to its formal memory system equivalent.
+
+\begin{table*}[!t]
+\centering
+\caption{Practitioner-invented structured memory patterns and their
+equivalents in formal memory architectures.  Each workaround addresses a
+specific failure of flat-file memory.  The ``System Equivalent'' column
+uses generic architectural terms, not any specific implementation.}
+\label{tab:structure-workarounds}
+\small
+\begin{tabular}{@{}L{2.6cm}L{2.8cm}L{4.0cm}L{4.0cm}@{}}
+\toprule
+\textbf{Pattern} & \textbf{Author} & \textbf{Description} & \textbf{System Equivalent} \\
+\midrule
+\texttt{decision.md}
+  & Genet~\cite{genet2026}
+  & Separate file for finalized decisions; user explicitly tells the
+    agent ``that's a decision'' to prevent re-litigation across sessions.
+  & Semantic node with a \emph{fact} type.  Consolidation promotes the
+    decision from episodic history to the persistent semantic store. \\
+\addlinespace
+\texttt{working-context.md}
+  & Fisher~\cite{fisher2026}
+  & Real-time context snapshot updated during complex tasks; designed to
+    survive context-window compaction.
+  & Episodic store with session identifiers.  Full session context
+    persists in the database, immune to context-window truncation. \\
+\addlinespace
+Temporal metadata (\texttt{[since:]}, \texttt{[learned:]})
+  & Fisher~\cite{fisher2026}
+  & Bi-temporal markers tracking when a fact became true versus when the
+    system learned it (inspired by Graphiti~\cite{dempsey2025graphiti}).
+  & \texttt{created\_at} and \texttt{last\_corroborated} timestamps on
+    semantic nodes, enabling provenance queries and temporal filtering. \\
+\addlinespace
+4-layer architecture (SOUL.md + tacit.md + daily notes + PARA vault)
+  & Oblivion Labz
+  & Identity layer, tacit knowledge layer, temporal notes, and a
+    reference vault---all prepended to the system prompt.
+  & Multi-store architecture: separate episodic, semantic, and
+    procedural stores with distinct retention policies. \\
+\addlinespace
+12-layer architecture with activation/decay
+  & coolmanns~\cite{coolmanns2026}
+  & SQLite + FTS5 knowledge graph with Hot/Warm/Cool activation tiers
+    and cron-based nightly decay.
+  & Forgetting model with tiered retrieval strength.  Activation decays
+    over time; frequently accessed memories retain high accessibility. \\
+\addlinespace
+TELOS identity system (10 structured files)
+  & Miessler, adapted by Swift
+  & Values, goals, and background as structured Markdown in an
+    Obsidian vault, organized by semantic category.
+  & Typed semantic store with category-specific schemas, separating
+    identity facts from task knowledge. \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Several observations follow from Table~\ref{tab:structure-workarounds}.
+First, the community has reinvented the episodic--semantic distinction
+independently.  Genet's \texttt{decision.md} separates curated facts
+from raw conversation history, precisely mirroring the consolidation
+pathway from episodic to semantic memory described in Complementary
+Learning Systems (CLS) theory~\cite{mcclelland1995}.  Fisher's temporal
+metadata recreates the bi-temporal provenance tracking that
+Zep/Graphiti~\cite{dempsey2025graphiti} implements at the graph layer.
+
+Second, multi-layer architectures (4-layer and 12-layer) recapitulate
+the multi-store models of cognitive psychology.  The 12-layer system is
+particularly notable: its Hot/Warm/Cool activation tiers implement a
+form of retrieval-strength decay, the same principle formalized in the
+Bjork dual-strength model~\cite{bjork1992}, where retrieval strength
+decays over time while storage strength persists.
+
+Third, these workarounds remain fundamentally constrained by the
+flat-file medium.  They impose structure through naming conventions and
+manual discipline, not through schema enforcement or automated
+lifecycle management.  A user who forgets to tag a fact with
+\texttt{[since:]} loses its temporal provenance permanently.  A formal
+memory system encodes these distinctions in the schema itself, making
+them mandatory rather than optional.
 
 \subsection{The Retrieval Problem}
+\label{sec:memorymd-retrieval}
 
-\todo{The Alice/auth canonical failure mode. Three mechanisms that
-address it (typed nodes, Hebbian links, spreading activation).}
+Chawla~\cite{chawla2026} demonstrated the canonical retrieval failure
+of flat-file memory systems.  Consider the following scenario: on Monday,
+the user mentions ``Alice manages the authentication team.''  On
+Wednesday, the user asks ``who handles auth permissions?''  A vector
+similarity search over the memory file retrieves entries containing
+``authentication'' but ranks them alongside any other entry with a
+similar embedding---including, in Chawla's example, notes about
+password salting that happen to share embedding-space proximity with the
+query.  More critically, even when the correct episode is retrieved, the
+system cannot connect the entities: it knows Alice exists and auth
+exists, but the relationship between them is implicit in the text rather
+than explicit in the data model.
+
+Three architectural mechanisms address this failure, none of which are
+available to flat-file memory:
+
+\begin{enumerate}[leftmargin=*, nosep]
+    \item \textbf{Typed memory nodes.}  When the consolidation process
+    extracts ``Alice manages the authentication team'' as a semantic
+    node of type \emph{relationship}, the retrieval system can restrict
+    search to relationship nodes when answering a ``who handles X?''
+    query.  This narrows the candidate set, eliminating irrelevant
+    matches that vector similarity alone cannot distinguish.
+
+    \item \textbf{Graph links.}  If the system maintains a graph
+    overlay where entities (Alice, authentication, permissions) are
+    connected by typed edges, then retrieving ``authentication'' also
+    surfaces ``Alice'' through edge traversal---regardless of whether
+    their text embeddings are close in vector space.  This is the
+    approach adopted by knowledge-graph memory systems such as
+    Graphiti~\cite{dempsey2025graphiti} and HippoRAG~\cite{gutierrez2024hipporag}.
+
+    \item \textbf{Spreading activation.}  Collins and
+    Loftus~\cite{collins1975} showed that activating a concept in a
+    semantic network propagates activation to associated concepts through
+    weighted edges.  Applied to agent memory, activating ``auth'' in the
+    graph raises the activation level of ``Alice'' through the connecting
+    edge, even when the user has not mentioned Alice explicitly.  This
+    mechanism explains why associative retrieval outperforms pure
+    embedding similarity for relational queries: the graph captures
+    relationships that the embedding space does not.
+\end{enumerate}
+
+The community has recognized this limitation.  A feature request for
+a next-generation memory system proposed associative traversal,
+salience weighting, and access-based forgetting---mechanisms that
+correspond to spreading activation, retrieval-strength scoring, and
+dual-strength decay, respectively.  The convergence between practitioner
+intuition and established cognitive science models is notable: users
+who have never encountered Collins and Loftus independently arrive at
+the need for activation propagation through associative links.
 
 \subsection{The Extraction Problem}
+\label{sec:memorymd-extraction}
 
-\todo{Fisher quote. ConsolidationProvider pattern. CLS-M prototype
-results (F1=44\%, precision matters more than recall).}
+The most fundamental limitation of file-based memory is that the user
+must manually curate it.  There is no automated pathway from
+conversation to structured knowledge.  Fisher~\cite{fisher2026}
+observed that ``the extraction step is more important than the storage
+format''---getting facts out of conversations automatically is the
+transformative capability.
+
+Fisher's own approach addresses extraction partially: temporal metadata
+and manual organization impose structure on the memory file, but the
+human remains the extraction engine.  This does not scale.  A user who
+conducts 20 sessions per week cannot reasonably curate the resulting
+knowledge base by hand.
+
+The automated alternative is \emph{consolidation}: a process inspired
+by CLS theory~\cite{mcclelland1995} in which a provider examines raw
+episodic records (conversation transcripts) and extracts structured
+semantic nodes (facts, relationships, preferences).  This mirrors the
+hippocampus-to-neocortex replay that McClelland~\etal\ described:
+episodes are replayed during a consolidation phase, and stable patterns
+are promoted to long-term semantic storage while transient details are
+discarded.
+
+In the memory architecture context, consolidation providers typically
+implement three operations: \emph{knowledge extraction} (identifying
+facts and relationships in episodes), \emph{impression extraction}
+(identifying behavioral patterns and preferences), and
+\emph{contradiction detection} (identifying conflicts between new
+extractions and existing semantic nodes).  Making extraction a
+first-class architectural concern---rather than an afterthought bolted
+onto a file-based system---ensures that the memory store grows
+automatically as the agent interacts.
+
+Early prototype results for CLS-inspired extraction are instructive.
+A community prototype achieved F1$\approx$44\% on a 45-query
+benchmark, with recall at 65\% but precision at only 35\%.  The
+asymmetry is significant: 65\% of retrieved content was noise.  For
+memory systems, \textbf{precision matters more than recall}.  A
+forgotten fact can be relearned from a future conversation, but a false
+memory---a confidently asserted ``fact'' that was never stated---can
+propagate errors through subsequent reasoning chains.  This asymmetry
+suggests that extraction systems should be calibrated conservatively,
+preferring to miss genuine facts over fabricating spurious ones.
 
 \subsection{Convergent Design Principles}
+\label{sec:memorymd-convergence}
 
-\todo{Five principles the community independently converged on:
-\begin{enumerate}[nosep]
-    \item Ranked retrieval over full-context injection
-    \item Typed memory stores over flat files
-    \item Graph traversal over text similarity
-    \item Temporal decay over manual curation
-    \item Automatic extraction over manual logging
+The practitioner community---working independently, without
+coordination, and largely without awareness of the cognitive science
+literature---has converged on five architectural principles for agent
+memory:
+
+\begin{enumerate}[leftmargin=*, nosep]
+    \item \textbf{Ranked retrieval over full-context injection.}  The
+    tools in Table~\ref{tab:community-retrieval-tools} demonstrate that
+    selectively retrieving relevant memories (via BM25 + vector + RRF)
+    reduces token consumption by 70--96\% with no loss in agent
+    performance.  Full-context injection is the memory equivalent of
+    reading the entire encyclopedia to answer a single question.
+
+    \item \textbf{Typed memory stores over flat files.}  The patterns
+    in Table~\ref{tab:structure-workarounds} show users independently
+    creating separate files for decisions, context, identity, and
+    knowledge---reinventing the episodic/semantic/procedural distinction
+    from cognitive psychology.
+
+    \item \textbf{Graph traversal over pure text similarity.}  The
+    retrieval failures documented by Chawla~\cite{chawla2026} drove
+    proposals for knowledge-graph overlays, entity linking, and
+    associative traversal---mechanisms that require structured
+    relationships rather than flat text.
+
+    \item \textbf{Temporal decay over manual curation.}  The 12-layer
+    architecture~\cite{coolmanns2026} with Hot/Warm/Cool activation
+    tiers and Fisher's~\cite{fisher2026} temporal metadata both
+    recognize that memories have a time dimension: recent, frequently
+    accessed knowledge should outrank stale entries.  Manual curation
+    does not scale; automated decay does.
+
+    \item \textbf{Automatic extraction over manual logging.}  Fisher's
+    observation that extraction is ``more important than the storage
+    format''~\cite{fisher2026} reflects a community-wide recognition
+    that the bottleneck is not \emph{where} to store memories but
+    \emph{how} to create them.  Manual logging requires discipline that
+    degrades over time; automated consolidation operates consistently.
 \end{enumerate}
-}
+
+These five principles are not arbitrary.  Each corresponds to an
+established result in cognitive neuroscience or information retrieval:
+ranked retrieval maps to the selective attention and cue-dependent
+recall studied in memory psychology; typed stores map to the
+episodic--semantic distinction central to CLS
+theory~\cite{mcclelland1995}; graph traversal maps to spreading
+activation in semantic networks~\cite{collins1975}; temporal decay
+maps to the retrieval-strength component of the Bjork dual-strength
+model~\cite{bjork1992}; and automatic extraction maps to the
+hippocampal replay mechanism in complementary learning
+systems~\cite{mcclelland1995}.
+
+The Yogac\=ara Buddhist tradition, discussed in
+\S\ref{sec:yogacara}, arrives at structurally parallel insights through
+a different analytical path.  The \emph{b\=ija} (seeds) stored in the
+\emph{\=alaya-vij\~n\=ana} (storehouse consciousness) are strengthened
+through \emph{v\=asan\=a} (perfuming)---a process that maps to
+Hebbian potentiation of co-activated memory traces.  Seeds that are not
+perfumed weaken over time, corresponding to retrieval-strength decay.
+The storehouse itself is not a static repository but a dynamic process
+that reshapes through interaction (\emph{\=a\'sraya-par\=av\d{r}tti},
+basis-transformation).
+
+The convergence across three independent traditions---practitioner
+intuition, cognitive neuroscience, and contemplative
+psychology---suggests that these five principles are not design
+preferences but \emph{structural necessities} of any sufficiently
+complex memory system.  A system that stores everything retrieves
+nothing useful (violating principle~1).  A system that conflates memory
+types cannot selectively query (violating principle~2).  A system
+without relational structure cannot answer relational queries (violating
+principle~3).  A system without temporal dynamics drowns in stale
+information (violating principle~4).  A system without automated
+extraction cannot scale beyond manual effort (violating principle~5).
+The practitioner community discovered these constraints the hard way,
+through the accumulated friction of daily use.  That their solutions
+align with both neuroscience and a 1,500-year-old contemplative
+tradition suggests the constraints are fundamental.

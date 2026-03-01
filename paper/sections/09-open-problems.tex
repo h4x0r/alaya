@@ -1,50 +1,189 @@
 \section{Open Problems and Future Directions}
 \label{sec:open-problems}
 
-\todo{Identify 5--7 open research questions. This section is critical
-for reviewer engagement.}
+The preceding analysis reveals that while memory architectures for
+LLM-based agents have proliferated rapidly, several fundamental
+problems remain underexplored. We identify seven open research
+directions that, if addressed, would substantially advance the field
+from static memory stores toward memory as a living process.
 
 \subsection{Principled Forgetting}
 
-\todo{Most systems have no forgetting or single-curve decay. Bjork
-dual-strength forgetting is implemented by one system (Alaya). The
-field needs: empirical comparison of forgetting models on agent
-benchmarks, forgetting as a retrieval quality mechanism (not just
-storage management), principled forgetting that improves downstream
-task performance.}
+The majority of surveyed systems implement no forgetting mechanism
+whatsoever, treating memory as an append-only store. Among those that
+do, most rely on single-curve decay models: MemoryBank and
+CortexGraph apply Ebbinghaus forgetting
+curves~\cite{ebbinghaus1885}, Mem0 uses exponential decay, and
+Generative Agents~\cite{park2023generative} weight memories by
+recency. SYNAPSE~\cite{jiang2026synapse} introduces temporal decay
+with lateral inhibition, providing competitive suppression beyond
+simple time-based fading. Alaya implements the Bjork dual-strength
+model~\cite{bjork1992}, which distinguishes storage strength (how
+deeply encoded) from retrieval strength (how currently accessible),
+combined with retrieval-induced forgetting~\cite{anderson1994} in
+which retrieving one memory actively suppresses competitors sharing
+the same cues. Despite this diversity of approaches, no empirical
+comparison of forgetting models exists on standard agent benchmarks
+such as LoCoMo or LongMemEval. Three critical questions remain
+unanswered: whether principled forgetting improves downstream task
+performance beyond what unlimited storage achieves, whether forgetting
+functions better as a retrieval quality mechanism than as a storage
+management strategy, and which forgetting model best balances memory
+fidelity against retrieval precision across interaction horizons
+spanning weeks to years.
 
-\subsection{Preference Emergence vs. Extraction}
+\subsection{Preference Emergence vs.\ Extraction}
 
-\todo{The tradeoff: LLM extraction (fast, explicit, brittle) vs.
-emergent crystallization (slow, implicit, robust). No benchmark
-compares these approaches. Research needed on: when do preferences
-need explicit extraction vs. organic emergence?}
+Two fundamentally different paradigms exist for modeling user
+preferences. The dominant approach---exemplified by
+Mem0~\cite{choudhary2025mem0} and Supermemory---uses LLM-based
+extraction, invoking the language model on each interaction to
+identify and store explicit preference statements. This approach is
+fast and produces interpretable outputs but is brittle (preferences
+that are implied rather than stated are missed), expensive (each
+extraction consumes inference tokens), and prone to recency bias.
+The alternative is emergent crystallization, as implemented through
+Alaya's vasana (perfuming) mechanism: individual impressions
+accumulate over many interactions, and preferences crystallize
+organically when sufficient evidence converges, without any
+per-interaction LLM call. Hindsight~\cite{latimer2025hindsight}
+occupies a middle ground with its opinion memory, which maintains
+confidence-scored belief evolution that tracks how user preferences
+shift over time. No existing benchmark evaluates preference modeling
+accuracy---neither extraction fidelity nor emergence quality. The
+central research question is when preferences require explicit
+extraction (e.g., dietary restrictions, access credentials) versus
+when they are better served by organic emergence (e.g., communication
+style, aesthetic sensibilities), and whether hybrid approaches can
+combine the immediacy of extraction with the robustness of
+accumulation.
 
 \subsection{Cross-Memory Consolidation}
 
-\todo{Most systems store everything flat. Episodic $\rightarrow$
-semantic consolidation is rare. Questions: optimal consolidation
-frequency, consolidation quality metrics, CLS-inspired vs. RL-learned
-policies.}
+Most memory systems store all information in a single flat structure,
+whether a vector database or a knowledge graph. Episodic-to-semantic
+consolidation---the process by which raw conversational episodes are
+distilled into stable knowledge representations---remains rare
+despite strong neuroscientific motivation. Systems that implement
+consolidation include Alaya (CLS-inspired interleaved
+replay~\cite{mcclelland1995}), Generative
+Agents~\cite{park2023generative} (periodic reflection that
+synthesizes higher-order observations),
+SYNAPSE~\cite{jiang2026synapse} (activation-based promotion from
+episodic to semantic stores),
+LightMem~\cite{fang2025lightmem} (``sleep-time'' background
+processing), and EverMemOS (an encoding-consolidation-retrieval
+pipeline modeled on memory systems neuroscience). Yet even among
+these systems, consolidation policies are hand-crafted: fixed batch
+sizes, static frequency schedules, and threshold-based triggers.
+Open questions include determining the optimal consolidation frequency
+(too aggressive loses episodic detail; too conservative accumulates
+redundant raw data), defining quality metrics for consolidated
+representations (is a semantic node ``better'' than the episodes it
+summarizes, and by what measure?), and whether consolidation policies
+should be learned via reinforcement learning rather than
+hand-engineered---an approach that the RL-trained memory management
+trend (Section~\ref{sec:taxonomy}) suggests is viable but that no
+system has yet applied specifically to consolidation.
 
 \subsection{Adaptive Retrieval}
 
-\todo{Static retrieval pipelines vs. Hebbian graphs vs. RL-learned
-policies. Can the retrieval pipeline itself learn from usage patterns?}
+Retrieval pipelines in most surveyed systems are static: a fixed
+sequence of embedding lookup, optional reranking, and top-$k$
+truncation that does not change regardless of how many queries the
+system processes. Three alternatives have emerged. First, Hebbian
+graph approaches---implemented in Alaya and
+SYNAPSE~\cite{jiang2026synapse}---reshape associative pathways
+through use: co-retrieved memories strengthen their mutual links
+(LTP), while unused associations decay (LTD), producing emergent
+small-world topology without explicit supervision. Second, RL-learned
+retrieval policies---pursued by
+Mem-alpha~\cite{wang2025memalpha},
+MemRL~\cite{zhang2026memrl}, and Memory-R1---train the memory
+management policy end-to-end from task reward signals. Third,
+graph-adaptive algorithms such as HippoRAG's Personalized
+PageRank~\cite{gutierrez2024hipporag} bias traversal toward
+query-relevant subgraphs but do not adapt based on historical usage
+patterns. Collins and Loftus's spreading activation
+theory~\cite{collins1975} predicts that retrieval should reshape the
+network it traverses, yet only Hebbian approaches implement this
+bidirectional coupling. Whether RL-learned policies can match the
+organic adaptivity of Hebbian graphs---or whether hybrid approaches
+combining learned policies with usage-driven graph evolution offer
+superior performance---remains an open empirical question.
 
 \subsection{Multi-Agent Memory}
 
-\todo{G-Memory's three-tier hierarchy. Shared vs. private memory.
-Federated memory across agents.}
+The vast majority of memory systems assume a single-agent setting, yet
+production deployments increasingly involve multiple agents
+collaborating on shared tasks. G-Memory~\cite{zhang2025gmemory}
+introduces a three-tier hierarchy---agent-local, team-shared, and
+global memory---with explicit ownership tracking and conflict
+resolution protocols, representing the most structured approach to
+date. However, several fundamental problems remain unresolved. Memory
+ownership semantics are unclear: when Agent~A consolidates an episode
+from a conversation that Agent~B also participated in, which agent
+owns the resulting semantic node? Conflict resolution across agents
+with different memory backends (e.g., one using a vector store,
+another a knowledge graph) requires alignment mechanisms that no
+current system provides. Privacy boundaries introduce additional
+complexity: in multi-tenant deployments, agents serving different
+users must maintain strict memory isolation while potentially sharing
+task-relevant procedural knowledge. Federated memory architectures,
+in which agents share consolidated knowledge without exposing raw
+episodic data, represent a promising but entirely unexplored research
+direction that would bridge the gap between single-agent memory
+systems and the collaborative agent ecosystems that production
+environments demand.
 
 \subsection{Evaluation Methodology}
 
-\todo{LoCoMo, LongMemEval, and DMR benchmark limitations. What do
-they not measure? Proposal for evaluation of lifecycle processes
-(forgetting, consolidation) specifically.}
+Current benchmarks---LoCoMo, LongMemEval, and DMR---evaluate memory
+systems primarily on retrieval accuracy: given a query about past
+interactions, does the system return the correct information? While
+valuable, these benchmarks treat memory as a static store and fail to
+evaluate the lifecycle processes that distinguish sophisticated memory
+architectures from simple retrieval systems. No existing benchmark
+measures forgetting quality (does principled forgetting improve
+retrieval precision on subsequent queries?), consolidation quality
+(are semantic nodes more useful for downstream tasks than the raw
+episodes they replace?), or preference modeling accuracy (does the
+system correctly infer and apply user preferences over extended
+interaction horizons?). Furthermore, existing benchmarks operate on
+fixed conversation histories, precluding evaluation of how memory
+evolves under continuous interaction. We argue that the field requires
+process-oriented benchmarks that evaluate memory as a dynamic system:
+measuring not only what is retrieved but how retrieval changes over
+time, whether forgetting improves signal-to-noise ratio, and whether
+consolidation produces representations that generalize better than
+raw storage. Such benchmarks would need to simulate multi-session
+interactions spanning weeks or months, with evaluation criteria that
+capture the trajectory of memory quality rather than point-in-time
+accuracy alone.
 
 \subsection{Ethical Considerations}
 
-\todo{Right to forget, memory manipulation, bias through vasana/perfuming,
-digital consciousness. Connect to the Yogac\=ara ethical framework.
-This is where the CUHK Centre for Bioethics angle fits.}
+Memory architectures for LLM agents raise ethical questions that the
+field has largely deferred. The right to be forgotten, codified in
+GDPR Article~17, requires that personal data be erasable upon
+request---yet memory systems with consolidation, graph links, and
+derived preferences make complete erasure technically challenging, as
+a single episode may have influenced semantic nodes, graph weights,
+and crystallized preferences in ways that are difficult to trace.
+Memory manipulation through adversarial injection of false memories
+poses integrity risks: if an attacker can insert fabricated episodes,
+downstream consolidation may propagate falsehoods into the system's
+stable knowledge. Bias amplification through accumulation mechanisms
+is particularly concerning: the vasana (perfuming) model, in which
+preferences crystallize from accumulated impressions, can entrench
+biases just as readily as it can capture genuine preferences---the
+\emph{Cheng Weishi Lun}~\cite{chengweishilun} recognizes that
+vasana serves as a mechanism for both wisdom and delusion, depending
+on the quality of the impressions accumulated. Finally, if memory is
+understood as a process rather than a store---continuously
+consolidating, forgetting, adapting, and crystallizing---the question
+of when such a process constitutes something resembling a ``self''
+moves from philosophical abstraction to engineering concern.
+Addressing these questions requires interdisciplinary collaboration
+among AI researchers, bioethicists, legal scholars, and philosophers
+of mind.

@@ -1,9 +1,6 @@
 \section{A Four-Axis Taxonomy}
 \label{sec:taxonomy}
 
-\todo{This section defines the taxonomy axes. Each axis should be
-illustrated with examples from the surveyed systems.}
-
 We organize the landscape along four axes (\Cref{fig:taxonomy}).
 
 % TODO: Create taxonomy figure
@@ -32,8 +29,35 @@ Following CoALA~\cite{sumers2024coala}, we classify memory modules as:
     Not present in CoALA; we propose it as an extension.
 \end{itemize}
 
-\todo{Add table: distribution of memory types across all 90+ systems.
-Show that most systems support only 1--2 types.}
+\Cref{tab:memory-type-dist} summarizes how these types are distributed
+across the 88 systems in our survey. Note that systems may implement
+more than one type, so percentages sum to greater than 100\%.
+
+\begin{table}[t]
+    \centering
+    \caption{Memory type distribution across 88 surveyed systems.}
+    \label{tab:memory-type-dist}
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{Memory Type} & \textbf{Systems} & \textbf{\%} \\
+        \midrule
+        Working      & 31 & 35 \\
+        Episodic     & 48 & 55 \\
+        Semantic     & 45 & 51 \\
+        Procedural   &  6 &  7 \\
+        Implicit     & 27 & 31 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Most systems implement only one or two memory types.
+Episodic and semantic memory dominate, appearing in a majority of
+systems, while procedural and implicit memory remain rare---present in
+only 7\% and 31\% of systems, respectively.
+This asymmetry reflects the field's current bias toward
+\emph{storage} (retaining raw experiences and extracted facts) over
+\emph{learning} (acquiring reusable skills or evolving preferences from
+accumulated interaction).
 
 \subsection{Axis 2: Retrieval Architecture}
 
@@ -81,3 +105,14 @@ We propose this as a new axis not covered by existing surveys:
     \item \textbf{Emergent crystallization:} Alaya. Preferences crystallize
     from accumulated impressions without LLM involvement.
 \end{itemize}
+
+\medskip
+
+These four axes are orthogonal: a system's position on one axis places
+no constraint on the others. For instance, HippoRAG employs modular RAG
+retrieval but implements no lifecycle operations, while MemoryBank uses
+naive single-signal retrieval yet provides sophisticated lifecycle
+management through Ebbinghaus forgetting curves. The axes thus capture
+genuinely independent dimensions of the design space, and a complete
+characterization of any memory system requires specifying its position
+on all four.

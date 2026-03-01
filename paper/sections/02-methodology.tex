@@ -1,8 +1,6 @@
 \section{Methodology}
 \label{sec:methodology}
 
-\todo{Complete this section with systematic review methodology.}
-
 % This section is critical for acceptance. Reviewers will reject
 % without a clear search and selection protocol.
 
@@ -66,14 +64,120 @@ taxonomies:
 % \begin{figure}[t]
 %     \centering
 %     \includegraphics[width=\columnwidth]{figures/prisma-flow.pdf}
-%     \caption{PRISMA flow diagram showing system selection process.
-%     \todo{Generate with actual numbers.}}
+%     \caption{PRISMA flow diagram showing system selection process.}
 %     \label{fig:prisma}
 % \end{figure}
 
-\subsection{Threats to Validity}
+\subsection{Data Extraction and Coding}
+\label{sec:coding}
 
-\todo{Add threats to validity: recency bias (field moves fast),
-selection bias (GitHub stars favor English-language projects),
-classification subjectivity (CoALA mapping requires judgment),
-completeness (new systems appear weekly).}
+For each system meeting our inclusion criteria, we performed structured
+data extraction along four orthogonal axes. Two authors independently
+coded each system; disagreements were resolved through discussion until
+consensus was reached. The four coding axes are:
+
+\begin{enumerate}[leftmargin=*, nosep]
+    \item \textbf{Structure.} Following CoALA~\cite{sumers2024coala}, we
+    classified each system's memory modules as \emph{working} (in-context
+    scratchpad), \emph{episodic} (timestamped interaction records),
+    \emph{semantic} (extracted facts and generalizations),
+    \emph{procedural} (reusable action sequences or skills), or
+    \emph{implicit} (behavioral patterns encoded in retrieval weights or
+    model parameters rather than explicit stores). A system may implement
+    multiple types simultaneously.
+
+    \item \textbf{Retrieval.} We mapped each system's retrieval pipeline
+    to the RAG taxonomy of Gao~\etal~\cite{gao2023rag}. \emph{Naive RAG}
+    denotes single-stage embed-and-retrieve over a flat index.
+    \emph{Advanced RAG} adds pre-retrieval query rewriting, post-retrieval
+    re-ranking, or both. \emph{Modular RAG} composes independently
+    swappable retrieval components (\eg, sparse search, dense search,
+    graph traversal, temporal filtering) via a routing or fusion layer.
+    We additionally recorded the specific retrieval modalities employed
+    (sparse/BM25, dense/vector, knowledge-graph traversal, recency decay,
+    importance weighting) and fusion strategy where applicable.
+
+    \item \textbf{Lifecycle.} Drawing on Zhang~\etal~\cite{zhang2024survey}
+    and the memory operations taxonomy of Du~\etal~\cite{du2025memory}, we
+    coded each system for four lifecycle operations: \emph{formation} (how
+    new memories are created---verbatim storage, LLM extraction, or
+    reinforcement-learned construction); \emph{consolidation} (whether raw
+    memories are merged, deduplicated, or promoted across stores);
+    \emph{forgetting} (whether the system implements any decay, eviction,
+    or active deletion mechanism); and \emph{transformation} (whether
+    memories change form over time, \eg, episodic records being
+    generalized into semantic facts). Systems lacking a given operation
+    were coded as ``none.''
+
+    \item \textbf{Preference.} We assessed the mechanism, if any, by
+    which user preferences and behavioral patterns emerge from accumulated
+    memory. We distinguished three levels: \emph{none} (no preference
+    modeling), \emph{LLM-extracted} (the system explicitly prompts an LLM
+    to summarize or extract preferences from stored interactions), and
+    \emph{emergent} (preferences arise implicitly through retrieval
+    frequency, Hebbian-style strengthening, or reinforcement signals
+    without an explicit extraction step). This axis extends beyond existing
+    survey taxonomies and reflects the gap identified by
+    Hu~\etal~\cite{hu2025memory} between static knowledge stores and
+    adaptive personalization.
+\end{enumerate}
+
+This four-axis coding scheme is designed to be both comprehensive and
+orthogonal: \emph{structure} describes \emph{what} is stored,
+\emph{retrieval} describes \emph{how} it is accessed, \emph{lifecycle}
+describes \emph{when and how} it evolves, and \emph{preference} describes
+\emph{why} it matters for downstream agent behavior. The resulting
+classifications are reported in the comparative matrices of
+\Cref{sec:comparison}.
+
+\subsection{Threats to Validity}
+\label{sec:threats}
+
+Several threats to validity constrain the generalizability of this survey.
+We identify five principal concerns and the mitigations we applied.
+
+\textbf{Recency bias.} The field of LLM agent memory is evolving at an
+extraordinary pace. Our search covers publications and systems through
+February~2026, but significant new architectures continue to appear on a
+weekly basis. We mitigate this by anchoring our taxonomy in stable
+cognitive-science frameworks (CoALA, complementary learning systems
+theory) rather than system-specific features, so that the analytical
+apparatus remains applicable to future systems even as the landscape
+shifts.
+
+\textbf{Selection bias.} Our GitHub search criteria (repositories with
+$>$500 stars) systematically favor English-language, open-source projects
+with strong community engagement. Closed-source production systems
+(\eg, proprietary memory layers in commercial agent platforms) are
+underrepresented because they publish limited technical details. We
+partially address this through practitioner source monitoring (blog posts,
+social media analyses, community tutorials) that surface implementation
+details of systems not formally published in academic venues.
+
+\textbf{Classification subjectivity.} Mapping heterogeneous systems onto
+a unified taxonomy necessarily involves interpretive judgment. The CoALA
+framework~\cite{sumers2024coala} was designed for cognitive architectures
+with clear module boundaries, but many production systems blur these
+distinctions---a single vector store may serve simultaneously as episodic
+and semantic memory depending on how entries are queried. We mitigate this
+through explicit operational definitions for each coding category
+(Section~\ref{sec:coding}), independent dual coding, and transparent
+reporting of borderline cases in our system analyses.
+
+\textbf{Completeness.} No survey of this rapidly expanding field can
+claim exhaustiveness. We identified over 90 systems meeting our inclusion
+criteria, but new projects appear weekly on arXiv and GitHub. Rather than
+pursuing completeness, we aimed for \emph{taxonomic saturation}: we
+continued adding systems until new entries no longer introduced novel
+architectural patterns or memory mechanisms. The final set is sufficient
+to establish the taxonomy's axes and identify convergent design principles,
+even if individual systems are inevitably omitted.
+
+\textbf{Reproducibility.} Several systems in our corpus exist only as
+blog posts, social media threads, or proprietary deployments with limited
+technical documentation. For these systems, we relied on the available
+descriptions and, where possible, examined open-source code. We flag
+systems with limited documentation in our analyses and weight our
+conclusions toward systems with reproducible implementations or
+peer-reviewed publications. Where architectural details are ambiguous, we
+report the ambiguity rather than speculate.

@@ -1,48 +1,302 @@
 \section{System-by-System Analysis}
 \label{sec:systems}
 
-\todo{Synthesize from docs/related-work.md. This section covers
-representative systems in each category. Keep to 2--3 paragraphs per
-system for space. Use tables for detailed comparison.}
-
 We organize systems into six categories: production systems
 (\S\ref{sec:production}), standalone memory servers
 (\S\ref{sec:standalone}), framework-level memory
 (\S\ref{sec:framework}), coding agent memory (\S\ref{sec:coding}),
 file-based memory (\S\ref{sec:filebased}), and research architectures
-(\S\ref{sec:research}).
+(\S\ref{sec:research}). For each system we identify the memory
+types supported (mapped to the CoALA taxonomy~\cite{sumers2024coala}),
+the retrieval architecture (mapped to the RAG
+taxonomy~\cite{gao2023rag}), the lifecycle operations, and the
+infrastructure requirements. Quantitative cross-comparisons appear in
+\S\ref{sec:comparison}; here we focus on what makes each system
+architecturally distinct.
 
+%% ===============================================================
 \subsection{Production Systems}
 \label{sec:production}
 
-\todo{Cover: Mem0, Zep/Graphiti, Letta/MemGPT, Supermemory, MemoryOS,
-A-MEM, Hindsight, Memvid. Each gets 2--3 paragraphs with CoALA
-mapping, retrieval, forgetting, and comparison.}
+\paragraph{Mem0.}
+Mem0~\cite{choudhary2025mem0} implements a tiered memory architecture
+backed by vector databases (Qdrant, Pinecone, or Chroma), a relational
+store for metadata, and an optional Neo4j graph layer (the Mem0g
+variant). Memory formation is LLM-dependent: every incoming
+interaction is routed through an LLM that extracts facts, user
+preferences, and personality traits, then decides whether to create,
+update, or deduplicate entries. Retrieval combines vector similarity
+with graph traversal and contextual priority scoring, placing Mem0 in
+the Advanced RAG category. Forgetting follows a single-curve
+exponential decay of low-relevance entries, with periodic consolidation
+between short-term and long-term tiers. The authors report a 26\%
+accuracy improvement over OpenAI's built-in memory on the LOCOMO
+benchmark and 91\% lower p95 latency versus full-context approaches.
 
+The key architectural tradeoff in Mem0 is its heavy infrastructure
+requirement (2--3 external services) and its reliance on an LLM for
+every memory write. This makes Mem0 well-suited for cloud-deployed,
+multi-user SaaS products with dedicated operations teams, but less
+appropriate for privacy-first or offline use cases. The Mem0g graph
+variant adds entity-relationship traversal, but the graph is
+static---entities and relationships exist only when the LLM explicitly
+creates them, with no dynamic restructuring through use.
+
+\paragraph{Zep / Graphiti.}
+Graphiti~\cite{dempsey2025graphiti}, the engine underlying Zep's memory
+service, constructs a hierarchical temporal knowledge graph on Neo4j
+with three subgraph layers: community (cluster summaries), entity
+(semantic entities and relationships), and episodic (raw conversation
+episodes). Retrieval uses a triple-hybrid pipeline---cosine similarity,
+Okapi BM25, and breadth-first graph traversal---fused via Reciprocal
+Rank Fusion (RRF) with subsequent maximal marginal relevance (MMR)
+diversification. Multi-stage reranking considers episode mentions, node
+distance, and cross-signal fusion. This places Zep/Graphiti firmly in
+the Modular RAG category, alongside a small minority of systems
+(18.2\%, Table~\ref{tab:rag-distribution}).
+
+Zep's most distinctive lifecycle feature is \emph{bi-temporal
+invalidation}: facts are never deleted, only marked with validity
+periods recording when each fact was true in the real world and when
+the system learned it. This conservative approach preserves full
+provenance but means the knowledge graph grows monotonically. Entity
+extraction requires an LLM (typically \texttt{gpt-4o-mini}), though
+retrieval itself is LLM-free. The authors report 94.8\% accuracy on
+the DMR benchmark and up to 18.5\% accuracy improvement on
+LongMemEval.
+
+\paragraph{Letta (formerly MemGPT).}
+Letta~\cite{packer2023memgpt} introduced the operating-system metaphor
+for agent memory: core memory serves as ``RAM'' (always in-context,
+editable by the agent), recall memory stores conversation history, and
+archival memory provides unbounded ``disk'' storage via a vector or
+graph database. The defining architectural choice is that the LLM
+\emph{is} the memory manager---it decides what to store, evict, and
+retrieve via explicit tool calls (\texttt{core\_memory\_append},
+\texttt{archival\_memory\_search}, etc.).
+
+This agent-driven design makes Letta's memory quality entirely
+dependent on LLM capability. When the context window fills, the
+system evicts approximately 70\% of messages through summarization.
+A 2025 extension adds ``sleep-time agents'' that handle asynchronous
+reorganization of archival memory outside the main interaction loop.
+Letta's CoALA mapping spans all three memory types (working, episodic,
+semantic), but its retrieval is Naive RAG---agent-driven tool calls
+with single-signal vector similarity. The OS metaphor proved
+influential: MemoryOS~\cite{kang2025memoryos} and OpenViking both
+adopted tiered hierarchies, though with different management
+strategies.
+
+\paragraph{Hindsight.}
+Hindsight~\cite{latimer2025hindsight} introduces the most novel memory
+decomposition in the production landscape: four logical networks for
+\emph{world} (objective facts), \emph{experience} (agent
+interactions), \emph{opinion} (subjective beliefs with confidence
+scores), and \emph{observation} (preference-neutral entity summaries).
+The opinion network is architecturally unique---each belief carries an
+explicit confidence score that evolves as new evidence arrives,
+enabling the system to distinguish between well-established facts and
+tentative assessments.
+
+Retrieval uses two specialized components: Tempr (temporal entity
+memory priming) for time-aware recall and Cara (coherent adaptive
+reasoning) for multi-step inference across networks. Hindsight does
+not implement explicit forgetting; instead, belief confidence scores
+decay or strengthen as evidence accumulates, producing an emergent
+form of selective retention. The authors claim state-of-the-art
+results: 91.4\% on LongMemEval and 89.61\% on LoCoMo. The four-network
+decomposition is finer-grained than most systems' two- or three-store
+architectures, but Hindsight lacks a graph overlay and does not
+implement principled forgetting beyond confidence evolution.
+
+%% ===============================================================
 \subsection{Standalone Memory Servers}
 \label{sec:standalone}
 
-\todo{Cover: Motorhead, Engram, OpenViking.}
+Several standalone servers provide memory as a network service,
+typically via REST or MCP endpoints, without being tied to a specific
+agent framework. \textbf{Motorhead} (Metal, Rust) implements a
+minimal conversation buffer with incremental summarization on Redis:
+when a configurable window (default 12 messages) fills, the oldest
+half is summarized and the summary is incrementally updated.
+\textbf{Engram} (Go) takes an agent-trusting approach---the LLM
+client decides what to remember, storing curated summaries in SQLite
+with FTS5 full-text search and no vector retrieval. Both represent
+Naive RAG with no graph, no forgetting model, and no consolidation.
+\textbf{OpenViking} (ByteDance/Volcengine, open-sourced January 2026)
+adopts a virtual filesystem metaphor, mapping all agent context to a
+\texttt{viking://} protocol with three tiers: L0 (immediate context),
+L1 (session-level), and L2 (persistent archival). Built on VikingDB
+infrastructure, OpenViking replaces fragmented vector storage with
+hierarchical directory-based retrieval, but provides no forgetting,
+no graph dynamics, and no preference learning.
 
+%% ===============================================================
 \subsection{Framework-Level Memory}
 \label{sec:framework}
 
-\todo{Cover: LangChain, LlamaIndex, LangMem SDK, LangGraph, Haystack.}
+The major agent frameworks provide memory as a built-in module, but
+these integrations are typically shallow---memory as an afterthought
+rather than a first-class architectural concern. \textbf{LangChain}'s
+memory classes (ConversationBufferMemory, ConversationSummaryMemory,
+ConversationBufferWindowMemory) offer working-memory-only storage with
+truncation-based forgetting; most are now deprecated in favor of
+\texttt{RunnableWithMessageHistory}. \textbf{LlamaIndex} provides
+composable memory blocks (StaticMemoryBlock,
+FactExtractionMemoryBlock, VectorMemoryBlock) with FIFO eviction and
+a configurable token ratio (70\% chat history, 30\% long-term by
+default). \textbf{LangMem SDK}, LangChain's dedicated memory engine,
+adds semantic memory (extracted facts and preferences) and a
+distinctive \emph{procedural} memory capability: learned patterns are
+saved as updated prompt instructions, modifying the agent's behavior
+without explicit retrieval. None of these frameworks implements a
+graph overlay, principled forgetting, consolidation, or preference
+emergence. Their retrieval ranges from direct prompt injection
+(LangChain) to vector similarity via LangGraph's storage layer
+(LangMem), placing them uniformly in the Naive RAG category.
 
+%% ===============================================================
 \subsection{Coding Agent Memory}
 \label{sec:coding}
 
-\todo{Cover: Beads, Engram, memsearch, QMD, index1, Basic Memory.}
+A distinctive cluster of memory systems has emerged around coding
+agents (Claude Code, Cursor, Windsurf), exposed primarily via the
+Model Context Protocol (MCP). These systems share a common pattern:
+replace the default full-context injection of MEMORY.md files with
+ranked retrieval, typically achieving 70--96\% token savings.
+\textbf{memsearch}~\cite{zilliz2026a} (Zilliz/Milvus team) extracts
+the default memory file structure and overlays BM25 plus vector
+retrieval with RRF fusion and progressive top-$k$ disclosure.
+\textbf{QMD}~\cite{lutke2026qmd} (Tobi L\"utke, Shopify) runs three
+local GGUF models for embedding (Gemma-300M), reranking
+(Qwen3-Reranker-0.6B), and query expansion (1.7B parameter model),
+achieving fully offline hybrid retrieval with cross-encoder reranking
+and reported 96\% token reduction~\cite{levine2026}. \textbf{Beads}
+(Go, on Dolt version-controlled SQL) models a dependency-aware issue
+graph with four link types, enabling traversal along dependency chains
+rather than pure similarity. \textbf{Basic Memory} (Python) takes a
+wiki-link approach, storing structured Markdown with explicit
+Observations and Relations that form a semantic knowledge graph
+navigable via \texttt{memory://} URLs. All four independently adopted
+RRF over the default weighted linear fusion---a convergence we
+analyze further in \Cref{sec:memorymd}.
 
+%% ===============================================================
 \subsection{File-Based Memory}
 \label{sec:filebased}
 
-\todo{Cover: OpenClaw MEMORY.md, Claudesidian. See \Cref{sec:memorymd}
-for detailed analysis of the MEMORY.md problem.}
+The simplest memory architecture stores knowledge in Markdown files
+that the agent reads and writes directly. The dominant instance is the
+\textbf{MEMORY.md pattern} used by coding agents such as OpenClaw:
+a curated long-term knowledge file (MEMORY.md) plus daily interaction
+logs with temporal decay, backed by a SQLite index with FTS5 and
+sqlite-vec for hybrid retrieval (70\% vector, 30\% BM25 weighted
+fusion). \textbf{Claudesidian} extends this pattern into Obsidian
+vaults, using PARA folder organization and daily/weekly notes with
+Obsidian's wiki-link graph for navigation. File-based memory provides
+zero-infrastructure deployment and human-readable persistence, but
+scales poorly: MEMORY.md is injected into the system prompt in full
+on every turn regardless of relevance, consuming approximately 35,600
+tokens per message (93.5\% waste in multi-message
+sessions)~\cite{openclaw9157}. We analyze the cost, structure, and
+retrieval failure modes of file-based memory in detail in
+\Cref{sec:memorymd}.
 
+%% ===============================================================
 \subsection{Research Architectures}
 \label{sec:research}
 
-\todo{Cover: Generative Agents, Reflexion, Voyager, MemoryBank,
-HippoRAG/HippoRAG2, SYNAPSE, Mem-alpha, MAGMA, LightMem, MemTree,
-RMM, CAM, SGMem, Memory-R1, MemRL, AgeMem.}
+\paragraph{Generative Agents.}
+Park et al.~\cite{park2023generative} introduced the seminal memory
+architecture for LLM agents: a chronological \emph{memory stream} of
+observations, from which the agent periodically generates
+\emph{reflections}---higher-order thoughts that synthesize multiple
+observations into abstract insights. Retrieval scores each memory by a
+weighted product of three signals: \emph{recency} (exponential decay),
+\emph{importance} (LLM-rated 1--10), and \emph{relevance} (cosine
+similarity to the current query). This triple-scored formula became the
+foundational retrieval mechanism for agent memory, adopted or adapted
+by the majority of subsequent systems.
+
+The architecture's significance lies less in its individual components
+(all relatively simple) than in their composition: the reflection
+mechanism implements a form of episodic-to-semantic consolidation,
+where accumulated observations are distilled into reusable knowledge.
+The system uses in-memory storage (ephemeral), a flat memory stream
+(no typed stores), no graph overlay, and single-curve recency
+decay---limitations that subsequent work has systematically addressed.
+The reflection mechanism, however, inspired consolidation pipelines
+in multiple production and research systems.
+
+\paragraph{HippoRAG.}
+HippoRAG~\cite{gutierrez2024hipporag} grounds its architecture in
+hippocampal indexing theory from neuroscience: the LLM acts as
+neocortex (processing and generating language), a parahippocampal
+region (PHR) encoder detects synonymy and entity co-reference, and an
+open knowledge graph acts as hippocampus (indexing and associating
+memories). Retrieval uses Personalized PageRank (PPR) on the knowledge
+graph, propagating activation from query-matched nodes to
+transitively connected entities. This enables multi-hop reasoning that
+pure embedding similarity cannot achieve---asking ``who handles auth
+permissions?'' can retrieve information about ``Alice manages the auth
+team'' through entity-relationship traversal rather than lexical
+overlap.
+
+HippoRAG achieves 20\% improvement on multi-hop question answering at
+10--30$\times$ lower cost than iterative retrieval
+approaches. HippoRAG~2~\cite{gutierrez2025rag2memory} extends this
+with online knowledge graph updates and a deeper integration of the
+complementary learning systems (CLS) framework. The knowledge graph
+is static (constructed by LLM extraction), and the system has no
+forgetting, consolidation, or preference learning---it is a retrieval
+architecture rather than a full memory lifecycle system. PPR on a
+knowledge graph is comparable in cognitive inspiration to spreading
+activation on associative graphs, though the two mechanisms differ:
+PPR computes a global stationary distribution, while spreading
+activation models local, time-bounded propagation~\cite{collins1975}.
+
+\paragraph{SYNAPSE.}
+SYNAPSE~\cite{jiang2026synapse} constructs a unified episodic-semantic
+graph and retrieves through two biologically inspired mechanisms:
+\emph{spreading activation} (activation propagates from query-matched
+nodes to neighbors through weighted edges, priming associated
+memories) and \emph{lateral inhibition} (strongly activated nodes
+suppress weakly activated competitors, sharpening retrieval focus).
+Retrieval fuses geometric embedding similarity with activation-based
+graph traversal in a triple-hybrid pipeline. Temporal decay weakens
+links over time.
+
+SYNAPSE achieves +7.2 F1 over prior state of the art on LoCoMo, 23\%
+improvement on multi-hop reasoning, and 95\% token reduction versus
+full-context approaches. The lateral inhibition mechanism is
+particularly notable: it implements a form of retrieval-induced
+forgetting~\cite{anderson1994}, where retrieving one memory
+suppresses competing memories sharing the same cues. This is the most
+neurobiologically grounded retrieval mechanism in the surveyed
+systems, though SYNAPSE does not implement consolidation, principled
+forgetting (beyond temporal decay), or preference learning. The
+system is in-memory Python research code, not a persistent or
+embeddable library.
+
+\paragraph{Mem-alpha.}
+Mem-alpha~\cite{wang2025memalpha} takes a fundamentally different
+approach to memory management: instead of hand-crafting lifecycle
+heuristics, it trains memory policies via reinforcement learning.
+The architecture decomposes memory into three components---core
+(always in context), episodic (interaction history), and semantic
+(distilled knowledge)---a decomposition nearly identical to the CoALA
+framework. An RL agent learns when to store, what to consolidate,
+and what to forget, using downstream question-answering accuracy as
+the reward signal. Trained on 30K tokens, the learned policy
+generalizes to 400K+ tokens (13$\times$ extrapolation).
+
+The RL-learned approach represents the most significant methodological
+divergence from hand-crafted cognitive models. Learned policies can
+potentially discover non-obvious management strategies that human
+designers would not specify, but they require training data, are
+opaque (the policy network's decisions are not interpretable), and may
+not transfer across domains. Mem-alpha is part of a broader 2025--2026
+trend: Memory-R1, MemRL~\cite{zhang2026memrl}, and AgeMem all train
+memory management via RL, collectively establishing learned memory
+policies as a distinct paradigm alongside rule-based and
+neuroscience-inspired approaches.

@@ -1,8 +1,10 @@
 \section{Background}
 \label{sec:background}
 
-\todo{Synthesize from docs/theoretical-foundations.md. Cover the
-theoretical foundations that ground the taxonomy.}
+This section presents the theoretical foundations that ground the
+taxonomy developed in Section~\ref{sec:taxonomy}. We draw from three
+domains: cognitive neuroscience, information retrieval, and Yogac\=ara
+Buddhist psychology.
 
 \subsection{Cognitive Neuroscience of Memory}
 
@@ -42,10 +44,21 @@ calibration~\cite{cormack2009rrf}: $\text{score}(d) = \sum_i 1 / (k +
 combination outperforms RRF when tuning data is available, but RRF is
 superior in zero-shot settings---the typical case for agent memory.
 
-\subsection{Yogac\=ara Buddhist Psychology}
+\subsubsection{Encoding Specificity}
+Tulving and Thomson~\cite{tulving1973} demonstrated that a memory is
+most accessible when the retrieval context matches the encoding
+context. A word encoded in the presence of a weak associate (e.g.,
+``train'' encoded with ``black'') is better recalled when that same
+associate is provided at retrieval, even if a strong associate
+(``white'') is substituted instead. This \emph{encoding specificity
+principle} implies that memory systems should preserve the context in
+which information was originally stored---topics, participants,
+sentiment, temporal position---and exploit that context at retrieval
+time. The principle bridges neuroscience and IR: it motivates context-aware
+reranking and the multi-signal fusion architectures found in several of
+the systems surveyed in Section~\ref{sec:systems}.
 
-\todo{Expand this section. This is a key differentiator of the paper.
-Draw from docs/theoretical-foundations.md.}
+\subsection{Yogac\=ara Buddhist Psychology}
 
 The Yogac\=ara school of Buddhist philosophy, systematized in the
 \emph{Yogac\=arabh\=umi-\\'s\=astra} attributed to
@@ -54,8 +67,80 @@ by Xuanzang (659~CE), proposes eight consciousnesses. The eighth,
 \emph{\=alaya-vij\~n\=ana} (\cjk{阿賴耶識}, storehouse consciousness),
 is a persistent substrate holding all \emph{b\=ija} (seeds)---latent
 potentials that ripen into experience when conditions
-converge~\cite{yogacarabhumi, chengweishilun}. Seeds are perfumed
-(\emph{v\=asan\=a}, \cjk{薰習}) by each experience, accumulating
-traces that shape behavior. Periodic transformation
-(\emph{\=a\'sraya-par\=av\d{r}tti}, \cjk{轉依}) restructures the
-storehouse itself.
+converge~\cite{yogacarabhumi, chengweishilun}. The framework provides a
+vocabulary for phenomena that cognitive neuroscience addresses piecemeal:
+persistent latent storage, gradual trace accumulation, and periodic
+structural reorganization.
+
+\subsubsection{The Storehouse and Seeds}
+
+The \emph{\=alaya-vij\~n\=ana} (\cjk{阿賴耶識}) is the eighth and
+deepest consciousness in Yogac\=ara theory---a continuous stream that
+underlies all mental activity, persisting through sleep, dreamless
+states, and (in the traditional account) between lifetimes. It receives
+impressions from every experience and stores them as
+\emph{b\=ija} (\cjk{種子}, seeds): latent potentials that are not
+static data but living dispositions with conditions for ripening.
+
+The key verse from the \emph{Sa\d{m}dhinirmocana S\=utra}
+(\cjk{解深密經}) captures this character~\cite{samdhinirmocana}:
+
+\begin{quote}
+\cjk{阿陀那識甚深細，一切種子如瀑流，我於凡愚不開演，恐彼分別執為我}
+
+\medskip
+\emph{The \=ad\=ana consciousness is exceedingly deep and subtle; all
+its seeds are like a torrential flood. I do not reveal it to the
+foolish, for fear they would grasp it as a self.}
+\end{quote}
+
+The metaphor of a torrential flood emphasizes that the storehouse is not
+a passive archive but a dynamic flow. Seeds interact with one another:
+they have mutual dependence (\emph{sahabhuh\=etu}), they ripen
+heterogeneously (\emph{vip\=aka}, \cjk{異熟}---the result differs in
+nature from the cause), and they are continuously modified by new
+experience. A seed ripens into manifest experience when appropriate
+conditions converge, much as retrieval strength in the Bjork model
+determines whether a latent memory surfaces.
+
+For memory system design, this framework suggests two principles:
+(i)~stored items should be treated as potentials with activation
+conditions rather than inert records, and (ii)~a memory system benefits
+from maintaining the distinction between the \emph{persistence} of
+storage (seeds remain) and the \emph{accessibility} of retrieval (seeds
+ripen only when conditions align).
+
+\subsubsection{Perfuming and Transformation}
+
+\emph{V\=asan\=a} (\cjk{薰習}, perfuming) is the process by which each
+experience leaves a subtle trace on the storehouse, like incense
+gradually permeating cloth~\cite{chengweishilun}. No single experience
+is transformative on its own; rather, the accumulation of many similar
+traces shapes disposition and behavior. The \emph{Cheng Weishi Lun}
+distinguishes \emph{ming-yan v\=asan\=a} (name-and-word perfuming,
+\cjk{名言薰習})---linguistic and conceptual traces---from
+\emph{ye v\=asan\=a} (action perfuming, \cjk{業薰習}), which records
+the volitional quality of action. Both accumulate incrementally, and
+both shape future experience.
+
+The complementary process is \emph{\=a\'sraya-par\=av\d{r}tti}
+(\cjk{轉依}, transformation of the basis): a periodic restructuring of
+the storehouse itself. Where perfuming is incremental addition,
+transformation is qualitative reorganization---resolving contradictions,
+pruning stale dispositions, and moving the substrate toward greater
+coherence. In the Yogac\=ara soteriological context, the ultimate
+transformation converts the eight consciousnesses into four wisdoms
+(\cjk{轉識成智}): the storehouse becomes \emph{great mirror wisdom}
+(\cjk{大圓鏡智}), reflecting reality without distortion.
+
+These two operations---incremental perfuming and periodic
+transformation---map directly onto patterns observed across
+agent memory systems. Perfuming corresponds to trace accumulation:
+strengthening associations on co-retrieval (Hebbian LTP), recording
+implicit preferences from behavioral patterns, and updating retrieval
+strength on access (Bjork). Transformation corresponds to consolidation
+and maintenance: deduplicating near-identical entries, decaying
+unreinforced associations (Hebbian LTD), pruning stale records, and
+restructuring knowledge graphs. The distinction between the two
+operations provides a useful analytical frame for the taxonomy
+dimensions developed in Section~\ref{sec:taxonomy}.
