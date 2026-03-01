@@ -1,5 +1,10 @@
 # Alaya
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Rust](https://img.shields.io/badge/Rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
+[![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
+[![GitHub stars](https://img.shields.io/github/stars/SecurityRonin/alaya?style=social)](https://github.com/SecurityRonin/alaya)
+
 A memory engine for AI agents that remembers, forgets, and learns.
 
 **Alaya** (Sanskrit: *alaya-vijnana*, "storehouse consciousness") is an
@@ -64,7 +69,7 @@ OpenClaw, Cline, etc.):
 
 ```bash
 # Build the MCP server
-git clone https://github.com/h4x0r/alaya.git
+git clone https://github.com/SecurityRonin/alaya.git
 cd alaya
 cargo build --release --features mcp
 ```
@@ -125,7 +130,7 @@ For embedding Alaya directly into a Rust application:
 
 ```toml
 [dependencies]
-alaya = { git = "https://github.com/h4x0r/alaya" }
+alaya = { git = "https://github.com/SecurityRonin/alaya" }
 ```
 
 ### Quick Start (Rust)
@@ -167,7 +172,7 @@ The demo walks through all six capabilities with annotated output and no
 external dependencies:
 
 ```bash
-git clone https://github.com/h4x0r/alaya.git
+git clone https://github.com/SecurityRonin/alaya.git
 cd alaya
 cargo run --example demo
 ```
@@ -393,7 +398,7 @@ lateral inhibition).
 | **LangChain Memory** | Framework-integrated, many backends | Framework-agnostic, lifecycle management, works without an LLM |
 
 - [Full comparison: 90+ systems](docs/related-work.md), grounded in the CoALA taxonomy (Sumers et al., 2024)
-- [Interactive landscape](https://h4x0r.github.io/alaya/docs/memory-landscape.html) (D3.js force-directed graph)
+- [Interactive landscape](https://SecurityRonin.github.io/alaya/docs/memory-landscape.html) (D3.js force-directed graph)
 - [Theoretical foundations](docs/theoretical-foundations.md) (neuroscience and Buddhist psychology)
 - [The MEMORY.md problem](docs/related-work.md#the-memorymd-problem-why-file-based-memory-breaks-at-scale) (community workarounds and how Alaya addresses each)
 
@@ -412,6 +417,15 @@ cargo build --release --features mcp
 # Run the demo (no external dependencies)
 cargo run --example demo
 ```
+
+## Support
+
+If Alaya saves your agent tokens and money, consider supporting development:
+
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=github)](https://github.com/sponsors/SecurityRonin)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/securityronin)
+
+Star the repo if you find it useful — it helps others discover Alaya.
 
 ## License
 

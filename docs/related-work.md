@@ -1332,7 +1332,7 @@ Grouped by category. Within each category, sorted by feature richness
 (graph, forgetting, preferences, hybrid retrieval, multi-store
 architecture), then by adoption where richness is comparable. For an
 interactive visualization, see
-[memory-landscape.html](https://h4x0r.github.io/alaya/docs/memory-landscape.html).
+[memory-landscape.html](https://SecurityRonin.github.io/alaya/docs/memory-landscape.html).
 
 ### Dedicated Memory Systems
 

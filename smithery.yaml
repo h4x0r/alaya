@@ -1,0 +1,20 @@
+# Smithery configuration: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      dbPath:
+        type: string
+        description: "Path to SQLite database file (default: ~/.alaya/memory.db)"
+  commandFunction: |-
+    (config) => ({
+      command: './target/release/alaya-mcp',
+      env: config.dbPath ? { ALAYA_DB: config.dbPath } : {}
+    })
+  exampleConfig:
+    dbPath: "~/.alaya/memory.db"
+
+build:
+  dockerBuildPath: .

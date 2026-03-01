@@ -556,6 +556,6 @@ fn main() {
     println!();
     println!("  To learn more:");
     println!("    - API docs: cargo doc --open");
-    println!("    - Source: https://github.com/h4x0r/alaya");
+    println!("    - Source: https://github.com/SecurityRonin/alaya");
     println!();
 }
