@@ -96,6 +96,29 @@ That's it. Your agent now has 7 memory tools:
 Data is stored in `~/.alaya/memory.db` (override with `ALAYA_DB` env var).
 Single SQLite file, no external services.
 
+**Example interaction** — what your agent sees when using Alaya:
+
+```
+Agent: [calls remember(content="User prefers dark mode", role="user", session_id="s1")]
+Alaya: Stored episode 1 in session 's1'
+
+Agent: [calls recall(query="user preferences")]
+Alaya: Found 1 memories:
+  1. [user] (score: 0.847) User prefers dark mode
+
+Agent: [calls status()]
+Alaya: Memory Status:
+  Episodes: 1
+  Semantic nodes: 0
+  Preferences: 0
+```
+
+**Environment variables:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ALAYA_DB` | `~/.alaya/memory.db` | Path to SQLite database |
+
 ### Rust Library
 
 For embedding Alaya directly into a Rust application:
@@ -157,20 +180,24 @@ the LLM, and the embedding model. Alaya owns memory.
 ```
 Your Agent                          Alaya
 ─────────                           ─────
-receive message
-  ├── store_episode()           ──▶ episodic store + graph links
-  ├── query()                   ──▶ BM25 + vector + graph → RRF → rerank
-  ├── preferences()             ──▶ crystallized behavioral patterns
-  ├── knowledge()               ──▶ consolidated semantic nodes
-  ├── assemble context + prompt
-  ├── call LLM
-  └── respond
 
-periodic background tasks:
-  ├── consolidate(provider)     ──▶ episodes → semantic knowledge
-  ├── perfume(interaction, provider) ──▶ impressions → preferences
-  ├── transform()               ──▶ dedup, prune, decay
-  └── forget()                  ──▶ Bjork strength decay + archival
+Via MCP (stdio):                    alaya-mcp binary
+  remember(content, role, session)    ──▶ episodic store + graph links
+  recall(query)                       ──▶ BM25 + vector + graph → RRF → rerank
+  preferences(domain?)                ──▶ crystallized behavioral patterns
+  knowledge(type?, confidence?)       ──▶ consolidated semantic nodes
+  maintain()                          ──▶ dedup + decay
+  purge(scope)                        ──▶ selective or full deletion
+
+Via Rust library:                   AlayaStore struct
+  store_episode()                     ──▶ episodic store + graph links
+  query()                            ──▶ BM25 + vector + graph → RRF → rerank
+  preferences()                      ──▶ crystallized behavioral patterns
+  knowledge()                        ──▶ consolidated semantic nodes
+  consolidate(provider)              ──▶ episodes → semantic knowledge
+  perfume(interaction, provider)     ──▶ impressions → preferences
+  transform()                        ──▶ dedup, prune, decay
+  forget()                           ──▶ Bjork strength decay + archival
 ```
 
 ### Three Stores
@@ -355,10 +382,36 @@ retrieval, and graph dynamics. Closest peers: **Vestige** (Rust, FSRS-6,
 spreading activation) and **SYNAPSE** (unified episodic-semantic graph,
 lateral inhibition).
 
+### Why Alaya over...
+
+| Alternative | What it does well | What Alaya adds |
+|---|---|---|
+| **MEMORY.md** | Zero setup | Ranked retrieval (not full-context injection), typed stores, automatic decay |
+| **mem0** | Managed cloud memory with auto-extraction | Local-only (single SQLite file), no API keys, Hebbian graph dynamics |
+| **Zep** | Production-ready with cloud/self-hosted options | No external services, association graph, preference crystallization |
+| **Vestige** | Rust, FSRS-6 spaced repetition | Three-store architecture, Hebbian co-retrieval, spreading activation |
+| **LangChain Memory** | Framework-integrated, many backends | Framework-agnostic, lifecycle management, works without an LLM |
+
 - [Full comparison: 90+ systems](docs/related-work.md), grounded in the CoALA taxonomy (Sumers et al., 2024)
 - [Interactive landscape](https://h4x0r.github.io/alaya/docs/memory-landscape.html) (D3.js force-directed graph)
 - [Theoretical foundations](docs/theoretical-foundations.md) (neuroscience and Buddhist psychology)
 - [The MEMORY.md problem](docs/related-work.md#the-memorymd-problem-why-file-based-memory-breaks-at-scale) (community workarounds and how Alaya addresses each)
+
+## Development
+
+```bash
+# Run all library tests
+cargo test
+
+# Run MCP integration tests
+cargo test --features mcp
+
+# Build the MCP server
+cargo build --release --features mcp
+
+# Run the demo (no external dependencies)
+cargo run --example demo
+```
 
 ## License
 
