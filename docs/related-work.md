@@ -996,6 +996,61 @@ against Alaya's architecture.
   operational burden of three databases is significant. Alaya trades Papr's
   scale and query flexibility for zero-ops deployment and full data locality.
 
+#### OpenClaw (Built-in Memory)
+
+- **Type:** File-based memory with hybrid search index. The default memory
+  system for the [OpenClaw](https://github.com/openclaw/openclaw) AI coding
+  agent.
+- **Architecture:** Markdown-first design with SQLite as a derived index.
+  Three file layers:
+  - **MEMORY.md** — curated long-term knowledge, agent-authored, never decays.
+    The agent reads this on every session start and rewrites it during
+    auto-flush compaction.
+  - **memory/YYYY-MM-DD.md** — daily interaction logs with temporal decay
+    (30-day half-life: `decayedScore = score × e^(−λ × ageInDays)`,
+    `λ = ln(2)/30`).
+  - **sessions/YYYY-MM-DD-\<slug\>.md** — full session transcripts with
+    LLM-generated slugs. Retention policy TBD.
+  - Additional config files: AGENTS.md (identity), SOUL.md (personality),
+    TOOLS.md, SKILL.md, HEARTBEAT.md (cron health check, default 30min).
+- **Storage backend:** SQLite with [FTS5](https://www.sqlite.org/fts5.html)
+  for keyword search and [sqlite-vec](https://github.com/asg017/sqlite-vec)
+  for vector similarity. Chunks are ~400 tokens with 80-token overlap,
+  SHA-256 deduplication.
+- **Embedding pipeline:** Three-provider fallback chain: local Gemma-300M →
+  OpenAI → Gemini. Embeddings are optional (BM25-only if all providers fail).
+- **Retrieval:** Hybrid weighted fusion: 70% vector cosine similarity + 30%
+  BM25 keyword score. No graph traversal, no spreading activation, no
+  reciprocal rank fusion.
+- **Context management:** Auto-flush before compaction — when the context
+  window reaches ~176K of 200K tokens, a silent agentic turn summarizes the
+  conversation and rewrites MEMORY.md.
+- **Forgetting:** Temporal decay on daily logs only (exponential with 30-day
+  half-life). MEMORY.md has no automated decay — grows unboundedly unless the
+  agent manually curates it.
+- **Plugin system:** Memory is a swappable plugin slot
+  (`plugins.slots.memory`). Bundled alternatives: `memory-core` (default,
+  SQLite) and `memory-lancedb`. Third-party memory plugins exist: Supermemory,
+  Mem0, Cognee, MemOS Cloud. Plugins register `memory_search` and
+  `memory_get` tools. An `openclaw-plugins` Rust crate (v0.1.0) supports
+  native shared library loading via `libloading`.
+- **vs. Alaya:** OpenClaw's memory is Markdown-first (files are the source of
+  truth, SQLite is a derived index); Alaya is SQLite-first (the database is
+  the source of truth). OpenClaw's retrieval is two-signal linear fusion
+  (vector + BM25); Alaya uses four-signal RRF (BM25 + vector + graph
+  activation + context weighting) with spreading activation. OpenClaw has
+  temporal decay on daily logs only; Alaya has Bjork dual-strength decay
+  (storage vs. retrieval strength) on all memory types with revival mechanics.
+  OpenClaw has no graph structure; Alaya has a Hebbian graph that reshapes
+  through use. OpenClaw's preferences are agent-authored (whatever the LLM
+  writes to MEMORY.md); Alaya's preferences emerge from accumulated
+  impressions via the vasana/perfuming pipeline. OpenClaw's memory grows
+  linearly until the agent manually curates; Alaya's lifecycle processes
+  (consolidation, transformation, forgetting) keep memory self-organized.
+  However, OpenClaw's plugin architecture means Alaya could serve as a
+  drop-in `memory` slot replacement — see
+  [Alaya as OpenClaw Plugin](#alaya-as-openclaw-memory-plugin) below.
+
 ---
 
 ## How the Categories Fit Together
@@ -1187,7 +1242,7 @@ no automated lifecycle, retrieval ranking, or emergent structure.
 
 | System | Lang | Storage | Infra | LLM | Memory Model | Graph | Retrieval | Forgetting | Preferences |
 |--------|:----:|---------|:-----:|:---:|-------------|:-----:|-----------|:----------:|:-----------:|
-| **OpenClaw** | Python | Markdown + SQLite FTS5 | None | Required (agent-authored) | Two-layer: MEMORY.md + daily logs | No | grep + FTS5 | No (append-only) | Agent-authored |
+| **OpenClaw** | TS | Markdown + SQLite (FTS5 + sqlite-vec) | None | Required (agent-authored curation + auto-flush) | Three-layer: MEMORY.md (curated, no decay) + daily logs (30-day half-life temporal decay) + session transcripts | No | Hybrid 70% vector + 30% BM25 weighted fusion | Temporal decay on daily logs (e^(−λ×age), λ=ln(2)/30); MEMORY.md append-only | Agent-authored (in MEMORY.md) |
 | **Claudesidian** | TS | Obsidian vault (markdown) | Obsidian | Required (Claude Code) | PARA folders + daily/weekly notes | Obsidian links (static) | Obsidian search + file scan | Manual summarization | No |
 
 ### Research Architectures
@@ -1668,6 +1723,86 @@ memories — the architecture supports future extension:
 
 But these are future extensions, not current priorities. The design principle
 is: **start simple, extend when you must, not when you might.**
+
+---
+
+## Alaya as OpenClaw Memory Plugin
+
+OpenClaw's memory is a **swappable plugin slot** (`plugins.slots.memory`).
+Multiple third-party memory plugins already exist (Supermemory, Mem0, Cognee,
+MemOS Cloud, LanceDB Custom), proving the pattern works. This section
+analyzes feasibility and integration paths for using Alaya as a plug-and-play
+replacement for OpenClaw's built-in memory.
+
+### Plugin Contract
+
+A memory plugin must provide two agent-facing tools:
+
+| Tool | Input | Output |
+|------|-------|--------|
+| `memory_search` | Natural-language query | Snippet (~700 chars), file path, line range, relevance score |
+| `memory_get` | Workspace-relative path, optional line range | Text content |
+
+The plugin also hooks lifecycle events: `before_agent_start` (inject recalled
+context) and `agent_end` (capture/persist new memories), and can register
+background services for periodic work.
+
+### Integration Paths
+
+| Path | Approach | Feasibility |
+|------|----------|:-----------:|
+| **A. TypeScript plugin + Rust FFI** | OpenClaw plugin (`kind: "memory"`) in TS calling Alaya via [napi-rs](https://napi.rs/) N-API bindings | **High** — canonical path, battle-tested by Cognee/Supermemory/Mem0 |
+| **B. Native Rust plugin** | Implement `api::Plugin` trait from [`openclaw-plugins`](https://crates.io/crates/openclaw-plugins) crate, load as `.dylib`/`.so` via `NativePluginManager` + `libloading` | **Medium** — pure Rust, but crate is v0.1.0 with sparse docs |
+| **C. MCP server sidecar** | Standalone Alaya MCP binary, spawned by OpenClaw as child process (JSON-RPC 2.0 over stdio) | **High** — easiest to build, most portable, but additive rather than replacement (runs alongside active memory slot unless `memory: "none"`) |
+| **D. WASM plugin** | Compile Alaya to `wasm32-wasi`, load via `WasmPluginManager` + `wasmtime` | **Low** — rusqlite's bundled C SQLite is difficult to compile to WASM |
+| **E. Fork OpenClaw** | Replace `MemoryIndexManager` internals | **Not recommended** — maintenance burden against 170K+ star active upstream |
+
+### Mapping Alaya to OpenClaw's Memory Contract
+
+| OpenClaw Concept | Alaya Method | Adaptation |
+|------------------|-------------|------------|
+| `memory_search(query)` | `AlayaStore::query(&Query)` | Map `ScoredMemory` → snippet format (truncate to ~700 chars, synthesize path/line metadata) |
+| `memory_get(path)` | Direct content retrieval by ID | Alaya stores in SQLite, not Markdown — either synthesize Markdown views or maintain a mirror |
+| Auto-capture (`agent_end`) | `store_episode()` + `perfume()` | Parse agent turn into `NewEpisode`; extract behavioral impressions |
+| Auto-recall (`before_agent_start`) | `query()` + `preferences()` + `knowledge()` | Inject relevant memories, preferences, and semantic knowledge as context |
+| Background lifecycle | `consolidate()`, `transform()`, `forget()` | Register via `api.registerService()` on timer (e.g., consolidate after 10+ new episodes) |
+
+### Architectural Tension: Markdown-First vs. SQLite-First
+
+OpenClaw's memory is **Markdown-first** — `.md` files are the canonical source
+of truth, SQLite is a derived index. Alaya is **SQLite-first** — the database
+is the source of truth. Three strategies to bridge this gap:
+
+1. **Alaya as sole source of truth** — abandon Markdown files entirely. The
+   plugin translates all reads/writes through Alaya's API. Loses OpenClaw's
+   git-backup and human-readability guarantees.
+
+2. **Dual-write with Markdown mirror** — Alaya stores in SQLite AND writes
+   Markdown files for compatibility. Preserves OpenClaw's ecosystem
+   expectations but adds sync complexity.
+
+3. **Alaya as enhanced retrieval layer** (recommended starting point) — keep
+   Markdown as source of truth but replace OpenClaw's 70/30 vector/BM25
+   linear fusion with Alaya's four-signal RRF pipeline (BM25 + vector +
+   Hebbian graph + context weighting) plus spreading activation, Bjork
+   forgetting, and preference crystallization. This is the least disruptive
+   path and provides the most immediate retrieval quality improvement.
+
+### Recommended Strategy
+
+1. **Build an MCP server first** (Path C) — fastest path to validation.
+   Works with any MCP-compatible agent (Claude Code, Cursor, etc.), not just
+   OpenClaw. Set `plugins.slots.memory: "none"` and use Alaya's MCP tools
+   as the primary memory interface.
+
+2. **Then build the TypeScript plugin** (Path A) — once the MCP server
+   proves the concept, wrap it as a first-class OpenClaw memory plugin for
+   tighter lifecycle integration (auto-capture, auto-recall, background
+   consolidation).
+
+3. **Watch the native plugin path** (Path B) — when `openclaw-plugins`
+   stabilizes past v0.1.0, a pure-Rust native plugin would be the cleanest
+   integration with the best performance.
 
 ---
 
