@@ -57,14 +57,55 @@ by text similarity but cannot connect them
 
 ## Getting Started
 
-### Installation
+### MCP Server (recommended for agents)
+
+The fastest way to add Alaya memory to any MCP-compatible agent (Claude Desktop,
+OpenClaw, Cline, etc.):
+
+```bash
+# Build the MCP server
+git clone https://github.com/h4x0r/alaya.git
+cd alaya
+cargo build --release --features mcp
+```
+
+Add to your agent's MCP config (e.g. `claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "alaya": {
+      "command": "/path/to/alaya/target/release/alaya-mcp"
+    }
+  }
+}
+```
+
+That's it. Your agent now has 7 memory tools:
+
+| Tool | What it does |
+|------|-------------|
+| `remember` | Store a conversation message |
+| `recall` | Search memory with hybrid retrieval |
+| `status` | Get memory statistics |
+| `preferences` | Get learned user preferences |
+| `knowledge` | Get distilled semantic facts |
+| `maintain` | Run memory cleanup (dedup, decay) |
+| `purge` | Delete memories by session, age, or all |
+
+Data is stored in `~/.alaya/memory.db` (override with `ALAYA_DB` env var).
+Single SQLite file, no external services.
+
+### Rust Library
+
+For embedding Alaya directly into a Rust application:
 
 ```toml
 [dependencies]
 alaya = { git = "https://github.com/h4x0r/alaya" }
 ```
 
-### Quick Start
+### Quick Start (Rust)
 
 ```rust
 use alaya::{AlayaStore, NewEpisode, Role, EpisodeContext, Query, NoOpProvider};
