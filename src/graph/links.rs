@@ -65,7 +65,8 @@ pub fn on_co_retrieval(conn: &Connection, source: NodeRef, target: NodeRef) -> R
             last_activated = ?5,
             activation_count = activation_count + 1
          WHERE source_type = ?1 AND source_id = ?2
-           AND target_type = ?3 AND target_id = ?4",
+           AND target_type = ?3 AND target_id = ?4
+           AND link_type = 'co_retrieval'",
         params![source.type_str(), source.id(), target.type_str(), target.id(), now, learning_rate],
     )?;
     if updated == 0 {
@@ -143,7 +144,8 @@ mod tests {
         let conn = open_memory_db().unwrap();
         let a = NodeRef::Episode(EpisodeId(1));
         let b = NodeRef::Semantic(NodeId(1));
-        create_link(&conn, a, b, LinkType::Topical, 0.3).unwrap();
+        // Create an existing CoRetrieval link (not Topical)
+        create_link(&conn, a, b, LinkType::CoRetrieval, 0.3).unwrap();
         let initial = get_links_from(&conn, a).unwrap()[0].forward_weight;
 
         on_co_retrieval(&conn, a, b).unwrap();
@@ -219,6 +221,27 @@ mod tests {
 
         create_link(&conn, NodeRef::Episode(EpisodeId(2)), NodeRef::Episode(EpisodeId(3)), LinkType::Temporal, 0.5).unwrap();
         assert_eq!(count_links(&conn).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_co_retrieval_with_existing_temporal_link() {
+        let conn = open_memory_db().unwrap();
+        let a = NodeRef::Episode(EpisodeId(1));
+        let b = NodeRef::Episode(EpisodeId(2));
+
+        // Create a temporal link first
+        create_link(&conn, a, b, LinkType::Temporal, 0.5).unwrap();
+        assert_eq!(count_links(&conn).unwrap(), 1);
+
+        // Co-retrieval should create a SEPARATE CoRetrieval link
+        on_co_retrieval(&conn, a, b).unwrap();
+        assert_eq!(count_links(&conn).unwrap(), 2, "should have both Temporal and CoRetrieval links");
+
+        // Verify both link types exist
+        let links = get_links_from(&conn, a).unwrap();
+        let types: Vec<LinkType> = links.iter().map(|l| l.link_type).collect();
+        assert!(types.contains(&LinkType::Temporal));
+        assert!(types.contains(&LinkType::CoRetrieval));
     }
 
     #[test]
