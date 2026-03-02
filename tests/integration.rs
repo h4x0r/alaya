@@ -258,12 +258,23 @@ fn test_full_retrieval_pipeline_with_temporal_links() {
         "should have 4 temporal links for a chain of 5 episodes"
     );
 
-    // Query should find episodes matching "borrow checker"
+    // Verify Hebbian co-retrieval: querying creates co-retrieval links between
+    // results. Count links before and after the FIRST query that returns multiple results.
+    let links_before = store.status().unwrap().link_count;
     let results = store.query(&Query::simple("borrow checker")).unwrap();
     assert!(
         !results.is_empty(),
         "query should return episodes about 'borrow checker'"
     );
+    if results.len() >= 2 {
+        let links_after = store.status().unwrap().link_count;
+        assert!(
+            links_after > links_before,
+            "co-retrieval should create Hebbian links between co-retrieved episodes ({} -> {})",
+            links_before,
+            links_after,
+        );
+    }
 
     // Spreading activation from the first episode should find temporal neighbors
     let neighbors = store.neighbors(NodeRef::Episode(id1), 2).unwrap();
@@ -278,20 +289,6 @@ fn test_full_retrieval_pipeline_with_temporal_links() {
         neighbor_refs.contains(&NodeRef::Episode(id2)),
         "episode 2 should be a neighbor of episode 1 via temporal link"
     );
-
-    // Verify Hebbian co-retrieval: querying creates co-retrieval links between
-    // results. Count links before and after a query that returns multiple results.
-    let links_before = store.status().unwrap().link_count;
-    let results = store.query(&Query::simple("borrow checker")).unwrap();
-    if results.len() >= 2 {
-        let links_after = store.status().unwrap().link_count;
-        assert!(
-            links_after > links_before,
-            "co-retrieval should create Hebbian links between co-retrieved episodes ({} -> {})",
-            links_before,
-            links_after,
-        );
-    }
 }
 
 // ---------------------------------------------------------------------------
