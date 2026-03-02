@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from functools import partial
 from typing import Callable
 
@@ -121,8 +122,16 @@ def llm_call(
         kwargs["api_base"] = api_base
     if api_key is not None:
         kwargs["api_key"] = api_key
-    response = litellm.completion(**kwargs)
-    return response.choices[0].message.content.strip()
+    for attempt in range(5):
+        try:
+            response = litellm.completion(**kwargs)
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            if attempt == 4:
+                raise
+            wait = 2 ** attempt  # 1, 2, 4, 8, 16 seconds
+            print(f"\n[retry {attempt+1}/5] {type(e).__name__}: {e}", flush=True)
+            time.sleep(wait)
 
 
 def make_llm_call(model: str | None = None) -> Callable:
