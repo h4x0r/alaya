@@ -460,12 +460,14 @@ impl AlayaStore {
             PurgeFilter::All => {
                 tx.execute_batch(
                     "DELETE FROM episodes;
-                     DELETE FROM semantic_nodes;
                      DELETE FROM impressions;
                      DELETE FROM preferences;
                      DELETE FROM embeddings;
                      DELETE FROM links;
-                     DELETE FROM node_strengths;",
+                     DELETE FROM node_strengths;
+                     UPDATE semantic_nodes SET category_id = NULL;
+                     DELETE FROM categories;
+                     DELETE FROM semantic_nodes;",
                 )?;
             }
         }
@@ -1105,6 +1107,33 @@ mod tests {
     // -----------------------------------------------------------------------
     // Task 8: Knowledge filter by category
     // -----------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------
+    // Task 10: purge(All) clears categories
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_purge_all_clears_categories() {
+        let store = AlayaStore::open_in_memory().unwrap();
+
+        // Create a semantic node first so FK on prototype_node_id is satisfied
+        store.conn.execute(
+            "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated)
+             VALUES ('proto', 'fact', 0.8, 1000, 1000)",
+            [],
+        ).unwrap();
+        let proto_id = NodeId(store.conn.last_insert_rowid());
+
+        // Create a category directly
+        store::categories::store_category(
+            &store.conn, "test-cat", proto_id, None,
+        ).unwrap();
+        assert_eq!(store.categories(None).unwrap().len(), 1);
+
+        store.purge(PurgeFilter::All).unwrap();
+        assert!(store.categories(None).unwrap().is_empty(),
+            "purge(All) should delete all categories");
+    }
 
     #[test]
     fn test_knowledge_filter_by_category() {
