@@ -2,10 +2,13 @@
 name = "alaya"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.75"
 authors = ["Albert Hui <albert@securityronin.com>"]
 description = "A memory engine for conversational AI agents, inspired by neuroscience and Buddhist psychology"
 license = "MIT"
 repository = "https://github.com/SecurityRonin/alaya"
+documentation = "https://docs.rs/alaya"
+readme = "README.md"
 keywords = ["memory", "ai", "rag", "conversational", "embedding"]
 categories = ["database", "science"]
 
