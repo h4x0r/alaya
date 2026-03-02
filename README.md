@@ -1,5 +1,8 @@
 # Alaya
 
+[![crates.io](https://img.shields.io/crates/v/alaya.svg)](https://crates.io/crates/alaya)
+[![docs.rs](https://docs.rs/alaya/badge.svg)](https://docs.rs/alaya)
+[![CI](https://github.com/SecurityRonin/alaya/actions/workflows/ci.yml/badge.svg)](https://github.com/SecurityRonin/alaya/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/Rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
@@ -17,7 +20,9 @@ let store = AlayaStore::open("memory.db")?;
 store.store_episode(&episode)?;           // store
 let results = store.query(&query)?;       // retrieve
 store.consolidate(&provider)?;            // distill knowledge
+store.transform()?;                       // discover categories, dedup
 store.forget()?;                          // decay what's stale
+let cats = store.categories(None)?;       // emergent ontology
 ```
 
 ## The Problem
@@ -130,7 +135,7 @@ For embedding Alaya directly into a Rust application:
 
 ```toml
 [dependencies]
-alaya = { git = "https://github.com/SecurityRonin/alaya" }
+alaya = "0.1.0"
 ```
 
 ### Quick Start (Rust)
@@ -239,6 +244,7 @@ flowchart LR
 | **Perfuming** | Vasana (Yogacara Buddhist psychology) | Accumulates impressions, crystallizes preferences |
 | **Transformation** | Asraya-paravrtti | Deduplicates, resolves contradictions, prunes |
 | **Forgetting** | Bjork & Bjork (1992) | Decays retrieval strength, archives weak nodes |
+| **Emergent Ontology** | Vikalpa (conceptual construction) | Categories emerge from semantic node clustering |
 
 ## Integration Guide
 
@@ -298,6 +304,8 @@ impl AlayaStore {
     pub fn preferences(&self, domain: Option<&str>) -> Result<Vec<Preference>>;
     pub fn knowledge(&self, filter: Option<KnowledgeFilter>) -> Result<Vec<SemanticNode>>;
     pub fn neighbors(&self, node: NodeRef, depth: u32) -> Result<Vec<(NodeRef, f32)>>;
+    pub fn categories(&self, min_stability: Option<f32>) -> Result<Vec<Category>>;
+    pub fn node_category(&self, node_id: NodeId) -> Result<Option<Category>>;
 
     // Lifecycle
     pub fn consolidate(&self, provider: &dyn ConsolidationProvider) -> Result<ConsolidationReport>;
@@ -401,6 +409,46 @@ lateral inhibition).
 - [Interactive landscape](https://SecurityRonin.github.io/alaya/docs/memory-landscape.html) (D3.js force-directed graph)
 - [Theoretical foundations](docs/theoretical-foundations.md) (neuroscience and Buddhist psychology)
 - [The MEMORY.md problem](docs/related-work.md#the-memorymd-problem-why-file-based-memory-breaks-at-scale) (community workarounds and how Alaya addresses each)
+
+## v0.1.0 — What's In This Release
+
+- **Three-store architecture** (episodic/semantic/implicit) + Hebbian graph overlay
+- **5 lifecycle operations:** consolidate, transform, forget, perfume, emergent ontology
+- **Modular RAG retrieval:** BM25 + vector + graph + RRF fusion
+- **Bjork dual-strength forgetting** with retrieval-induced suppression
+- **Emergent flat categories** via dual-signal clustering (embedding + graph)
+- **Zero-dependency Rust library** with SQLite WAL + FTS5
+- **181 tests** (154 unit + 9 integration + 18 doc), CI across 3 OS x 2 toolchains
+- **MCP server** (optional `mcp` feature flag)
+
+## v0.2.0 Roadmap
+
+- Category hierarchy (*vikalpa*), prototype theory (*nama-rupa*), category seeds (*bija*)
+- Conceptual transformation (*asraya-paravrtti*) — categories evolve through use
+- Cross-domain bridging via spreading activation through category nodes
+- MCP tool extensions (categories, knowledge filter, recall boost)
+- EmbeddingProvider trait
+
+## Benchmark Evaluation
+
+We evaluate two canonical baselines on LoCoMo (1,540 questions) and
+LongMemEval (500 questions). Full methodology and statistical analysis:
+[docs/benchmark-evaluation.md](docs/benchmark-evaluation.md).
+
+```mermaid
+xychart-beta
+    title "Retrieval Crossover: Full-Context vs Naive RAG"
+    x-axis ["LoCoMo", "LongMemEval"]
+    y-axis "Accuracy (%)" 0 --> 80
+    bar [61.4, 46.2]
+    bar [26.0, 54.6]
+```
+
+**Key finding:** Full-context dominates on shorter conversations (LoCoMo,
+16-26K tokens) but naive RAG wins on longer histories (LongMemEval, ~115K
+tokens). Both differences are statistically significant (McNemar's test,
+p < 0.001). Neither baseline addresses what lifecycle management is designed
+for — the regime between these extremes.
 
 ## Development
 
