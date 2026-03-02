@@ -1,0 +1,85 @@
+\section{Implementation}
+\label{sec:implementation}
+
+\alaya{} is implemented in Rust as an embeddable library crate, prioritizing
+zero-dependency deployment and deterministic behavior.
+
+\subsection{Storage Layer}
+
+All data resides in a single SQLite database using WAL (Write-Ahead Logging)
+mode for concurrent read access during write operations. The schema comprises
+seven tables: \texttt{episodes} (with FTS5 virtual table for full-text
+search), \texttt{semantic\_nodes}, \texttt{impressions},
+\texttt{preferences}, \texttt{embeddings}, \texttt{links} (the Hebbian
+graph), \texttt{node\_strengths} (Bjork dual-strength values), and
+\texttt{categories} (emergent ontology). Schema versioning uses SQLite's
+\texttt{PRAGMA user\_version} with forward migration on database open.
+
+The choice of SQLite over a dedicated vector database or graph database is
+deliberate. The companion survey~\cite{hui2026taxonomy} reports that 70.5\%
+of memory systems require an LLM for memory management operations and 42.0\%
+require 1--2 external services. \alaya{} requires neither: all memory
+management operations (consolidation, transformation, forgetting,
+perfuming, ontology) execute locally against SQLite, with the LLM used only
+during consolidation for knowledge extraction---and even that is pluggable
+via the \texttt{ConsolidationProvider} trait.
+
+\subsection{Provider Interface}
+
+\alaya{} does not embed any LLM or embedding model. Instead, it defines a
+\texttt{ConsolidationProvider} trait that applications implement:
+
+\begin{lstlisting}[language=Rust, caption={Provider trait (simplified)}]
+pub trait ConsolidationProvider {
+    fn extract_knowledge(
+        &self,
+        episodes: &[Episode],
+    ) -> Result<Vec<NewSemanticNode>>;
+}
+\end{lstlisting}
+
+This design keeps \alaya{} independent of any specific model, API, or
+inference framework. Applications can use GPT-4, Claude, Gemini, local
+models, or rule-based extractors. The emergent ontology system operates
+entirely without the provider---category discovery uses embedding similarity
+and graph topology, with LLM labeling as an optional enhancement.
+
+\subsection{Embedding Handling}
+
+Embeddings are stored as little-endian \texttt{f32} BLOBs in SQLite.
+Cosine similarity is computed in Rust without external linear algebra
+libraries. The system operates in three embedding modes:
+
+\begin{itemize}[nosep]
+    \item \textbf{Full embeddings:} Applications provide embeddings with
+    episodes and semantic nodes. Vector retrieval and embedding-based
+    clustering are fully operational.
+    \item \textbf{Partial embeddings:} Some nodes have embeddings, others do
+    not. The system uses embeddings where available and falls back to BM25
+    and graph signals for nodes without embeddings.
+    \item \textbf{No embeddings:} The system operates on BM25 full-text
+    search and graph traversal alone. Category discovery falls back to
+    graph-only clustering (shared Hebbian link overlap).
+\end{itemize}
+
+\subsection{MCP Server}
+
+An optional Model Context Protocol (MCP)~\cite{anthropic2024mcp} server
+binary (\texttt{alaya-mcp}) exposes \alaya{}'s API as MCP tools, enabling
+any MCP-compatible AI agent to use \alaya{} as its memory backend. The MCP
+server is gated behind a Cargo feature flag (\texttt{mcp}) and adds
+\texttt{rmcp}, \texttt{tokio}, and \texttt{schemars} as dependencies only
+when enabled. The default library crate has four dependencies:
+\texttt{rusqlite} (with bundled SQLite), \texttt{serde},
+\texttt{serde\_json}, and \texttt{thiserror}.
+
+\subsection{Testing}
+
+\alaya{} follows test-driven development with 181 tests across three
+categories: 154 unit tests covering individual store operations, graph
+algorithms, lifecycle functions, and category CRUD; 9 integration tests
+covering full lifecycle pipelines (episode ingestion through category
+emergence); and 18 documentation tests ensuring code examples in the API
+documentation compile and produce correct results. Continuous integration
+runs the full test suite across three operating systems (Linux, macOS,
+Windows) and two Rust toolchains (stable and MSRV 1.75).

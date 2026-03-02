@@ -1,0 +1,194 @@
+\section{Architecture}
+\label{sec:architecture}
+
+\alaya{} is organized around three memory stores connected by a Hebbian graph
+overlay, with five lifecycle operations that manage memory health over time.
+\Cref{fig:architecture} illustrates the overall structure.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    store/.style={draw, rounded corners, minimum width=2.2cm, minimum height=1cm, font=\small},
+    op/.style={draw, dashed, rounded corners, minimum width=1.8cm, minimum height=0.7cm, font=\scriptsize, fill=gray!10},
+    arr/.style={-{Stealth[length=2mm]}, thick},
+]
+    % Stores
+    \node[store, fill=blue!15] (ep) at (0, 0) {Episodic};
+    \node[store, fill=green!15] (sem) at (3.2, 0) {Semantic};
+    \node[store, fill=orange!15] (imp) at (6.4, 0) {Implicit};
+
+    % Graph overlay
+    \node[draw, rounded corners, minimum width=7.5cm, minimum height=0.7cm,
+          fill=yellow!10, font=\small] (graph) at (3.2, -1.5) {Hebbian Graph Overlay};
+
+    % Lifecycle ops
+    \node[op] (cons) at (1.6, 1.5) {Consolidate};
+    \node[op] (trans) at (3.2, 2.3) {Transform};
+    \node[op] (forg) at (4.8, 1.5) {Forget};
+    \node[op] (perf) at (0, 2.3) {Perfume};
+    \node[op] (onto) at (6.4, 2.3) {Ontology};
+
+    % Arrows
+    \draw[arr] (ep) -- (cons);
+    \draw[arr] (cons) -- (sem);
+    \draw[arr] (trans) -- (sem);
+    \draw[arr] (forg) -- (sem);
+    \draw[arr] (perf) -- (imp);
+    \draw[arr] (onto) -- (sem);
+
+    % Graph connections
+    \draw[arr, gray] (ep) -- (graph);
+    \draw[arr, gray] (sem) -- (graph);
+    \draw[arr, gray] (imp) -- (graph);
+\end{tikzpicture}
+\caption{\alaya{} architecture. Three stores hold different memory types;
+the Hebbian graph overlay connects them with weighted, use-adaptive links.
+Five lifecycle operations (dashed) manage memory beyond storage and
+retrieval.}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Memory Stores}
+\label{sec:stores}
+
+\paragraph{Episodic store (hippocampus)}
+Records individual conversational turns with full context: content, speaker
+role, session identifier, timestamp, topic tags, entities, sentiment, and
+optional embedding vector. Episodes are indexed for full-text search (FTS5)
+and vector similarity. Following the CLS model, the episodic store is
+high-fidelity and append-only; management occurs through consolidation and
+forgetting, not in-place mutation.
+
+\paragraph{Semantic store (neocortex)}
+Holds stable knowledge extracted during consolidation: facts
+(\emph{``User programs in Rust''}), relationships (\emph{``Alice manages
+Bob''}), events (\emph{``User presented at RustConf 2025''}), and concepts
+(\emph{``Functional programming emphasizes immutability''}). Each semantic
+node carries a confidence score, corroboration count (how many independent
+episodes support it), source episode links, and optional category assignment.
+Semantic nodes are the primary substrate for long-term memory.
+
+\paragraph{Implicit store (v\=asan\=a)}
+Models preferences that emerge from accumulated interaction rather than
+explicit extraction. Raw \emph{impressions}---observations about user
+behavior (\emph{``User prefers concise responses''})---accumulate over many
+sessions. When impressions converge (five or more similar observations), a
+\emph{preference} crystallizes with a confidence score. This models the
+Yogac\=ara concept of v\=asan\=a (perfuming): preferences are not extracted
+from any single interaction but emerge gradually from the ``incense'' of
+repeated experience.
+
+\subsection{Hebbian Graph Overlay}
+\label{sec:graph}
+
+All three stores are connected by a shared graph with six link types:
+
+\begin{itemize}[nosep]
+    \item \textbf{Temporal:} Sequential relationships between episodes in a
+    session.
+    \item \textbf{Topical:} Shared topic tags between any two nodes.
+    \item \textbf{Entity:} Shared named entities.
+    \item \textbf{Causal:} Explicit causal relationships identified during
+    consolidation.
+    \item \textbf{CoRetrieval:} Created when two nodes are returned in the
+    same query result, modeling the Hebbian principle that co-activated
+    memories strengthen their association.
+    \item \textbf{MemberOf:} Category membership links created by the
+    emergent ontology system (\Cref{sec:ontology}).
+\end{itemize}
+
+Link weights evolve through use: co-retrieval strengthens weights (LTP),
+while the passage of time without co-activation allows weights to decay
+(LTD). This produces emergent small-world topology in the graph, where
+frequently co-accessed memories form tightly connected clusters while rarely
+used associations weaken. The graph is used during retrieval for spreading
+activation---a query activates seed nodes, and activation propagates through
+weighted links with distance-based decay, surfacing indirectly related
+memories that pure similarity search would miss.
+
+\subsection{Lifecycle Operations}
+\label{sec:lifecycle}
+
+\paragraph{Consolidation (\texttt{consolidate()})}
+Implements CLS-style interleaved replay. Recent unconsolidated episodes are
+batched and submitted to a \texttt{ConsolidationProvider} (typically an LLM)
+that extracts structured semantic nodes---facts, relationships, events, and
+concepts. The provider returns typed nodes with confidence scores and source
+episode references. \alaya{} stores these in the semantic store, creates
+Hebbian links to source episodes, initializes Bjork dual-strength values,
+and attempts category assignment (\Cref{sec:ontology}). The provider
+interface is pluggable: applications supply their own LLM integration,
+keeping \alaya{} independent of any specific model or API.
+
+In Yogac\=ara terms, consolidation implements \emph{vip\=aka}
+(heterogeneous ripening): the output is qualitatively different from the
+input. Episodes are specific, contextual, and time-bound; semantic nodes
+are decontextualized, typed, and reusable.
+
+\paragraph{Transformation (\texttt{transform()})}
+Periodic reorganization of the semantic store, implementing
+\emph{\=a\'sraya-par\=av\d{r}tti} (transformation of the basis). Three
+sub-operations run in sequence:
+\begin{enumerate}[nosep]
+    \item \textbf{Deduplication:} Semantic nodes with high embedding
+    similarity and matching type are merged, combining corroboration counts
+    and source links.
+    \item \textbf{Contradiction resolution:} Nodes flagged as contradictory
+    (opposing confidence signals from corroboration) are resolved by
+    retaining the more strongly supported version.
+    \item \textbf{Category discovery:} Uncategorized semantic nodes are
+    clustered to discover emergent categories (\Cref{sec:ontology}).
+\end{enumerate}
+
+\paragraph{Forgetting (\texttt{forget()})}
+Implements Bjork dual-strength decay. Retrieval strength decays as a
+function of time since last access; storage strength is monotonically
+non-decreasing. When retrieval strength drops below a configurable
+threshold, the memory becomes effectively inaccessible---still stored but
+unlikely to be retrieved. The \texttt{forget()} operation can purge
+memories below this threshold, modeling the Yogac\=ara principle that
+unactivated seeds weaken over time. During query, retrieval-induced
+forgetting suppresses competitors: memories sharing retrieval cues with
+the accessed memory have their retrieval strength reduced, implementing
+the competitive dynamics that Anderson~\etal~\cite{anderson1994}
+demonstrated in human memory.
+
+\paragraph{Perfuming (\texttt{perfume()})}
+Implements v\=asan\=a (gradual impression accumulation). Each interaction
+can generate impressions---observations about user behavior, preferences,
+or communication style. Impressions accumulate in the implicit store. When
+five or more similar impressions converge, a preference crystallizes. This
+gradual process avoids the brittleness of one-shot preference extraction:
+a user mentioning Python once does not generate a ``prefers Python''
+preference, but mentioning it across fifty sessions does.
+
+\paragraph{Emergent ontology}
+The newest lifecycle operation, detailed in \Cref{sec:ontology}. Categories
+emerge from clustering patterns in the semantic store, providing a
+lightweight taxonomic structure without manual curation or supervision.
+
+\subsection{Retrieval Pipeline}
+\label{sec:retrieval}
+
+\alaya{} implements Modular RAG~\cite{gao2023rag} with four retrieval
+signals fused via Reciprocal Rank Fusion (RRF)~\cite{cormack2009rrf}:
+
+\begin{enumerate}[nosep]
+    \item \textbf{BM25 (sparse):} Full-text search via SQLite FTS5,
+    effective for exact term matches and proper nouns.
+    \item \textbf{Vector (dense):} Cosine similarity over embedding
+    vectors, effective for semantic similarity.
+    \item \textbf{Graph (associative):} Spreading activation from seed
+    nodes through the Hebbian graph overlay, effective for indirect
+    associations.
+    \item \textbf{Reranking:} Hebbian co-retrieval frequency and Bjork
+    retrieval strength boost results that have been useful in similar past
+    contexts.
+\end{enumerate}
+
+\noindent RRF combines ranked lists from each signal without requiring
+score normalization: $\text{RRF}(d) = \sum_{r \in R} \frac{1}{k + r(d)}$,
+where $r(d)$ is the rank of document $d$ in ranked list $r$ and $k$ is a
+constant (default 60). This is robust to heterogeneous score distributions
+across signals, which is critical when combining sparse, dense, and
+graph-based scores.

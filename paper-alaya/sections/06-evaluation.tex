@@ -1,0 +1,122 @@
+\section{Evaluation}
+\label{sec:evaluation}
+
+We evaluate baseline retrieval performance on two standard benchmarks to
+establish the performance landscape that motivates \alaya{}'s lifecycle
+operations. A full end-to-end evaluation of \alaya{}'s lifecycle benefits
+(forgetting, consolidation, ontology) against these baselines is ongoing
+work.
+
+\subsection{Benchmarks}
+
+\textbf{LoCoMo}~\cite{maharana2024locomo} evaluates long-conversation
+memory with 1,540 questions across four categories: single-hop factual
+recall, temporal reasoning, multi-hop inference, and open-domain questions.
+Conversations average 16--26K tokens.
+
+\textbf{LongMemEval}~\cite{wu2025longmemeval} evaluates memory over
+extended interaction histories averaging ${\sim}$115K tokens, with 500
+questions across six types including single-session, multi-session, temporal,
+and knowledge update queries.
+
+\subsection{Baseline Replication}
+
+We replicate two canonical baselines---full-context injection and na\"ive
+vector RAG---with full methodological transparency. The generator is
+Gemini-2.0-Flash-001 via OpenRouter (temperature~0, max\_tokens~512); the
+judge is GPT-4o-mini via OpenRouter (temperature~0, max\_tokens~10), using
+the binary yes/no LLM-as-Judge protocol from~\cite{maharana2024locomo}.
+Na\"ive RAG uses ChromaDB with \texttt{all-MiniLM-L6-v2} embeddings and
+top-10 cosine similarity retrieval.
+
+\begin{table}[!t]
+\centering
+\caption{Baseline replication results. 95\% confidence intervals via Wilson
+score interval. McNemar's test confirms both differences are statistically
+significant ($p < 0.001$).}
+\label{tab:baselines}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+& \multicolumn{2}{c}{\textbf{LoCoMo}} & \multicolumn{2}{c}{\textbf{LongMemEval\_S}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+\textbf{System} & \textbf{Acc.\ (\%)} & \textbf{95\% CI} & \textbf{Acc.\ (\%)} & \textbf{95\% CI} \\
+\midrule
+Full-context & 61.4 & [58.9, 63.8] & 46.2 & [41.9, 50.6] \\
+Na\"ive RAG  & 26.0 & [23.9, 28.2] & \textbf{54.6} & [50.2, 58.9] \\
+\midrule
+$\Delta$ (FC $-$ RAG) & $+35.4$ & & $-8.4$ & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{The Retrieval Crossover}
+
+\Cref{tab:baselines} reveals a statistically significant crossover: full-context
+outperforms na\"ive RAG by 35.4 percentage points on LoCoMo (McNemar's
+$\chi^2 = 461.6$, $p < 10^{-5}$), while na\"ive RAG outperforms
+full-context by 8.4 points on LongMemEval ($\chi^2 = 11.7$,
+$p = 6.3 \times 10^{-4}$).
+
+The crossover occurs because LoCoMo conversations (16--26K tokens) fit
+within the generator's context window, preserving temporal and relational
+cues that top-10 retrieval discards. LongMemEval histories (${\sim}$115K
+tokens) exceed the model's effective attention span; injecting everything
+forces the model to locate relevant details among overwhelming noise, while
+RAG's filtering improves signal-to-noise ratio.
+
+\begin{table}[!t]
+\centering
+\caption{LoCoMo accuracy by question category. Temporal reasoning
+(category~2) is catastrophically poor for both baselines.}
+\label{tab:categories}
+\small
+\begin{tabular}{@{}clrrrr@{}}
+\toprule
+\textbf{Cat.} & \textbf{Type} & \textbf{$N$} & \textbf{FC (\%)} & \textbf{RAG (\%)} & \textbf{$\Delta$} \\
+\midrule
+1 & Single-hop     & 282 & 54.3 & 13.5 & $+40.8$ \\
+2 & Temporal        & 321 & 19.3 &  6.5 & $+12.8$ \\
+3 & Multi-hop       &  96 & 46.9 & 21.9 & $+25.0$ \\
+4 & Open-domain     & 841 & 81.5 & 38.0 & $+43.5$ \\
+\midrule
+  & \textbf{Overall} & 1{,}540 & 61.4 & 26.0 & $+35.4$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{tab:categories} decomposes LoCoMo accuracy by question type. Temporal
+reasoning (category~2) is catastrophically poor for both systems: 19.3\%
+for full-context and 6.5\% for na\"ive RAG. These questions require
+reasoning about \emph{when} events occurred relative to each other---a
+capability that neither context stuffing nor cosine similarity provides.
+This is precisely the regime where \alaya{}'s temporal links in the Hebbian
+graph and time-aware retrieval strength (Bjork model) should provide an
+advantage, though empirical validation is ongoing.
+
+\subsection{Implications for Lifecycle Management}
+
+The crossover demonstrates that \emph{how much} context to include is at
+least as important as \emph{what} to include. Neither extreme---inject
+everything or retrieve a fixed top-$k$---is universally optimal. Memory
+systems with lifecycle management are designed for the regime between these
+extremes:
+
+\begin{itemize}[nosep]
+    \item \textbf{Consolidation} reduces episodic volume while preserving
+    signal, potentially avoiding the noise that degrades full-context
+    performance on long histories.
+    \item \textbf{Forgetting} further improves signal-to-noise by
+    suppressing memories that are deeply stored but no longer relevant to
+    current retrieval needs.
+    \item \textbf{Graph-based retrieval} discovers indirect associations
+    that cosine similarity misses, addressing the multi-hop and temporal
+    reasoning failures observed in both baselines.
+    \item \textbf{Emergent ontology} provides category-level retrieval
+    that can boost recall for categorically related memories.
+\end{itemize}
+
+\noindent A full evaluation of \alaya{}'s lifecycle operations against these
+baselines is planned for a future publication, using \alaya{}'s retrieval
+pipeline with consolidation, forgetting, and category-boosted retrieval
+against the same LoCoMo and LongMemEval benchmarks.

@@ -1,0 +1,110 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Yogac\=ara as Architectural Guide}
+
+The companion survey~\cite{hui2026taxonomy} identifies four cases where
+Yogac\=ara concepts predict design choices that the AI memory community has
+independently converged upon. \alaya{} was designed with these predictions
+as explicit architectural constraints rather than post-hoc rationalizations:
+
+\begin{itemize}[nosep]
+    \item \textbf{Heterogeneous ripening} (\emph{vip\=aka}) predicted that
+    consolidation should produce outputs qualitatively different from inputs.
+    \alaya{}'s consolidation converts time-bound episodes into
+    decontextualized, typed semantic nodes---a structural transformation,
+    not a summary.
+    \item \textbf{Gradual perfuming} (\emph{v\=asan\=a}) predicted that
+    preferences should emerge from accumulation, not extraction. \alaya{}'s
+    five-impression threshold before preference crystallization implements
+    this directly.
+    \item \textbf{Transformation of the basis}
+    (\emph{\=a\'sraya-par\=av\d{r}tti}) predicted that the memory store
+    requires periodic reorganization. \alaya{}'s \texttt{transform()}
+    operation---deduplication, contradiction resolution, category
+    discovery---implements this prediction.
+    \item \textbf{Seed mutual conditioning} predicted that stored elements
+    should activate related elements through weighted, use-adaptive links.
+    \alaya{}'s Hebbian graph overlay with spreading activation implements
+    this structural isomorphism directly.
+\end{itemize}
+
+The value of Yogac\=ara as an architectural guide is not mystical but
+structural: it provides a coherent theory of memory-as-process that
+identifies operations (perfuming, ripening, transformation) which neither
+pure neuroscience models nor pure engineering intuition would prioritize
+independently. The preference emergence mechanism, in particular, was
+designed from the v\=asan\=a concept before we found empirical support in
+the memory systems literature.
+
+\subsection{Graceful Degradation}
+
+A deliberate design principle is that \alaya{} never fails due to missing
+optional capabilities. The system operates in three degradation modes:
+
+\begin{enumerate}[nosep]
+    \item \textbf{Full capability:} Embeddings + LLM provider available.
+    All retrieval signals (BM25, vector, graph), embedding-based clustering,
+    LLM-generated category labels.
+    \item \textbf{No embeddings:} BM25 + graph retrieval only. Category
+    discovery uses graph-only clustering (shared Hebbian link overlap).
+    \item \textbf{No LLM:} Consolidation is unavailable, but all other
+    lifecycle operations function: forgetting, transformation (on existing
+    semantic nodes), category discovery (from existing nodes), preference
+    emergence (from accumulated impressions).
+\end{enumerate}
+
+This design reflects a practical reality: many deployment contexts
+(offline agents, privacy-sensitive environments, cost-constrained settings)
+cannot guarantee access to embedding models or LLMs for every memory
+operation. The system should do the best it can with available resources
+rather than failing entirely.
+
+\subsection{Positioning in the Landscape}
+
+The companion survey's capability scoring~\cite{hui2026taxonomy} evaluates
+systems across eight discriminating features. \alaya{} implements all eight:
+episodic memory, semantic memory, graph structure, forgetting,
+consolidation, contradiction resolution, preference learning, and hybrid
+retrieval fusion. Among the 88 surveyed systems, only 2.3\% score 8/8 on
+this metric.
+
+The distinctive characteristics relative to comparable systems are:
+\begin{itemize}[nosep]
+    \item vs.\ \textbf{Mem0}~\cite{choudhary2025mem0}: \alaya{} adds
+    principled forgetting, graph-based retrieval, emergent (not extracted)
+    preferences, and consolidation. Mem0 requires external services
+    (Qdrant/Neo4j); \alaya{} requires none.
+    \item vs.\ \textbf{Zep/Graphiti}~\cite{dempsey2025graphiti}: Both use
+    knowledge graphs, but \alaya{}'s graph is Hebbian (reshapes through use)
+    while Graphiti's is LLM-extracted (static after creation). \alaya{} adds
+    forgetting and preference emergence.
+    \item vs.\ \textbf{SYNAPSE}~\cite{jiang2026synapse}: Both implement
+    CLS-inspired consolidation and activation-based retrieval. \alaya{} adds
+    emergent ontology and the implicit (preference) store. SYNAPSE is
+    evaluated on specific benchmarks; \alaya{} is a general-purpose library.
+    \item vs.\ \textbf{Generative Agents}~\cite{park2023generative}: Both
+    implement episodic-to-semantic consolidation (reflection). \alaya{} adds
+    principled forgetting (Bjork vs.\ recency weighting), Hebbian graph
+    evolution, and emergent categories.
+\end{itemize}
+
+\subsection{Limitations}
+
+\alaya{} v0.1.0 has several limitations:
+\begin{itemize}[nosep]
+    \item \textbf{No end-to-end benchmark results:} We report baseline
+    crossover analysis but have not yet evaluated \alaya{}'s full pipeline
+    against LoCoMo/LongMemEval. This is ongoing work.
+    \item \textbf{Flat categories only:} The emergent ontology discovers
+    flat categories without hierarchy. Category hierarchy, prototype theory,
+    and category seeds are planned for v0.2.0.
+    \item \textbf{Single-agent only:} No multi-agent memory sharing,
+    ownership semantics, or federated memory.
+    \item \textbf{Thresholds are hand-tuned:} Cosine similarity thresholds
+    for category assignment (0.6), discovery (0.7), and merge (0.85) are
+    based on reasonable defaults, not learned from data.
+    \item \textbf{SQLite scalability:} While SQLite handles millions of
+    records efficiently, the in-process architecture limits concurrent write
+    access to a single process.
+\end{itemize}

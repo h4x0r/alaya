@@ -1,0 +1,68 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Large language model (LLM) agents face a fundamental constraint: the context
+window is finite, but experience is not. An agent that converses across
+hundreds of sessions accumulates knowledge, preferences, and relationships
+that cannot fit in a single prompt. Memory---the ability to store, retrieve,
+and \emph{manage} this accumulation over time---is now a first-class
+architectural concern.
+
+A companion survey~\cite{hui2026taxonomy} documents over 90 memory systems
+that have emerged since 2023 and organizes them along four axes: structure,
+retrieval, lifecycle, and preference emergence. That analysis reveals a
+pronounced gap: the field has invested heavily in memory \emph{formation} and
+\emph{retrieval} while largely neglecting memory \emph{management}. Only
+18.2\% of surveyed systems implement consolidation (episodic-to-semantic
+promotion), 12.5\% support transformation (reorganization, deduplication),
+and 38.6\% implement any forgetting mechanism. Preference emergence---the
+organic crystallization of behavioral patterns from accumulated
+interaction---is present in only 4.5\% of systems.
+
+This paper presents \alaya{}, an embeddable memory engine that addresses
+these gaps by treating memory as a \emph{dynamic process} rather than a
+static store. The design is grounded in two traditions that have studied
+memory far longer than computer science:
+
+\begin{enumerate}[leftmargin=*, nosep]
+    \item \textbf{Computational neuroscience:} Complementary learning
+    systems (CLS) theory~\cite{mcclelland1995} for dual-store consolidation,
+    Bjork dual-strength forgetting~\cite{bjork1992} for principled decay,
+    Hebbian learning~\cite{hebb1949} for use-dependent graph adaptation, and
+    Collins--Loftus spreading activation~\cite{collins1975} for associative
+    retrieval.
+
+    \item \textbf{Yogac\=ara Buddhist psychology:} The theory of storehouse
+    consciousness (\emph{\=alaya-vij\~n\=ana}, \cjk{阿賴耶識}) provides a
+    process-oriented framework in which memories are \emph{seeds}
+    (\emph{b\=ija}) that strengthen through \emph{perfuming}
+    (\emph{v\=asan\=a}), ripen heterogeneously (\emph{vip\=aka}), and
+    undergo periodic structural transformation
+    (\emph{\=a\'sraya-par\=av\d{r}tti}). The companion
+    survey~\cite{hui2026taxonomy} demonstrates that these concepts converge
+    with neuroscience on the same structural principles.
+\end{enumerate}
+
+\noindent \alaya{} translates these principles into a concrete system with
+five lifecycle operations beyond storage and retrieval: consolidation,
+transformation, forgetting, preference emergence, and emergent ontology
+(unsupervised category formation). The system is implemented as a
+zero-dependency Rust library with SQLite, requiring no external databases or
+network services.
+
+Our contributions are:
+\begin{enumerate}[leftmargin=*, nosep]
+    \item A three-store architecture (episodic, semantic, implicit) with a
+    Hebbian graph overlay that reshapes through use, implementing the
+    CLS/Yogac\=ara dual-system model.
+    \item Five lifecycle operations that manage memory health over time:
+    consolidation, transformation, forgetting, preference emergence, and
+    emergent ontology.
+    \item An emergent category formation mechanism that discovers semantic
+    clusters through dual-signal analysis (embedding similarity + graph
+    topology) without supervision.
+    \item A zero-dependency, embeddable implementation in Rust with SQLite
+    WAL and FTS5, available as an open-source crate.
+    \item Baseline evaluation on LoCoMo and LongMemEval demonstrating a
+    retrieval crossover that motivates lifecycle-aware memory management.
+\end{enumerate}

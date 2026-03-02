@@ -1,0 +1,79 @@
+\section{Background}
+\label{sec:background}
+
+This section summarizes the neuroscience and Buddhist psychology foundations
+that inform \alaya{}'s design. A comprehensive treatment of these traditions
+and their convergence appears in the companion survey~\cite{hui2026taxonomy};
+here we focus on the specific principles that map to architectural decisions.
+
+\subsection{Complementary Learning Systems}
+
+McClelland~\etal~\cite{mcclelland1995} proposed that biological memory
+relies on two complementary systems: a fast-learning hippocampal system that
+encodes episodes with high fidelity, and a slow-learning neocortical system
+that gradually extracts stable patterns through interleaved replay. This
+separation prevents catastrophic interference---new learning destroying old
+knowledge---while enabling generalization from accumulated experience.
+
+\alaya{} instantiates this with an episodic store (rapid, high-fidelity
+conversation recording) and a semantic store (stable, deduplicated knowledge
+extracted during consolidation). The consolidation operation implements
+CLS-style interleaved replay: batches of recent episodes are processed by an
+LLM provider to extract facts, relationships, events, and concepts, which
+are stored as semantic nodes distinct in kind from their source episodes.
+
+\subsection{Bjork Dual-Strength Forgetting}
+
+Bjork and Bjork~\cite{bjork1992} distinguished two independent strengths for
+every memory: \emph{storage strength} (how deeply encoded) and
+\emph{retrieval strength} (how currently accessible). Storage strength
+increases monotonically with exposure; retrieval strength decays over time
+but recovers dramatically when a memory is successfully retrieved---the
+\emph{spacing effect}. Anderson~\etal~\cite{anderson1994} extended this with
+\emph{retrieval-induced forgetting} (RIF): retrieving one memory actively
+suppresses competitors sharing the same retrieval cues.
+
+\alaya{} implements both mechanisms. Each memory node carries independent
+storage and retrieval strengths. Retrieval boosts both strengths; the passage
+of time decays only retrieval strength. Competitors sharing retrieval cues
+are suppressed during query, implementing RIF. The \texttt{forget()} operation
+uses retrieval strength to determine which memories are effectively
+inaccessible.
+
+\subsection{Hebbian Learning and Spreading Activation}
+
+Hebb's principle~\cite{hebb1949}---``neurons that fire together wire
+together''---describes use-dependent synaptic strengthening. Collins and
+Loftus~\cite{collins1975} formalized spreading activation in semantic
+networks: activating one concept propagates to associated concepts through
+weighted links with distance-based decay.
+
+\alaya{} maintains a Hebbian graph overlay across all memory stores. Links
+are created during encoding (temporal, topical, entity, causal) and during
+retrieval (co-retrieval links between jointly accessed memories). Link
+weights strengthen through repeated co-activation and decay through disuse,
+producing emergent small-world topology. Spreading activation is used during
+retrieval to discover indirect associations---a query about ``cooking'' can
+surface chemistry-related memories through shared Hebbian links.
+
+\subsection{Yogac\=ara Process Model}
+
+The Yogac\=ara school's theory of \=alaya-vij\~n\=ana (storehouse
+consciousness) describes memory as a dynamic substrate holding \emph{seeds}
+(\emph{b\=ija}) that:
+\begin{itemize}[nosep]
+    \item \textbf{Strengthen through perfuming} (\emph{v\=asan\=a}): each
+    experience leaves a subtle imprint; preferences emerge from accumulated
+    impressions, not single observations.
+    \item \textbf{Ripen heterogeneously} (\emph{vip\=aka}): seeds mature
+    into forms qualitatively different from their causes, paralleling CLS
+    consolidation.
+    \item \textbf{Transform structurally}
+    (\emph{\=a\'sraya-par\=av\d{r}tti}): the store itself reorganizes
+    periodically, resolving contradictions and pruning obsolete content.
+    \item \textbf{Condition mutually}: seeds activate related seeds,
+    paralleling spreading activation in Hebbian networks.
+\end{itemize}
+
+\noindent These four principles map directly to \alaya{}'s lifecycle
+operations, as detailed in \Cref{sec:architecture}.

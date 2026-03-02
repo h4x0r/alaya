@@ -1,0 +1,121 @@
+\documentclass[conference]{IEEEtran}
+
+% ---- Packages ----
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{balance}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{url}
+\usepackage{enumitem}
+\usepackage{CJKutf8}
+\usepackage{adjustbox}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage[flushleft]{threeparttable}
+\usepackage{listings}
+
+% ---- Listings setup ----
+\lstset{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\bfseries,
+    commentstyle=\color{gray},
+    frame=single,
+    breaklines=true,
+    columns=fullflexible,
+}
+
+% ---- Hyperref setup ----
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    citecolor=blue!70!black,
+    urlcolor=blue!70!black,
+    pdfauthor={Albert K.T. Hui},
+    pdftitle={Alaya: A Yogacara-Inspired Memory Engine for Conversational AI Agents},
+}
+
+% ---- Custom commands ----
+\newcommand{\sys}[1]{\textsc{#1}}
+\newcommand{\alaya}{\sys{Alaya}}
+\newcommand{\eg}{\emph{e.g.}}
+\newcommand{\ie}{\emph{i.e.}}
+\newcommand{\etal}{\emph{et~al.}}
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{TODO:} #1}}
+
+% ---- CJK for Buddhist terms ----
+\newcommand{\cjk}[1]{\begin{CJK}{UTF8}{bsmi}#1\end{CJK}}
+
+% ---- Column type for fixed-width ----
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+\begin{document}
+
+\title{\alaya{}: A Yogac\=ara-Inspired Memory Engine\\for Conversational AI Agents}
+
+\author{
+    \IEEEauthorblockN{Albert K.T. Hui}
+    \IEEEauthorblockA{
+        \textit{Independent Researcher}\\
+        albert@securityronin.com
+    }
+}
+
+\maketitle
+
+\begin{abstract}
+We present \alaya{}, an embeddable memory engine for conversational AI
+agents that models memory as a dynamic process rather than a static store.
+Inspired by Yogac\=ara Buddhist psychology's theory of storehouse
+consciousness (\emph{\=alaya-vij\~n\=ana}) and grounded in computational
+neuroscience, \alaya{} implements a three-store architecture---episodic,
+semantic, and implicit---connected by a Hebbian graph overlay that reshapes
+through use. The system provides five lifecycle operations beyond basic
+storage and retrieval: consolidation (complementary learning systems
+replay), transformation (deduplication, contradiction resolution, category
+discovery), forgetting (Bjork dual-strength decay with retrieval-induced
+suppression), preference emergence (gradual crystallization from accumulated
+impressions), and emergent ontology (unsupervised category formation from
+semantic node clustering). \alaya{} is implemented as a zero-dependency Rust
+library with SQLite WAL and FTS5, requiring no external databases, no
+network services, and optionally no LLM for memory management operations.
+We evaluate baseline retrieval on LoCoMo and LongMemEval, demonstrating a
+statistically significant retrieval crossover between full-context injection
+and na\"ive RAG that motivates lifecycle-aware memory management. \alaya{}
+is available as an open-source crate at
+\url{https://crates.io/crates/alaya}.
+\end{abstract}
+
+\begin{IEEEkeywords}
+memory engine, AI agents, Yogac\=ara, \=alaya-vij\~n\=ana, Hebbian
+learning, forgetting, emergent ontology, Rust, MCP
+\end{IEEEkeywords}
+
+% ---- Sections ----
+\input{sections/01-introduction}
+\input{sections/02-background}
+\input{sections/03-architecture}
+\input{sections/04-emergent-ontology}
+\input{sections/05-implementation}
+\input{sections/06-evaluation}
+\input{sections/07-discussion}
+\input{sections/08-conclusion}
+
+% ---- References ----
+\def\UrlBreaks{\do\/\do-\do.\do=\do_\do?\do&\do\%\do\#\do\~}
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
