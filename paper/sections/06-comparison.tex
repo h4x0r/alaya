@@ -210,6 +210,164 @@ architectural concern.
 \input{sections/benchmark-table-fragment}
 
 %% ---------------------------------------------------------------
+\subsubsection{Baseline Replication}
+\label{sec:baseline-replication}
+
+To provide a controlled comparison with full methodological transparency, we
+replicate the two canonical baselines---full-context injection and na\"ive
+vector RAG---on both LoCoMo and LongMemEval\_S using identical infrastructure.
+The generator is Gemini-2.0-Flash-001 via OpenRouter (temperature~0,
+max\_tokens~512); the judge is GPT-4o-mini via OpenRouter (temperature~0,
+max\_tokens~10), using the binary yes/no LLM-as-Judge protocol from
+\cite{maharana2024locomo}.  For LoCoMo, we evaluate 1{,}540 questions across
+categories~1--4 (single-hop, temporal, multi-hop, open-domain), excluding
+category~5 (adversarial) per the standard evaluation protocol.  For
+LongMemEval\_S, we evaluate all 500 questions across six question types.
+Na\"ive RAG uses ChromaDB with \texttt{all-MiniLM-L6-v2} embeddings and
+top-10 cosine similarity retrieval.  Table~\ref{tab:our-baselines} and
+Figure~\ref{fig:crossover} report the results.
+
+\begin{table}[!t]
+\centering
+\caption{Baseline replication with Gemini-2.0-Flash-001 (generator) and
+GPT-4o-mini (judge).  95\% confidence intervals via Wilson score interval.
+McNemar's test confirms both differences are statistically significant
+($p < 0.001$).  Full results and code at
+\url{https://github.com/SecurityRonin/alaya/tree/main/bench}.}
+\label{tab:our-baselines}
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+& \multicolumn{2}{c}{\textbf{LoCoMo}} & \multicolumn{2}{c}{\textbf{LongMemEval\_S}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+\textbf{System} & \textbf{Acc.\ (\%)} & \textbf{95\% CI} & \textbf{Acc.\ (\%)} & \textbf{95\% CI} \\
+\midrule
+Full-context & 61.4 & [58.9, 63.8] & 46.2 & [41.9, 50.6] \\
+Na\"ive RAG  & 26.0 & [23.9, 28.2] & \textbf{54.6} & [50.2, 58.9] \\
+\midrule
+$\Delta$ (FC $-$ RAG) & $+35.4$ & & $-8.4$ & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    bar width=14pt,
+    width=\columnwidth,
+    height=5.5cm,
+    ylabel={Accuracy (\%)},
+    symbolic x coords={LoCoMo, LongMemEval\_S},
+    xtick=data,
+    ymin=0, ymax=80,
+    ytick={0,20,40,60,80},
+    legend style={at={(0.5,1.05)}, anchor=south, legend columns=2,
+                  font=\small},
+    nodes near coords,
+    nodes near coords style={font=\scriptsize},
+    every node near coord/.append style={yshift=2pt},
+]
+\addplot[fill=blue!50] coordinates
+    {(LoCoMo, 61.4) (LongMemEval\_S, 46.2)};
+\addplot[fill=red!50] coordinates
+    {(LoCoMo, 26.0) (LongMemEval\_S, 54.6)};
+\legend{Full-context, Na\"ive RAG}
+\end{axis}
+\end{tikzpicture}
+\caption{The retrieval crossover: full-context injection dominates on
+LoCoMo's shorter conversations (${\sim}$16--26K tokens) but na\"ive RAG
+outperforms on LongMemEval's longer histories (${\sim}$115K tokens).
+McNemar's test on paired questions: LoCoMo $\chi^2 = 461.6$,
+$p < 10^{-5}$; LongMemEval $\chi^2 = 11.7$, $p < 0.001$.}
+\label{fig:crossover}
+\end{figure}
+
+Three findings merit discussion.
+
+\smallskip
+\noindent\textbf{Finding 1: The retrieval crossover is statistically
+significant in both directions.}\enspace
+On LoCoMo, full-context outperforms na\"ive RAG by 35.4 percentage points
+(McNemar's $\chi^2 = 461.6$, $p < 10^{-5}$, $n = 1{,}529$ paired questions);
+on LongMemEval, na\"ive RAG outperforms full-context by 8.4 percentage points
+($\chi^2 = 11.7$, $p = 6.3 \times 10^{-4}$, $n = 500$).  The crossover
+occurs because LoCoMo conversations average 16--26K tokens---well within the
+generator's context window, allowing full-context injection to preserve all
+temporal and relational cues that top-10 retrieval discards.  LongMemEval
+histories average ${\sim}$115K tokens, exceeding the model's effective
+attention span; injecting everything forces the model to locate relevant
+details among overwhelming noise, while RAG's filtering---even crude cosine
+similarity with a fixed top-$k$---improves signal-to-noise ratio.
+
+Note that our full-context LoCoMo accuracy (61.4\%) is lower than the GPT-4o
+baseline (${\sim}$72.9\%) in Table~\ref{tab:benchmark-comparison}, reflecting
+the model quality gap between Gemini-2.0-Flash and GPT-4o rather than a
+methodological difference.  The crossover pattern is architecture-dependent,
+not model-dependent: within any fixed model, the relative advantage of
+full-context versus RAG reverses as history length exceeds the model's
+effective attention window.
+
+\smallskip
+\noindent\textbf{Finding 2: Category analysis reveals systematic weaknesses
+in both baselines.}\enspace
+Table~\ref{tab:locomo-categories} decomposes LoCoMo accuracy by question type.
+Temporal reasoning (category~2) is catastrophically poor for both systems:
+19.3\% for full-context and 6.5\% for na\"ive RAG.  These questions require
+reasoning about \emph{when} events occurred relative to each other---a
+capability that neither context stuffing nor cosine similarity provides.
+Multi-hop questions (category~3) show a similar pattern at higher absolute
+levels.  Open-domain questions (category~4), which reward broad coverage
+rather than precise relational reasoning, reach the highest accuracy (81.5\%
+full-context).
+
+On LongMemEval, single-session user queries jump from 60.0\% (FC) to 88.6\%
+(RAG)---facts stated by the user in a single session are well-served by
+embedding similarity.  Multi-session queries improve from 30.8\% to 44.4\%,
+benefiting from noise filtering.  But temporal reasoning is unchanged at
+29.3\% for both systems, confirming that neither approach addresses
+time-dependent reasoning---a capability requiring structured temporal indexing
+rather than content similarity.
+
+\begin{table}[!t]
+\centering
+\caption{LoCoMo accuracy by question category. Category~5 (adversarial)
+excluded per evaluation protocol.  The temporal reasoning gap
+(category~2) is the most pronounced weakness for both baselines.}
+\label{tab:locomo-categories}
+\small
+\begin{tabular}{@{}clrrrr@{}}
+\toprule
+\textbf{Cat.} & \textbf{Type} & \textbf{$N$} & \textbf{FC (\%)} & \textbf{RAG (\%)} & \textbf{$\Delta$} \\
+\midrule
+1 & Single-hop     & 282 & 54.3 & 13.5 & $+40.8$ \\
+2 & Temporal        & 321 & 19.3 &  6.5 & $+12.8$ \\
+3 & Multi-hop       &  96 & 46.9 & 21.9 & $+25.0$ \\
+4 & Open-domain     & 841 & 81.5 & 38.0 & $+43.5$ \\
+\midrule
+  & \textbf{Overall} & 1{,}540 & 61.4 & 26.0 & $+35.4$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\smallskip
+\noindent\textbf{Finding 3: Neither baseline addresses what lifecycle
+management is designed for.}\enspace
+The crossover demonstrates that \emph{how much} context to include is at
+least as important as \emph{what} to include---yet neither existing benchmark
+evaluates adaptive retrieval scope.  Memory systems with lifecycle
+management (consolidation, forgetting, graph-based association) are designed
+precisely for the regime where neither extreme is optimal: they reduce noise
+through forgetting, improve signal through consolidation, and discover
+indirect connections through graph traversal.  These capabilities should
+manifest as performance that exceeds both baselines simultaneously on both
+benchmarks, but no published evaluation tests this hypothesis.  This gap
+reinforces the evaluation methodology problem discussed in
+\S\ref{sec:open-problems}: the field needs benchmarks that test memory
+\emph{management}, not just memory \emph{retrieval}.
+
+%% ---------------------------------------------------------------
 \subsection{The Long Tail Problem}
 \label{sec:long-tail}
 

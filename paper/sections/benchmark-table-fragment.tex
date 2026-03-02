@@ -57,6 +57,10 @@ Na\"ive RAG          & GPT-4o            & ---                  & ${\sim}52$    
 Zep (per Mem0)       & GPT-4o            & 65.99\tnote{g}       & ---             & ---   & \cite{choudhary2025mem0} \\
 Zep (per Mem0 repl.) & GPT-4o            & 58.44\tnote{g}       & ---             & ---   & \cite{mem0replication2025} \\
 \midrule
+% --- Our replication baselines ---
+Full-context (repl.) & Gemini-2.0-Flash\tnote{h} & 61.36             & 46.20              & ---   & This work \\
+Na\"ive RAG (repl.)  & Gemini-2.0-Flash\tnote{h} & 25.97             & \textbf{54.60}     & ---   & This work \\
+\midrule
 % --- DMR-only baselines ---
 Zep                  & GPT-4o-mini       & ---                  & ---             & \textbf{98.20} & \cite{dempsey2025graphiti} \\
 Session Summary      & GPT-4-turbo       & ---                  & ---             & 78.60 & \cite{packer2023memgpt} \\
@@ -71,6 +75,7 @@ Recursive Summary    & GPT-4-turbo       & ---                  & ---           
 \item[e] DMR conversations are only ${\sim}60$ messages (${\sim}$4K tokens), fitting easily in modern context windows.  The full-context baseline (94.4\%) nearly matches MemGPT (93.4\%).
 \item[f] Approximate; LoCoMo conversations average ${\sim}$16--26K tokens, within GPT-4o's 128K window.
 \item[g] Disputed score.  Mem0 evaluated Zep at 65.99\%; Mem0's subsequent replication attempt yielded 58.44\%.  Both differ substantially from Zep's self-reported 75.14\%.
+\item[h] Our baselines (\S\ref{sec:baseline-replication}).  Generator: Gemini-2.0-Flash-001 via OpenRouter (temp.~0, max\_tokens~512).  Judge: GPT-4o-mini (temp.~0, max\_tokens~10).  LoCoMo: categories 1--4 (1{,}540 questions; cat.~5 adversarial excluded).  LongMemEval\_S: 500 questions.  Na\"ive RAG: ChromaDB, all-MiniLM-L6-v2 embeddings, top-10 cosine retrieval.  Code and results at \url{https://github.com/SecurityRonin/alaya/tree/main/bench}.
 \end{tablenotes}
 \end{threeparttable}
 \end{adjustbox}

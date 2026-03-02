@@ -167,6 +167,12 @@ cognitive structures via a 3D-8Q model (Object x Form x Time).
 - **Forgetting:** Not documented.
 - **Key context:** 500x pipeline volume growth in 2025. Running in 70+
   companies. Backed by OpenAI and FAIR founders.
+- **Ontology support:** Optional OWL/RDF grounding via `RDFLibOntologyResolver`.
+  Cognee's core data model is a property graph (Pydantic DataPoints), not RDF
+  triples, but `.owl` files can be loaded to validate and align extracted entities
+  against a domain vocabulary (80% fuzzy matching threshold). This contrasts with
+  Memonto, which uses RDF triples as its native storage format. Cognee reads OWL
+  but stores as property graph; Memonto is ontology-native.
 - **vs. Alaya:** Cognee is a knowledge engine, not a memory system — it
   transforms data into graph-structured knowledge but lacks forgetting,
   consolidation, and preference learning. Alaya treats memory as a living

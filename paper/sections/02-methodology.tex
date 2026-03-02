@@ -130,6 +130,20 @@ describes \emph{when and how} it evolves, and \emph{preference} describes
 classifications are reported in the comparative matrices of
 \Cref{sec:comparison}.
 
+\subsection{Baseline Evaluation}
+\label{sec:methodology-baseline}
+
+In addition to the survey analysis, we conduct a controlled baseline
+replication to provide an independent reference point for the published
+benchmark scores compiled in \S\ref{sec:benchmark-cross-comparison}.  We
+evaluate two canonical systems---full-context injection and na\"ive vector
+RAG---on both LoCoMo (1{,}540 questions, categories~1--4) and LongMemEval\_S
+(500 questions) using Gemini-2.0-Flash-001 as the generator and GPT-4o-mini as
+the LLM judge, both accessed via OpenRouter.  Statistical significance is
+assessed using McNemar's test on paired questions, with 95\% Wilson score
+confidence intervals.  Full experimental details, code, and raw results are
+available at \url{https://github.com/SecurityRonin/alaya/tree/main/bench}.
+
 \subsection{Threats to Validity}
 \label{sec:threats}
 
