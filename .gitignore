@@ -4,3 +4,12 @@ Cargo.lock
 *.db-journal
 *.db-wal
 .DS_Store
+
+# LaTeX build artifacts
+paper/build/
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.pdf
