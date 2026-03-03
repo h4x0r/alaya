@@ -51,9 +51,161 @@ svg { width: 100%; height: 100%; }
 .tooltip .tag.no { background: #21262d; color: #484f58; }
 .tooltip .meta { color: #8b949e; margin-top: 6px; font-size: 11px; }
 #help { margin-top: 16px; font-size: 11px; color: #484f58; line-height: 1.5; border-top: 1px solid #21262d; padding-top: 8px; }
+
+/* ── Mobile header ── */
+#mobile-header {
+  display: none; align-items: center; justify-content: space-between;
+  padding: 10px 16px; background: #161b22;
+  border-bottom: 1px solid #30363d; flex-shrink: 0;
+}
+#mobile-header .m-btn {
+  background: none; border: none; color: #c9d1d9;
+  font-size: 20px; padding: 6px 8px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#mobile-header .m-btn:active { opacity: 0.6; }
+#mobile-header .m-title {
+  font-size: 14px; font-weight: 600; color: #f0f6fc;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── Mobile search bar ── */
+#mobile-search-bar {
+  display: none; padding: 8px 16px; background: #161b22;
+  border-bottom: 1px solid #30363d; flex-shrink: 0;
+}
+#mobile-search-bar input {
+  width: 100%; padding: 10px 12px; background: #0d1117;
+  border: 1px solid #30363d; border-radius: 6px;
+  color: #c9d1d9; font-size: 14px;
+}
+#mobile-search-bar input:focus { outline: none; border-color: #58a6ff; }
+#mobile-search-bar input::placeholder { color: #484f58; }
+
+/* ── Mobile footer ── */
+#mobile-footer {
+  display: none; align-items: center; justify-content: space-between;
+  padding: 10px 16px; background: #161b22;
+  border-top: 1px solid #30363d; flex-shrink: 0;
+}
+#mobile-footer .m-status { font-size: 12px; color: #8b949e; }
+#mobile-footer .m-status span { color: #58a6ff; font-weight: 600; }
+#mobile-footer .m-reset {
+  background: none; border: 1px solid #30363d; color: #8b949e;
+  font-size: 12px; padding: 6px 14px; border-radius: 4px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#mobile-footer .m-reset:active { color: #f0f6fc; border-color: #58a6ff; }
+
+/* ── Sidebar overlay ── */
+#sidebar-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6); z-index: 90;
+  -webkit-tap-highlight-color: transparent;
+}
+#sidebar-overlay.active { display: block; }
+
+/* ── Mobile bottom-sheet tooltip ── */
+#mobile-tooltip {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #1c2128; border-top: 2px solid #58a6ff;
+  border-radius: 12px 12px 0 0; z-index: 80;
+  max-height: 55vh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+#mobile-tooltip.visible { transform: translateY(0); pointer-events: auto; }
+#mobile-tooltip .sheet-handle {
+  width: 36px; height: 4px; background: #484f58;
+  border-radius: 2px; margin: 10px auto 4px;
+}
+#mobile-tooltip .sheet-close {
+  position: absolute; top: 6px; right: 12px;
+  background: none; border: none; color: #8b949e;
+  font-size: 22px; cursor: pointer; padding: 4px 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+#mobile-tooltip .sheet-close:active { color: #f0f6fc; }
+#mobile-tooltip .sheet-content {
+  padding: 4px 16px 20px; /* extra bottom padding for safe area */
+}
+#mobile-tooltip .sheet-content h3 {
+  font-size: 16px; color: #f0f6fc; margin-bottom: 6px;
+}
+#mobile-tooltip .sheet-desc { color: #c9d1d9; font-size: 13px; line-height: 1.5; }
+#mobile-tooltip .sheet-details {
+  color: #8b949e; font-size: 12px; margin-top: 8px; line-height: 1.4;
+  border-left: 2px solid #30363d; padding-left: 8px;
+}
+#mobile-tooltip .sheet-badges {
+  display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;
+}
+#mobile-tooltip .sheet-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #21262d; border-radius: 4px; padding: 3px 10px; font-size: 11px; color: #c9d1d9;
+}
+#mobile-tooltip .sheet-badge .bl { color: #8b949e; }
+#mobile-tooltip .sheet-feat-label {
+  font-size: 10px; color: #8b949e; text-transform: uppercase;
+  letter-spacing: 0.3px; margin-top: 8px; margin-bottom: 3px;
+}
+#mobile-tooltip .sheet-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+#mobile-tooltip .sheet-meta {
+  color: #8b949e; margin-top: 10px; font-size: 12px;
+  padding-top: 8px; border-top: 1px solid #21262d;
+}
+
+/* ── Tablet (< 1024px) ── */
+@media (max-width: 1024px) {
+  #sidebar { width: 260px; }
+  .filter-group label { font-size: 11px; }
+}
+
+/* ── Mobile (< 768px) ── */
+@media (max-width: 768px) {
+  body { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+  #mobile-header { display: flex; }
+  #mobile-footer { display: flex; }
+  #container { height: auto; flex: 1; min-height: 0; }
+  #sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0;
+    width: 300px; z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  #sidebar.open { transform: translateX(0); }
+  #graph { flex: 1; width: 100%; }
+  .tooltip { display: none !important; }
+  .filter-group label { padding: 6px 0; min-height: 36px; }
+  .filter-group input[type="checkbox"] { width: 18px; height: 18px; }
+  .node text { font-size: 8px; }
+  #help { display: none; }
+  /* Safe area for notch devices */
+  #mobile-header { padding-top: max(10px, env(safe-area-inset-top)); }
+  #mobile-footer { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  #mobile-tooltip .sheet-content { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+}
+
+/* ── Small phone (< 480px) ── */
+@media (max-width: 480px) {
+  #sidebar { width: 100%; }
+  #mobile-header .m-title { font-size: 13px; }
+  .mobile-stat-value { font-size: 16px; }
+}
 </style>
 </head>
 <body>
+<div id="mobile-header">
+  <button class="m-btn" id="menu-btn" aria-label="Open filters">&#9776;</button>
+  <span class="m-title">Memory Landscape</span>
+  <button class="m-btn" id="search-toggle" aria-label="Search">&#128269;</button>
+</div>
+<div id="mobile-search-bar">
+  <input type="text" id="mobile-search-input" placeholder="Search systems...">
+</div>
+<div id="sidebar-overlay"></div>
 <div id="container">
 <div id="sidebar">
 <h1>AI Agent Memory Landscape</h1>
@@ -77,6 +229,15 @@ Based on the taxonomy in <em>Memory as Process</em>.
 <div id="graph">
 <div class="tooltip" id="tooltip"></div>
 </div>
+</div>
+<div id="mobile-footer">
+  <span class="m-status">Showing <span id="m-visible">0</span> / <span id="m-total">0</span></span>
+  <button class="m-reset" id="m-reset-btn">Reset filters</button>
+</div>
+<div id="mobile-tooltip">
+  <div class="sheet-handle"></div>
+  <button class="sheet-close" aria-label="Close">&times;</button>
+  <div class="sheet-content"></div>
 </div>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
@@ -819,6 +980,140 @@ document.getElementById("reset-btn").addEventListener("click", () => {
 
 // Initial count
 applyFilters();
+
+// ── Mobile responsive interactions ──
+(function() {
+  const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const mobileTooltip = document.getElementById('mobile-tooltip');
+  const sheetContent = mobileTooltip.querySelector('.sheet-content');
+  const mVisibleEl = document.getElementById('m-visible');
+  const mTotalEl = document.getElementById('m-total');
+
+  // Sync mobile footer counts via MutationObserver on desktop counter
+  mTotalEl.textContent = SYSTEMS.length;
+  mVisibleEl.textContent = visibleCountEl.textContent;
+  new MutationObserver(() => {
+    mVisibleEl.textContent = visibleCountEl.textContent;
+  }).observe(visibleCountEl, { childList: true, characterData: true, subtree: true });
+
+  // ── Sidebar drawer toggle ──
+  function openDrawer() {
+    sidebar.classList.add('open');
+    overlay.classList.add('active');
+  }
+  function closeDrawer() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('active');
+  }
+  document.getElementById('menu-btn').addEventListener('click', openDrawer);
+  overlay.addEventListener('click', closeDrawer);
+  // Close drawer when a filter changes (on mobile)
+  document.querySelectorAll('#filter-sections input[type="checkbox"]').forEach(el => {
+    el.addEventListener('change', () => {
+      // Small delay so user sees the check state change
+      if (isMobile()) setTimeout(closeDrawer, 200);
+    });
+  });
+
+  // ── Mobile search toggle ──
+  const searchBar = document.getElementById('mobile-search-bar');
+  const mobileSearchInput = document.getElementById('mobile-search-input');
+  document.getElementById('search-toggle').addEventListener('click', () => {
+    const isOpen = searchBar.style.display === 'block';
+    searchBar.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen) mobileSearchInput.focus();
+  });
+  // Sync mobile search → desktop search
+  mobileSearchInput.addEventListener('input', (e) => {
+    document.getElementById('search').value = e.target.value;
+    applyFilters();
+  });
+  // Sync desktop search → mobile search (if opened programmatically)
+  document.getElementById('search').addEventListener('input', () => {
+    mobileSearchInput.value = document.getElementById('search').value;
+  });
+
+  // ── Bottom sheet tooltip (tap-based) ──
+  function showSheet(d) {
+    let html = `<h3>${d.id}</h3>`;
+    html += `<div class="sheet-desc">${d.desc}</div>`;
+    if (d.details) html += `<div class="sheet-details">${d.details}</div>`;
+    html += `<div class="sheet-badges">`;
+    if (d.storage) html += `<span class="sheet-badge"><span class="bl">Storage:</span> ${d.storage}</span>`;
+    if (d.rag) html += `<span class="sheet-badge"><span class="bl">RAG:</span> ${d.rag}</span>`;
+    html += `</div>`;
+    FEATURE_GROUPS.forEach(group => {
+      html += `<div class="sheet-feat-label">${group.label}</div><div class="sheet-tags">`;
+      Object.entries(group.feats).forEach(([k, label]) => {
+        html += `<span class="tag ${d[k] ? 'yes' : 'no'}">${label}</span>`;
+      });
+      html += `</div>`;
+    });
+    html += `<div class="sheet-meta">${d.lang} &middot; ${d.cat} &middot; ${d.stars > 0 ? d.stars.toLocaleString() + ' &#9733;' : 'new'}</div>`;
+    sheetContent.innerHTML = html;
+    mobileTooltip.classList.add('visible');
+  }
+  function closeSheet() { mobileTooltip.classList.remove('visible'); }
+
+  // Tap on node → show bottom sheet (mobile only)
+  nodeElements.on('click.mobile', (e, d) => {
+    if (!isMobile()) return;
+    e.stopPropagation();
+    showSheet(d);
+  });
+
+  // Close bottom sheet
+  mobileTooltip.querySelector('.sheet-close').addEventListener('click', closeSheet);
+
+  // Swipe-down to close bottom sheet
+  let touchStartY = 0;
+  mobileTooltip.addEventListener('touchstart', (e) => {
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  mobileTooltip.addEventListener('touchmove', (e) => {
+    const dy = e.touches[0].clientY - touchStartY;
+    if (dy > 60 && mobileTooltip.scrollTop <= 0) {
+      closeSheet();
+    }
+  }, { passive: true });
+
+  // Tap on empty graph area → close sheet
+  svg.on('click.closemobile', () => {
+    if (isMobile()) closeSheet();
+  });
+
+  // ── Mobile reset ──
+  document.getElementById('m-reset-btn').addEventListener('click', () => {
+    document.querySelectorAll('#filter-sections input[type="checkbox"]').forEach(el => {
+      el.checked = !!el.dataset.cat;
+    });
+    document.getElementById('search').value = '';
+    mobileSearchInput.value = '';
+    searchBar.style.display = 'none';
+    applyFilters();
+  });
+
+  // ── Resize handler — re-center simulation on orientation change ──
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      const w = graphDiv.clientWidth;
+      const h = graphDiv.clientHeight;
+      svg.attr('width', w).attr('height', h);
+      simulation.force('center', d3.forceCenter(w / 2, h / 2));
+      simulation.force('x').x(d => {
+        const cats = Object.keys(CATEGORIES);
+        const idx = cats.indexOf(d.cat);
+        return w * (0.2 + 0.6 * idx / (cats.length - 1));
+      });
+      simulation.force('y', d3.forceY(h / 2).strength(0.05));
+      simulation.alpha(0.3).restart();
+    }, 150);
+  });
+})();
 </script>
 </body>
 </html>
