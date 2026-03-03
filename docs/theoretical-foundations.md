@@ -457,6 +457,11 @@ sweep changes the store (consolidation, transformation, forgetting).
 Memory is not a static database — it is a living system that reshapes
 itself through use.
 
+For empirical evidence of the gaps these mechanisms address — temporal
+reasoning catastrophe at 19.3%/6.5%, preference blindness at 10.0%/33.3%,
+and the retrieval crossover where neither full-context nor naive RAG
+dominates — see the [Baseline Replication Study](benchmark-evaluation.md).
+
 ---
 
 ## References

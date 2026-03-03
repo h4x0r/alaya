@@ -224,8 +224,26 @@ categories~1--4 (single-hop, temporal, multi-hop, open-domain), excluding
 category~5 (adversarial) per the standard evaluation protocol.  For
 LongMemEval\_S, we evaluate all 500 questions across six question types.
 Na\"ive RAG uses ChromaDB with \texttt{all-MiniLM-L6-v2} embeddings and
-top-10 cosine similarity retrieval.  Table~\ref{tab:our-baselines} and
-Figure~\ref{fig:crossover} report the results.
+top-10 cosine similarity retrieval.  Retry policy: 5~attempts with
+exponential backoff (1/2/4/8/16\,s).
+
+\smallskip
+\noindent\textbf{Statistical methods.}\enspace
+Confidence intervals use the Wilson score interval~\cite{wilson1927} for
+binomial proportions, which provides correct coverage near boundary values
+unlike the normal approximation.  Significance testing uses McNemar's
+test~\cite{mcnemar1947} with continuity correction on the $2 \times 2$
+contingency table of per-question agreement between systems---the appropriate
+test for paired nominal data where each question yields a binary outcome from
+both systems.  Effect sizes are reported as differences in proportions with
+95\% confidence intervals.
+
+Table~\ref{tab:our-baselines} and Figure~\ref{fig:crossover} report overall
+results; Tables~\ref{tab:locomo-categories} and~\ref{tab:longmemeval-types}
+decompose accuracy by question category and type;
+Table~\ref{tab:mcnemar} reports the McNemar contingency tables and test
+statistics; and Figure~\ref{fig:breakdown} visualizes the per-category and
+per-type breakdowns.
 
 \begin{table}[!t]
 \centering
@@ -284,15 +302,61 @@ $p < 10^{-5}$; LongMemEval $\chi^2 = 11.7$, $p < 0.001$.}
 \label{fig:crossover}
 \end{figure}
 
+\begin{table}[!t]
+\centering
+\caption{McNemar's test on paired per-question outcomes.  Each cell counts
+questions where systems agree or disagree.  The extreme asymmetry
+(FC-only $\gg$ RAG-only on LoCoMo; RAG-only $>$ FC-only on LongMemEval)
+drives the significant $\chi^2$ values.  $\Delta$~CI is the 95\%
+confidence interval for the difference in proportions.}
+\label{tab:mcnemar}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+& \multicolumn{2}{c}{\textbf{LoCoMo} ($n\!=\!1{,}529$\thinspace\textsuperscript{*})}
+& \multicolumn{2}{c}{\textbf{LongMemEval} ($n\!=\!500$)} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+& RAG $\checkmark$ & RAG $\times$ & RAG $\checkmark$ & RAG $\times$ \\
+\midrule
+FC $\checkmark$ & 353 & 583 & 180 & 51 \\
+FC $\times$     &  44 & 549 &  93 & 176 \\
+\midrule
+\multicolumn{1}{@{}l}{$\chi^2$ (corrected)}
+  & \multicolumn{2}{c}{461.6}
+  & \multicolumn{2}{c}{11.7} \\
+\multicolumn{1}{@{}l}{$p$-value}
+  & \multicolumn{2}{c}{$< 10^{-5}$}
+  & \multicolumn{2}{c}{$6.3 \times 10^{-4}$} \\
+\multicolumn{1}{@{}l}{$\Delta$ (FC $-$ RAG)}
+  & \multicolumn{2}{c}{$+35.4$~pp}
+  & \multicolumn{2}{c}{$-8.4$~pp} \\
+\multicolumn{1}{@{}l}{95\% CI of $\Delta$}
+  & \multicolumn{2}{c}{$[+32.1, +38.7]$}
+  & \multicolumn{2}{c}{$[-14.5, -2.3]$} \\
+\bottomrule
+\end{tabular}
+\vspace{0.2em}
+\begin{flushleft}
+\footnotesize
+\textsuperscript{*}11 duplicate question texts removed for pairing.
+\end{flushleft}
+\end{table}
+
 Three findings merit discussion.
 
 \smallskip
 \noindent\textbf{Finding 1: The retrieval crossover is statistically
 significant in both directions.}\enspace
-On LoCoMo, full-context outperforms na\"ive RAG by 35.4 percentage points
-(McNemar's $\chi^2 = 461.6$, $p < 10^{-5}$, $n = 1{,}529$ paired questions);
-on LongMemEval, na\"ive RAG outperforms full-context by 8.4 percentage points
-($\chi^2 = 11.7$, $p = 6.3 \times 10^{-4}$, $n = 500$).  The crossover
+On LoCoMo, full-context outperforms na\"ive RAG by 35.4~pp
+(McNemar's $\chi^2 = 461.6$, $p < 10^{-5}$, $n = 1{,}529$ paired questions;
+effect size 95\% CI: $[+32.1, +38.7]$~pp);
+on LongMemEval, na\"ive RAG outperforms full-context by 8.4~pp
+($\chi^2 = 11.7$, $p = 6.3 \times 10^{-4}$, $n = 500$;
+effect size 95\% CI: $[-14.5, -2.3]$~pp).
+Table~\ref{tab:mcnemar} shows the full contingency tables: the LoCoMo
+asymmetry is extreme (583~questions correct for FC only vs.\ 44 for RAG
+only), while the LongMemEval asymmetry is moderate (93 vs.\ 51) but
+statistically significant.  The crossover
 occurs because LoCoMo conversations average 16--26K tokens---well within the
 generator's context window, allowing full-context injection to preserve all
 temporal and relational cues that top-10 retrieval discards.  LongMemEval
@@ -312,23 +376,34 @@ effective attention window.
 \smallskip
 \noindent\textbf{Finding 2: Category analysis reveals systematic weaknesses
 in both baselines.}\enspace
-Table~\ref{tab:locomo-categories} decomposes LoCoMo accuracy by question type.
-Temporal reasoning (category~2) is catastrophically poor for both systems:
-19.3\% for full-context and 6.5\% for na\"ive RAG.  These questions require
-reasoning about \emph{when} events occurred relative to each other---a
-capability that neither context stuffing nor cosine similarity provides.
-Multi-hop questions (category~3) show a similar pattern at higher absolute
-levels.  Open-domain questions (category~4), which reward broad coverage
-rather than precise relational reasoning, reach the highest accuracy (81.5\%
-full-context).
+Tables~\ref{tab:locomo-categories} and~\ref{tab:longmemeval-types} decompose
+accuracy by question category and type, with the visual comparison in
+Figure~\ref{fig:breakdown}.
 
-On LongMemEval, single-session user queries jump from 60.0\% (FC) to 88.6\%
-(RAG)---facts stated by the user in a single session are well-served by
-embedding similarity.  Multi-session queries improve from 30.8\% to 44.4\%,
-benefiting from noise filtering.  But temporal reasoning is unchanged at
-29.3\% for both systems, confirming that neither approach addresses
-time-dependent reasoning---a capability requiring structured temporal indexing
-rather than content similarity.
+On LoCoMo, temporal reasoning (category~2) is catastrophically poor for both
+systems: 19.3\% for full-context and 6.5\% for na\"ive RAG---well below
+random guessing on binary questions.  These questions require reasoning about
+\emph{when} events occurred relative to each other---a capability that
+neither context stuffing nor cosine similarity provides.  Multi-hop questions
+(category~3) show a similar pattern at higher absolute levels (46.9\% vs.\
+21.9\%).  Open-domain questions (category~4), which comprise 54.6\% of all
+LoCoMo questions and reward broad coverage rather than precise relational
+reasoning, reach the highest accuracy (81.5\% full-context), inflating the
+overall score.  Excluding category~4, full-context accuracy drops to 37.2\%.
+
+On LongMemEval (Table~\ref{tab:longmemeval-types}), single-session user
+queries show the largest RAG advantage, jumping from 60.0\% (FC) to 88.6\%
+(RAG)---facts stated by the user in a single session are semantically close
+to the question and well-served by embedding similarity.  Single-session
+preference questions are poor for both systems (10.0\% FC, 33.3\% RAG);
+preferences are often implied rather than stated explicitly, making them
+difficult for both approaches.  Multi-session queries improve from 30.8\% to
+44.4\%, benefiting from noise filtering.  But temporal reasoning is
+\emph{identical} at 29.3\% for both systems, confirming the LoCoMo finding:
+temporal reasoning requires structured temporal indexing, not content
+similarity.  Single-session assistant queries are near-ceiling for both
+(96.4\% FC, 94.6\% RAG)---facts stated by the assistant are typically clear,
+structured responses that both approaches handle well.
 
 \begin{table}[!t]
 \centering
@@ -350,6 +425,99 @@ excluded per evaluation protocol.  The temporal reasoning gap
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{table}[!t]
+\centering
+\caption{LongMemEval accuracy by question type.  Single-session user queries
+show the largest RAG advantage ($+28.6$~pp); temporal reasoning is identical
+for both systems (29.3\%), confirming the LoCoMo finding.  Single-session
+preference questions are poor for both approaches.}
+\label{tab:longmemeval-types}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+\textbf{Type} & \textbf{$N$} & \textbf{FC (\%)} & \textbf{RAG (\%)} & \textbf{$\Delta$} \\
+\midrule
+SS-user       &  70 & 60.0 & 88.6 & $-28.6$ \\
+SS-assistant  &  56 & 96.4 & 94.6 & $+1.8$ \\
+SS-preference &  30 & 10.0 & 33.3 & $-23.3$ \\
+Multi-session & 133 & 30.8 & 44.4 & $-13.5$ \\
+Temporal      & 133 & 29.3 & 29.3 & $0.0$ \\
+Knowledge update & 78 & 66.7 & 64.1 & $+2.6$ \\
+\midrule
+\textbf{Overall} & 500 & 46.2 & 54.6 & $-8.4$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure*}[!t]
+\centering
+\begin{minipage}[b]{0.48\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    bar width=8pt,
+    width=\textwidth,
+    height=5.5cm,
+    ylabel={Accuracy (\%)},
+    symbolic x coords={Single-hop, Temporal, Multi-hop, Open-domain},
+    xtick=data,
+    x tick label style={rotate=25, anchor=east, font=\scriptsize},
+    ymin=0, ymax=100,
+    ytick={0,20,40,60,80,100},
+    legend style={at={(0.5,1.05)}, anchor=south, legend columns=2,
+                  font=\scriptsize},
+    nodes near coords,
+    nodes near coords style={font=\tiny},
+    every node near coord/.append style={yshift=2pt},
+    title={\small (a) LoCoMo by category},
+]
+\addplot[fill=blue!50] coordinates
+    {(Single-hop, 54.3) (Temporal, 19.3) (Multi-hop, 46.9) (Open-domain, 81.5)};
+\addplot[fill=red!50] coordinates
+    {(Single-hop, 13.5) (Temporal, 6.5) (Multi-hop, 21.9) (Open-domain, 38.0)};
+\legend{Full-context, Na\"ive RAG}
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[b]{0.48\textwidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    bar width=6pt,
+    width=\textwidth,
+    height=5.5cm,
+    ylabel={Accuracy (\%)},
+    symbolic x coords={SS-User, SS-Asst, SS-Pref, Multi-S, Temporal, K-Upd},
+    xtick=data,
+    x tick label style={rotate=25, anchor=east, font=\scriptsize},
+    ymin=0, ymax=100,
+    ytick={0,20,40,60,80,100},
+    legend style={at={(0.5,1.05)}, anchor=south, legend columns=2,
+                  font=\scriptsize},
+    nodes near coords,
+    nodes near coords style={font=\tiny},
+    every node near coord/.append style={yshift=2pt},
+    title={\small (b) LongMemEval by type},
+]
+\addplot[fill=blue!50] coordinates
+    {(SS-User, 60.0) (SS-Asst, 96.4) (SS-Pref, 10.0) (Multi-S, 30.8) (Temporal, 29.3) (K-Upd, 66.7)};
+\addplot[fill=red!50] coordinates
+    {(SS-User, 88.6) (SS-Asst, 94.6) (SS-Pref, 33.3) (Multi-S, 44.4) (Temporal, 29.3) (K-Upd, 64.1)};
+\legend{Full-context, Na\"ive RAG}
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\caption{Per-category and per-type accuracy breakdown.  (a)~LoCoMo: temporal
+reasoning (cat.~2) is catastrophic for both systems; open-domain (cat.~4)
+inflates overall full-context accuracy.  (b)~LongMemEval: single-session user
+queries show the largest RAG advantage; temporal reasoning is identical at
+29.3\% for both systems.  Error bars omitted for clarity; confidence intervals
+are in Tables~\ref{tab:locomo-categories} and~\ref{tab:longmemeval-types}.}
+\label{fig:breakdown}
+\end{figure*}
 
 \smallskip
 \noindent\textbf{Finding 3: Neither baseline addresses what lifecycle
