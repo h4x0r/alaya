@@ -1,0 +1,145 @@
+%% system-matrix.tex — Per-system classification matrix
+%% Included from 06-comparison.tex
+
+\subsection{Per-System Classification}
+\label{sec:system-matrix}
+
+Table~\ref{tab:system-matrix} presents per-feature classifications for
+41~systems with complete capability data across the eight discriminating
+features defined in \S\ref{sec:long-tail}.  Systems are grouped by category
+and sorted by capability score within each group.
+
+\begin{table*}[!t]
+\centering
+\caption{Per-system capability matrix for 41 classified systems.
+$\bullet$~=~capability present.  Score counts eight discriminating features:
+episodic memory, semantic memory, graph structure, hybrid fusion,
+consolidation, forgetting, contradiction resolution, and preference learning.
+RAG tier: N~=~Naive, A~=~Advanced, M~=~Modular~\cite{gao2023rag}.
+An interactive visualization with filtering is available at
+\url{https://securityronin.github.io/alaya/docs/memory-landscape.html}.}
+\label{tab:system-matrix}
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lc cccccccc r@{}}
+\toprule
+\textbf{System}
+  & \rotatebox{90}{\textbf{RAG}}
+  & \rotatebox{90}{\textbf{Episodic}}
+  & \rotatebox{90}{\textbf{Semantic}}
+  & \rotatebox{90}{\textbf{Graph}}
+  & \rotatebox{90}{\textbf{Fusion}}
+  & \rotatebox{90}{\textbf{Consolid.}}
+  & \rotatebox{90}{\textbf{Forgetting}}
+  & \rotatebox{90}{\textbf{Contrad.}}
+  & \rotatebox{90}{\textbf{Preference}}
+  & \textbf{Sc.} \\
+\midrule
+\multicolumn{11}{@{}l}{\textit{Dedicated Memory Systems (20)}} \\
+Alaya                & M & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & 8 \\
+MemOS                & A & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           & $\bullet$ & 7 \\
+Mem0                 & A & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           & $\bullet$ & $\bullet$ & $\bullet$ & 7 \\
+Zep/Graphiti         & M & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           & 7 \\
+Hindsight            & A & $\bullet$ & $\bullet$ &           & $\bullet$ &           & $\bullet$ & $\bullet$ & $\bullet$ & 6 \\
+OpenMemory           & A & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           & $\bullet$ &           & $\bullet$ & 6 \\
+Vestige              & M & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           & $\bullet$ &           & $\bullet$ & 6 \\
+EverMemOS            & A & $\bullet$ & $\bullet$ &           & $\bullet$ & $\bullet$ & $\bullet$ &           &           & 5 \\
+MemoryOS             & A & $\bullet$ & $\bullet$ &           & $\bullet$ &           & $\bullet$ &           & $\bullet$ & 5 \\
+Supermemory          & A & $\bullet$ & $\bullet$ & $\bullet$ &           &           & $\bullet$ &           & $\bullet$ & 5 \\
+Neo4j Agent Mem.     & A & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           &           &           &           & 4 \\
+OpenClaw Redis       & A & $\bullet$ & $\bullet$ &           &           &           & $\bullet$ &           & $\bullet$ & 4 \\
+Cognee               & A &           & $\bullet$ & $\bullet$ & $\bullet$ &           &           &           &           & 3 \\
+MCP Mem.\ Service    & A &           & $\bullet$ & $\bullet$ & $\bullet$ &           &           &           &           & 3 \\
+Memary               & A &           & $\bullet$ & $\bullet$ &           &           & $\bullet$ &           &           & 3 \\
+Memonto              & N &           & $\bullet$ & $\bullet$ &           &           &           &           &           & 2 \\
+Memvid               & A & $\bullet$ &           &           & $\bullet$ &           &           &           &           & 2 \\
+Redis Memory         & A &           & $\bullet$ &           & $\bullet$ &           &           &           &           & 2 \\
+Cortex-Mem           & N &           & $\bullet$ &           &           &           &           &           &           & 1 \\
+Memobase             & N &           &           &           &           &           &           &           & $\bullet$ & 1 \\
+\midrule
+\multicolumn{11}{@{}l}{\textit{Framework Memory Modules (6)}} \\
+Letta (MemGPT)       & N & $\bullet$ & $\bullet$ &           &           & $\bullet$ & $\bullet$ &           & $\bullet$ & 5 \\
+CrewAI               & A & $\bullet$ & $\bullet$ &           & $\bullet$ &           &           &           & $\bullet$ & 4 \\
+MS GraphRAG          & M &           & $\bullet$ & $\bullet$ & $\bullet$ &           &           &           &           & 3 \\
+LangChain            & N & $\bullet$ &           &           &           &           & $\bullet$ &           &           & 2 \\
+LlamaIndex           & N & $\bullet$ &           &           &           &           & $\bullet$ &           &           & 2 \\
+LangMem SDK          & N &           & $\bullet$ &           &           &           &           &           &           & 1 \\
+\midrule
+\multicolumn{11}{@{}l}{\textit{Coding Agent Memory (4)}} \\
+Beads                & A & $\bullet$ & $\bullet$ & $\bullet$ &           & $\bullet$ & $\bullet$ &           &           & 5 \\
+Cipher (ByteRover)   & A & $\bullet$ & $\bullet$ &           &           &           & $\bullet$ &           &           & 3 \\
+Memsearch            & A & $\bullet$ &           &           &           &           & $\bullet$ &           &           & 2 \\
+Engram               & N & $\bullet$ &           &           &           &           &           &           &           & 1 \\
+\midrule
+\multicolumn{11}{@{}l}{\textit{File-Based Memory (2)}} \\
+Claudesidian         & A & $\bullet$ &           & $\bullet$ &           &           & $\bullet$ &           &           & 3 \\
+Claude Code          & N & $\bullet$ &           &           &           &           &           &           & $\bullet$ & 2 \\
+\midrule
+\multicolumn{11}{@{}l}{\textit{Research Architectures (9)}} \\
+Generative Agents    & A & $\bullet$ & $\bullet$ &           & $\bullet$ & $\bullet$ & $\bullet$ &           & $\bullet$ & 6 \\
+SYNAPSE              & M & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           &           & 6 \\
+LightMem             & A & $\bullet$ & $\bullet$ &           &           & $\bullet$ & $\bullet$ &           &           & 4 \\
+A-MEM                & A &           & $\bullet$ & $\bullet$ & $\bullet$ &           &           &           &           & 3 \\
+LightRAG             & M &           & $\bullet$ & $\bullet$ & $\bullet$ &           &           &           &           & 3 \\
+Mem-alpha            & A & $\bullet$ & $\bullet$ &           &           &           & $\bullet$ &           &           & 3 \\
+MemoRAG              & A & $\bullet$ & $\bullet$ &           & $\bullet$ &           &           &           &           & 3 \\
+HippoRAG            & M &           & $\bullet$ & $\bullet$ &           &           &           &           &           & 2 \\
+MemAgent             & A & $\bullet$ &           &           &           &           & $\bullet$ &           &           & 2 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Three patterns emerge from the per-system view that are not visible in the
+aggregate statistics.  First, contradiction resolution is the rarest
+capability: only 4 of 41~systems implement it (Alaya, Mem0, Zep/Graphiti,
+and Hindsight), all dedicated memory systems.  Second, Modular RAG systems
+average 5.0/8 on the capability score, versus 4.0 for Advanced RAG and 1.9
+for Naive RAG---retrieval sophistication correlates strongly with
+architectural investment in lifecycle operations.  Third, no framework memory
+module exceeds a score of~5: memory is a secondary concern in orchestration
+frameworks, limiting investment in consolidation, contradiction resolution,
+and graph-based retrieval.
+
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    xbar,
+    width=0.7\columnwidth,
+    height=5cm,
+    xlabel={Mean Capability Score (out of 8)},
+    symbolic y coords={File-Based (2), Coding Agent (4), Framework (6), Research (9), Dedicated (20)},
+    ytick=data,
+    xmin=0, xmax=7,
+    xtick={0,1,2,3,4,5,6,7},
+    nodes near coords,
+    nodes near coords style={font=\scriptsize, anchor=west},
+    every node near coord/.append style={xshift=2pt},
+    bar width=10pt,
+    x tick label style={font=\small},
+    y tick label style={font=\small},
+    xlabel style={font=\small},
+]
+\addplot[fill=blue!40] coordinates {
+    (2.5,File-Based (2))
+    (2.8,Coding Agent (4))
+    (2.8,Framework (6))
+    (3.6,Research (9))
+    (4.4,Dedicated (20))
+};
+\end{axis}
+\end{tikzpicture}
+\caption{Mean capability score by system category (number of systems in
+parentheses).  Dedicated memory systems score highest, reflecting their
+architectural focus on memory as a primary concern.  Framework modules and
+coding agent tools score below~3, consistent with memory being an auxiliary
+feature in these categories.}
+\label{fig:category-scores}
+\end{figure}
+
+Figure~\ref{fig:category-scores} summarizes the category-level pattern:
+dedicated systems and research architectures invest in lifecycle operations,
+while framework modules and coding tools prioritize integration breadth over
+memory depth.  For interactive exploration with filtering by category,
+capability, and RAG tier, see the companion
+visualization.\footnote{\url{https://securityronin.github.io/alaya/docs/memory-landscape.html}}
