@@ -3,9 +3,9 @@
 
 \subsection{Yogac\=ara as Architectural Guide}
 
-The companion survey~\cite{hui2026taxonomy} identifies four cases where
-Yogac\=ara concepts predict design choices that the AI memory community has
-independently converged upon. \alaya{} was designed with these predictions
+We identify four cases where Yogac\=ara concepts predict design choices
+that the AI memory community has independently converged
+upon~\cite{hui2026taxonomy}. \alaya{} was designed with these predictions
 as explicit architectural constraints rather than post-hoc rationalizations:
 
 \begin{itemize}[nosep]
@@ -36,6 +36,51 @@ pure neuroscience models nor pure engineering intuition would prioritize
 independently. The preference emergence mechanism, in particular, was
 designed from the v\=asan\=a concept before we found empirical support in
 the memory systems literature.
+
+\subsection{Convergence with Neuroscience}
+
+The parallels between Yogac\=ara and cognitive neuroscience are
+especially striking because the two traditions developed independently,
+separated by fifteen centuries and entirely different methodological
+commitments.  Their convergence on the same structural patterns provides
+independent triangulation for \alaya{}'s design principles.
+
+\paragraph{Dual-system consolidation}
+CLS theory~\cite{mcclelland1995} proposes fast-learning hippocampal
+encoding with slow-learning neocortical integration through interleaved
+replay.  The Yogac\=ara distinction between \=alaya-vij\~n\=ana (which
+receives all impressions rapidly) and manas (which reflects
+deliberatively) describes the same architectural split at the
+phenomenological level.
+
+\paragraph{Hebbian strengthening and weakening}
+The \emph{Yogac\=arabh\=umi-\\'s\=astra} describes seeds as
+strengthening through repeated activation (\cjk{增長}) and weakening
+when not activated (\cjk{損減})---the same dynamics as LTP/LTD in
+Hebb's framework~\cite{hebb1949, bliss1973}, expressed in
+phenomenological rather than physiological vocabulary.
+
+\paragraph{Spreading activation and seed mutual conditioning}
+Collins and Loftus~\cite{collins1975} formalized spreading activation in
+semantic networks.  The \emph{Yogac\=arabh\=umi-\\'s\=astra} describes
+seeds as mutually conditioning (\cjk{互相薰習}): activation of one seed
+creates conditions for the ripening of associated seeds.  The structural
+isomorphism is precise: interconnected elements, use-dependent
+facilitation, distance-based attenuation.
+
+\paragraph{Competitive retrieval dynamics}
+Anderson~\etal~\cite{anderson1994} demonstrated retrieval-induced
+forgetting (RIF): retrieving one memory suppresses competitors.
+Yogac\=ara describes an analogous dynamic among mutually opposed seeds
+(\cjk{相違種子})~\cite{chengweishilun}.  Both predict that retrieval is
+an active process that reshapes the accessibility landscape of memory.
+
+\medskip
+\noindent When three traditions separated by methodology, culture, and
+fifteen centuries arrive at the same structural principles---dual-system
+consolidation, use-dependent strengthening, associative spreading, and
+competitive retrieval dynamics---those principles merit attention as
+candidate universals of memory architecture.
 
 \subsection{Graceful Degradation}
 

@@ -1,10 +1,9 @@
 \section{Background}
 \label{sec:background}
 
-This section summarizes the neuroscience and Buddhist psychology foundations
-that inform \alaya{}'s design. A comprehensive treatment of these traditions
-and their convergence appears in the companion survey~\cite{hui2026taxonomy};
-here we focus on the specific principles that map to architectural decisions.
+This section presents the neuroscience and Buddhist psychology foundations
+that inform \alaya{}'s design, with particular attention to their
+convergence on the same structural principles for memory architecture.
 
 \subsection{Complementary Learning Systems}
 
@@ -57,23 +56,74 @@ retrieval to discover indirect associations---a query about ``cooking'' can
 surface chemistry-related memories through shared Hebbian links.
 
 \subsection{Yogac\=ara Process Model}
+\label{sec:yogacara}
 
-The Yogac\=ara school's theory of \=alaya-vij\~n\=ana (storehouse
-consciousness) describes memory as a dynamic substrate holding \emph{seeds}
-(\emph{b\=ija}) that:
-\begin{itemize}[nosep]
-    \item \textbf{Strengthen through perfuming} (\emph{v\=asan\=a}): each
-    experience leaves a subtle imprint; preferences emerge from accumulated
-    impressions, not single observations.
-    \item \textbf{Ripen heterogeneously} (\emph{vip\=aka}): seeds mature
-    into forms qualitatively different from their causes, paralleling CLS
-    consolidation.
-    \item \textbf{Transform structurally}
-    (\emph{\=a\'sraya-par\=av\d{r}tti}): the store itself reorganizes
-    periodically, resolving contradictions and pruning obsolete content.
-    \item \textbf{Condition mutually}: seeds activate related seeds,
-    paralleling spreading activation in Hebbian networks.
-\end{itemize}
+The Yogac\=ara (\cjk{瑜伽行派}) school of Buddhist philosophy,
+systematized in the \emph{Yogac\=arabh\=umi-\\'s\=astra}
+(\cjk{瑜伽師地論}, attributed to Maitreya/Asa\.{n}ga, translated by
+Xuanzang 646--648~CE)~\cite{yogacarabhumi} and the \emph{Cheng Weishi
+Lun} (\cjk{成唯識論}, Xuanzang, 659~CE)~\cite{chengweishilun},
+developed a detailed phenomenology of memory more than a millennium
+before computational cognitive science.
 
-\noindent These four principles map directly to \alaya{}'s lifecycle
+\subsubsection{The Storehouse and Seeds}
+
+The \emph{\=alaya-vij\~n\=ana} (\cjk{阿賴耶識}, storehouse
+consciousness) is the eighth and deepest consciousness in Yogac\=ara
+theory---a continuous stream that underlies all mental activity.  It
+receives impressions from every experience and stores them as
+\emph{b\=ija} (\cjk{種子}, seeds): latent potentials that are not
+static data but living dispositions with conditions for ripening.
+The key verse from the \emph{Sa\d{m}dhinirmocana S\=utra}
+(\cjk{解深密經})~\cite{samdhinirmocana} captures this character:
+
+\begin{quote}
+\emph{The \=ad\=ana consciousness is exceedingly deep and subtle; all
+its seeds are like a torrential flood.}
+\end{quote}
+
+Seeds interact with one another: they have mutual dependence, ripen
+heterogeneously (\emph{vip\=aka}, \cjk{異熟}---the result differs in
+nature from the cause), and are continuously modified by new experience.
+Above the storehouse, \emph{manas} (\cjk{末那識}, the seventh
+consciousness) performs deliberative reflection, continuously examining
+and reinterpreting what the storehouse contains---mirroring the CLS
+distinction between fast episodic encoding and slow semantic
+integration~\cite{mcclelland1995}.
+
+\subsubsection{Perfuming and Transformation}
+
+\emph{V\=asan\=a} (\cjk{薰習}, perfuming) is the process by which each
+experience leaves a subtle trace on the storehouse, ``like incense
+gradually permeating cloth''~\cite{chengweishilun}.  No single
+experience is transformative; preferences emerge from the accumulation
+of many similar traces.
+
+The complementary process is \emph{\=a\'sraya-par\=av\d{r}tti}
+(\cjk{轉依}, transformation of the basis): a periodic restructuring of
+the storehouse itself---resolving contradictions, pruning stale
+dispositions, and moving the substrate toward greater coherence.
+
+\Cref{tab:yogacara-mapping} maps these concepts to \alaya{}'s
+architecture.
+
+\begin{table}[t]
+\centering
+\caption{Mapping Yogac\=ara Concepts to \alaya{} Architecture}
+\label{tab:yogacara-mapping}
+\begin{tabular}{@{}L{2.0cm}L{1.8cm}L{3.2cm}@{}}
+\toprule
+\textbf{Yogac\=ara} & \textbf{Axis} & \textbf{\alaya{} Operation} \\
+\midrule
+\emph{\=Alaya-vij\~n\=ana} & Structure & Persistent memory store \\
+\emph{B\=ija} (seeds) & Structure & Memory nodes with strengths \\
+\emph{V\=asan\=a} & Preference & Impression accumulation \\
+\emph{Vip\=aka} & Lifecycle & Consolidation \\
+\emph{\=A\'sraya-par\=av\d{r}tti} & Lifecycle & Transformation \\
+\emph{Vijnapti-m\=atra} & Retrieval & Encoding specificity \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent These principles map directly to \alaya{}'s lifecycle
 operations, as detailed in \Cref{sec:architecture}.

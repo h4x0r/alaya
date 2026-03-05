@@ -17,7 +17,6 @@
 \usepackage{array}
 \usepackage{url}
 \usepackage{enumitem}
-\usepackage{CJKutf8}
 \usepackage{adjustbox}
 \usepackage{tikz}
 \usetikzlibrary{positioning, arrows.meta, shapes.geometric}
@@ -41,9 +40,6 @@
 \newcommand{\ie}{\emph{i.e.}}
 \newcommand{\etal}{\emph{et~al.}}
 \newcommand{\todo}[1]{\textcolor{red}{\textbf{TODO:} #1}}
-
-% ---- CJK for Buddhist terms ----
-\newcommand{\cjk}[1]{\begin{CJK}{UTF8}{bsmi}#1\end{CJK}}
 
 % ---- Column type for fixed-width ----
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
@@ -84,11 +80,10 @@ semantic, procedural, implicit), mapped to the CoALA framework; (2)
 the RAG taxonomy; (3) memory \emph{lifecycle} (formation, consolidation,
 forgetting, transformation); and (4) \emph{preference emergence} (how
 behavioral patterns crystallize from interaction). We ground this taxonomy
-in neuroscience (Hebbian learning, complementary learning systems, Bjork
-dual-strength forgetting) and Yogac\=ara Buddhist psychology
-(\emph{alaya-vij\~n\=ana}, \emph{v\=asan\=a}, \emph{b\=ija}), showing
-that both traditions converge on the same structural
-principles for memory architecture. We identify five convergent design principles
+in cognitive neuroscience (Hebbian learning, complementary learning
+systems, Bjork dual-strength forgetting), showing that the design
+principles emerging independently in the practitioner community were
+predicted by memory research decades earlier. We identify five convergent design principles
 emerging independently in the practitioner community, catalog critical
 gaps (principled forgetting, preference emergence, adaptive retrieval),
 and propose a research agenda for the next generation of agent memory
@@ -98,7 +93,7 @@ systems.
 \begin{IEEEkeywords}
 AI agents, memory systems, large language models, taxonomy, episodic
 memory, semantic memory, forgetting, Hebbian learning, reciprocal rank
-fusion, Yogac\=ara, alaya-vij\~n\=ana
+fusion, complementary learning systems
 \end{IEEEkeywords}
 
 % ---- Sections ----
@@ -109,7 +104,6 @@ fusion, Yogac\=ara, alaya-vij\~n\=ana
 \input{sections/05-systems}
 \input{sections/06-comparison}
 \input{sections/07-memory-md-problem}
-\input{sections/08-yogacara-framework}
 \input{sections/09-open-problems}
 \input{sections/10-limitations}
 \input{sections/11-conclusion}
