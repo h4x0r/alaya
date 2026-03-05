@@ -178,13 +178,13 @@ components with principled fusion and post-retrieval processing).
 \caption{Distribution of systems across the RAG taxonomy \cite{gao2023rag}. Classification is based on the retrieval pipeline as documented; systems that delegate retrieval entirely to an LLM (e.g., Letta's agent-driven tool calls) are classified as Naive with an agent-augmented qualifier.}
 \label{tab:rag-distribution}
 \small
-\begin{tabular}{@{}lrrp{4.8cm}@{}}
+\begin{tabular}{@{}lrrp{4.0cm}@{}}
 \toprule
-\textbf{RAG Category} & \textbf{Count} & \textbf{\%} & \textbf{Representative Systems} \\
+\textbf{RAG Type} & \textbf{Count} & \textbf{\%} & \textbf{Representative Systems} \\
 \midrule
-Naive RAG       & 42 & 47.7 & LangChain, LlamaIndex, Motorhead, Engram, Agency Swarm, MemoryMesh \\
-Advanced RAG    & 30 & 34.1 & Mem0, Generative Agents, Hindsight, Memvid, A-MEM, CrewAI \\
-Modular RAG     & 16 & 18.2 & Zep/Graphiti, SYNAPSE, HippoRAG, PageIndex, Vestige, QMD \\
+Naive RAG       & 42 & 47.7 & LangChain, LlamaIndex, Engram, Agency Swarm \\
+Advanced RAG    & 30 & 34.1 & Mem0, Generative Agents, Hindsight, A-MEM \\
+Modular RAG     & 16 & 18.2 & Zep/Graphiti, SYNAPSE, HippoRAG, QMD \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -256,9 +256,9 @@ McNemar's test confirms both differences are statistically significant
 \small
 \begin{tabular}{@{}lcccc@{}}
 \toprule
-& \multicolumn{2}{c}{\textbf{LoCoMo}} & \multicolumn{2}{c}{\textbf{LongMemEval\_S}} \\
+& \multicolumn{2}{c}{\textbf{LoCoMo}} & \multicolumn{2}{c}{\textbf{LongMemEval}} \\
 \cmidrule(lr){2-3} \cmidrule(lr){4-5}
-\textbf{System} & \textbf{Acc.\ (\%)} & \textbf{95\% CI} & \textbf{Acc.\ (\%)} & \textbf{95\% CI} \\
+\textbf{System} & \textbf{Acc.} & \textbf{95\% CI} & \textbf{Acc.} & \textbf{95\% CI} \\
 \midrule
 Full-context & 61.4 & [58.9, 63.8] & 46.2 & [41.9, 50.6] \\
 Na\"ive RAG  & 26.0 & [23.9, 28.2] & \textbf{54.6} & [50.2, 58.9] \\
@@ -274,7 +274,7 @@ $\Delta$ (FC $-$ RAG) & $+35.4$ & & $-8.4$ & \\
 \begin{axis}[
     ybar,
     bar width=14pt,
-    width=\columnwidth,
+    width=0.95\columnwidth,
     height=5.5cm,
     ylabel={Accuracy (\%)},
     symbolic x coords={LoCoMo, LongMemEval\_S},
@@ -295,10 +295,9 @@ $\Delta$ (FC $-$ RAG) & $+35.4$ & & $-8.4$ & \\
 \end{axis}
 \end{tikzpicture}
 \caption{The retrieval crossover: full-context injection dominates on
-LoCoMo's shorter conversations (${\sim}$16--26K tokens) but na\"ive RAG
-outperforms on LongMemEval's longer histories (${\sim}$115K tokens).
-McNemar's test on paired questions: LoCoMo $\chi^2 = 461.6$,
-$p < 10^{-5}$; LongMemEval $\chi^2 = 11.7$, $p < 0.001$.}
+LoCoMo (${\sim}$16--26K tokens) but na\"ive RAG outperforms on
+LongMemEval (${\sim}$115K tokens).  McNemar's test confirms both
+differences are significant ($p < 0.001$).}
 \label{fig:crossover}
 \end{figure}
 
@@ -311,9 +310,10 @@ drives the significant $\chi^2$ values.  $\Delta$~CI is the 95\%
 confidence interval for the difference in proportions.}
 \label{tab:mcnemar}
 \small
+\footnotesize
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
-& \multicolumn{2}{c}{\textbf{LoCoMo} ($n\!=\!1{,}529$\thinspace\textsuperscript{*})}
+& \multicolumn{2}{c}{\textbf{LoCoMo} ($n\!=\!1529$\textsuperscript{*})}
 & \multicolumn{2}{c}{\textbf{LongMemEval} ($n\!=\!500$)} \\
 \cmidrule(lr){2-3} \cmidrule(lr){4-5}
 & RAG $\checkmark$ & RAG $\times$ & RAG $\checkmark$ & RAG $\times$ \\
@@ -551,12 +551,12 @@ distribution.
 
 \begin{table}[!t]
 \centering
-\caption{Distribution of capability scores across 88 systems. The capability score counts the presence of eight discriminating features: episodic memory, semantic memory, graph structure, forgetting, consolidation, contradiction resolution, preference learning, and hybrid retrieval fusion.}
+\caption{Distribution of capability scores across 88 systems.  The score counts eight features: episodic memory, semantic memory, graph structure, forgetting, consolidation, contradiction resolution, preference learning, and hybrid retrieval.}
 \label{tab:capability-distribution}
 \small
-\begin{tabular}{@{}crrl@{}}
+\begin{tabular}{@{}crrp{3.8cm}@{}}
 \toprule
-\textbf{Score} & \textbf{Systems} & \textbf{\%} & \textbf{Examples} \\
+\textbf{Score} & \textbf{Sys.} & \textbf{\%} & \textbf{Examples} \\
 \midrule
 0--1 & 24 & 27.3 & Agency Swarm, Qwen-Agent, AutoGPT \\
 2--3 & 33 & 37.5 & LangChain, Engram, Memvid, HippoRAG \\
