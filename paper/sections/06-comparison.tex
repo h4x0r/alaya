@@ -452,9 +452,9 @@ Knowledge update & 78 & 66.7 & 64.1 & $+2.6$ \\
 
 \begin{figure*}[!t]
 \centering
-\begin{minipage}[b]{0.48\textwidth}
+\begin{minipage}[t]{0.48\textwidth}
 \centering
-\begin{tikzpicture}
+\begin{tikzpicture}[baseline=(current axis.north)]
 \begin{axis}[
     ybar,
     bar width=8pt,
@@ -464,14 +464,16 @@ Knowledge update & 78 & 66.7 & 64.1 & $+2.6$ \\
     symbolic x coords={Single-hop, Temporal, Multi-hop, Open-domain},
     xtick=data,
     x tick label style={rotate=25, anchor=east, font=\scriptsize},
-    ymin=0, ymax=100,
+    ymin=0, ymax=110,
     ytick={0,20,40,60,80,100},
-    legend style={at={(0.5,1.05)}, anchor=south, legend columns=2,
+    legend style={at={(0.5,1.08)}, anchor=south, legend columns=2,
                   font=\scriptsize},
     nodes near coords,
     nodes near coords style={font=\tiny},
     every node near coord/.append style={yshift=2pt},
+    title style={yshift=3pt},
     title={\small (a) LoCoMo by category},
+    clip=false,
 ]
 \addplot[fill=blue!50] coordinates
     {(Single-hop, 54.3) (Temporal, 19.3) (Multi-hop, 46.9) (Open-domain, 81.5)};
@@ -481,9 +483,9 @@ Knowledge update & 78 & 66.7 & 64.1 & $+2.6$ \\
 \end{axis}
 \end{tikzpicture}
 \end{minipage}\hfill
-\begin{minipage}[b]{0.48\textwidth}
+\begin{minipage}[t]{0.48\textwidth}
 \centering
-\begin{tikzpicture}
+\begin{tikzpicture}[baseline=(current axis.north)]
 \begin{axis}[
     ybar,
     bar width=6pt,
@@ -493,18 +495,17 @@ Knowledge update & 78 & 66.7 & 64.1 & $+2.6$ \\
     symbolic x coords={SS-User, SS-Asst, SS-Pref, Multi-S, Temporal, K-Upd},
     xtick=data,
     x tick label style={rotate=25, anchor=east, font=\scriptsize},
-    ymin=0, ymax=100,
+    ymin=0, ymax=110,
     ytick={0,20,40,60,80,100},
-    legend style={at={(0.5,1.05)}, anchor=south, legend columns=2,
+    legend style={at={(0.5,1.08)}, anchor=south, legend columns=2,
                   font=\scriptsize},
-    nodes near coords,
-    nodes near coords style={font=\tiny},
-    every node near coord/.append style={yshift=2pt},
+    title style={yshift=3pt},
     title={\small (b) LongMemEval by type},
+    clip=false,
 ]
-\addplot[fill=blue!50] coordinates
+\addplot[fill=blue!50, nodes near coords, nodes near coords style={font=\tiny, yshift=5pt}] coordinates
     {(SS-User, 60.0) (SS-Asst, 96.4) (SS-Pref, 10.0) (Multi-S, 30.8) (Temporal, 29.3) (K-Upd, 66.7)};
-\addplot[fill=red!50] coordinates
+\addplot[fill=red!50, nodes near coords, nodes near coords style={font=\tiny, yshift=-1pt}] coordinates
     {(SS-User, 88.6) (SS-Asst, 94.6) (SS-Pref, 33.3) (Multi-S, 44.4) (Temporal, 29.3) (K-Upd, 64.1)};
 \legend{Full-context, Na\"ive RAG}
 \end{axis}
