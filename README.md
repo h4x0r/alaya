@@ -438,7 +438,7 @@ competencies). Generator: Gemini-2.0-Flash-001; Judge: GPT-4o-mini. Full
 methodology and statistical analysis:
 [docs/benchmark-evaluation.md](docs/benchmark-evaluation.md).
 
-![Benchmark Results](docs/assets/benchmark-chart.svg)
+![Benchmark Results](https://raw.githubusercontent.com/SecurityRonin/alaya/main/docs/assets/benchmark-chart.svg)
 
 **Key findings:**
 - **Retrieval crossover:** Full-context dominates on shorter conversations
