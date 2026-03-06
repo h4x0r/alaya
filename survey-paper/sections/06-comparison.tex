@@ -711,20 +711,22 @@ The feature prevalence data in Table~\ref{tab:feature-prevalence} reveals a
 pronounced long-tail distribution: most capabilities are concentrated in a
 small number of systems, while the majority of the 95 surveyed systems
 implement only basic memory functionality. To quantify this, we define a
-\emph{capability score} as the count of features present from a set of eight
-discriminating capabilities: episodic memory, semantic memory, graph structure,
-forgetting, consolidation, contradiction resolution, preference learning, and
-hybrid retrieval fusion. Table~\ref{tab:capability-distribution} shows the
-distribution.
+\emph{feature breadth count} as the number of features present from a set of
+eight discriminating capabilities: episodic memory, semantic memory, graph
+structure, forgetting, consolidation, contradiction resolution, preference
+learning, and hybrid retrieval fusion.  This count measures architectural
+breadth, not quality or depth---a system excelling at graph-based retrieval
+may have a low count while outperforming broader systems on specific tasks.
+Table~\ref{tab:capability-distribution} shows the distribution.
 
 \begin{table}[!t]
 \centering
-\caption{Distribution of capability scores across 95 systems.  The score counts eight features: episodic memory, semantic memory, graph structure, forgetting, consolidation, contradiction resolution, preference learning, and hybrid retrieval.}
+\caption{Distribution of feature breadth counts across 95 systems.  The count tallies eight features: episodic memory, semantic memory, graph structure, forgetting, consolidation, contradiction resolution, preference learning, and hybrid retrieval.  This measures architectural breadth, not quality.}
 \label{tab:capability-distribution}
 \small
 \begin{tabular}{@{}crrp{3.8cm}@{}}
 \toprule
-\textbf{Score} & \textbf{Sys.} & \textbf{\%} & \textbf{Examples} \\
+\textbf{Count} & \textbf{Sys.} & \textbf{\%} & \textbf{Examples} \\
 \midrule
 0--1 & 24 & 27.3 & Agency Swarm, Qwen-Agent, AutoGPT \\
 2--3 & 33 & 37.5 & LangChain, Engram, Memvid, HippoRAG \\
@@ -735,9 +737,8 @@ distribution.
 \end{tabular}
 \end{table}
 
-The distribution is sharply skewed: 64.8\% of systems score 3 or below,
-meaning they implement at most three of the eight capabilities. Only 12.5\% of
-systems score 6 or above. This concentration has three implications for the
+The distribution is sharply skewed: 64.8\% of systems implement three or
+fewer of the eight capabilities. Only 12.5\% implement six or more. This concentration has three implications for the
 field.
 
 First, the median memory system is a \textbf{vector store with optional
