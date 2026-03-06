@@ -20,119 +20,123 @@ mab = [
     ("CR\n(Forgetting)", 50.0, 41.0),
 ]
 
-fig, ax = plt.subplots(figsize=(10, 5))
-
-# Colors
 fc_color = "#4A90D9"
 rag_color = "#E85D5D"
 bar_width = 0.35
 
-# -- Left cluster: LoCoMo + LongMemEval --
+fig, (ax_left, ax_right) = plt.subplots(1, 2, figsize=(11, 4.8),
+                                         gridspec_kw={"width_ratios": [1, 1.8],
+                                                      "wspace": 0.35})
+
+# ===== LEFT PANEL: Retrieval Crossover (X pattern) =====
 left_x = np.array([0, 1])
-fc_vals_left = [g[1] for g in groups]
-rag_vals_left = [g[2] for g in groups]
+fc_vals = [g[1] for g in groups]
+rag_vals = [g[2] for g in groups]
 labels_left = [g[0] for g in groups]
 
-bars1 = ax.bar(left_x - bar_width/2, fc_vals_left, bar_width,
-               color=fc_color, label="Full-context", zorder=3)
-bars2 = ax.bar(left_x + bar_width/2, rag_vals_left, bar_width,
-               color=rag_color, label="Naive RAG", zorder=3)
+bars1 = ax_left.bar(left_x - bar_width/2, fc_vals, bar_width,
+                    color=fc_color, label="Full-context", zorder=3, alpha=0.85)
+bars2 = ax_left.bar(left_x + bar_width/2, rag_vals, bar_width,
+                    color=rag_color, label="Naive RAG", zorder=3, alpha=0.85)
 
-# Value labels
+# Value labels on bars
 for bar in bars1:
-    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1.5,
-            f"{bar.get_height():.1f}", ha="center", va="bottom",
-            fontsize=8.5, fontweight="bold", color=fc_color)
+    ax_left.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1.5,
+                 f"{bar.get_height():.1f}", ha="center", va="bottom",
+                 fontsize=8.5, fontweight="bold", color=fc_color)
 for bar in bars2:
-    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1.5,
-            f"{bar.get_height():.1f}", ha="center", va="bottom",
-            fontsize=8.5, fontweight="bold", color=rag_color)
+    ax_left.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1.5,
+                 f"{bar.get_height():.1f}", ha="center", va="bottom",
+                 fontsize=8.5, fontweight="bold", color=rag_color)
 
-# Crossover arrow annotation
-ax.annotate("", xy=(1 + bar_width/2, 54.6), xytext=(0 - bar_width/2, 61.4),
-            arrowprops=dict(arrowstyle="->", color="#888", lw=1.2,
-                            connectionstyle="arc3,rad=0.15"))
-ax.text(0.5, 66, "crossover", ha="center", fontsize=7.5, color="#666",
-        fontstyle="italic")
+# The X: connect FC tops and RAG tops with lines
+fc_centers = left_x - bar_width/2 + bar_width/2  # center of FC bars = left_x
+rag_centers = left_x + bar_width/2 + bar_width/2 - bar_width/2  # = left_x
 
-# -- Right cluster: MAB competencies (offset by gap) --
-gap = 1.5  # visual gap between clusters
-right_x = np.array([0, 1, 2, 3]) + len(groups) + gap
-fc_vals_right = [g[1] for g in mab]
-rag_vals_right = [g[2] for g in mab]
+# Lines connecting the bar tops across benchmarks — these form the X
+ax_left.plot(left_x, fc_vals, color=fc_color, linewidth=2.5, zorder=4,
+             marker="o", markersize=6, markeredgecolor="white", markeredgewidth=1.5)
+ax_left.plot(left_x, rag_vals, color=rag_color, linewidth=2.5, zorder=4,
+             marker="o", markersize=6, markeredgecolor="white", markeredgewidth=1.5)
+
+# "X" label at intersection point
+# Lines: FC goes 61.4 -> 46.2, RAG goes 26.0 -> 54.6
+# Intersection: solve 61.4 + t*(46.2-61.4) = 26.0 + t*(54.6-26.0)
+# 61.4 - 15.2t = 26.0 + 28.6t  =>  35.4 = 43.8t  =>  t = 0.808
+t = 35.4 / 43.8
+cross_x = 0 + t * 1
+cross_y = 61.4 + t * (46.2 - 61.4)
+ax_left.annotate("crossover", xy=(cross_x, cross_y + 3), fontsize=7.5,
+                 ha="center", color="#555", fontstyle="italic",
+                 bbox=dict(boxstyle="round,pad=0.15", facecolor="white",
+                           edgecolor="#CCC", linewidth=0.6, alpha=0.9))
+
+ax_left.set_xticks(left_x)
+ax_left.set_xticklabels(labels_left, fontsize=9.5)
+ax_left.set_ylabel("Accuracy (%)", fontsize=10)
+ax_left.set_ylim(0, 78)
+ax_left.set_yticks([0, 20, 40, 60])
+ax_left.set_title("Retrieval Benchmarks", fontsize=10, fontweight="bold",
+                  color="#444", pad=10)
+ax_left.yaxis.grid(True, alpha=0.3, linestyle="--", zorder=0)
+ax_left.set_axisbelow(True)
+ax_left.spines["top"].set_visible(False)
+ax_left.spines["right"].set_visible(False)
+ax_left.legend(loc="upper center", framealpha=0.9, fontsize=8.5, ncol=2)
+
+# ===== RIGHT PANEL: MAB Lifecycle Competencies =====
+right_x = np.arange(len(mab))
+fc_vals_r = [g[1] for g in mab]
+rag_vals_r = [g[2] for g in mab]
 labels_right = [g[0] for g in mab]
 
-bars3 = ax.bar(right_x - bar_width/2, fc_vals_right, bar_width,
-               color=fc_color, zorder=3)
-bars4 = ax.bar(right_x + bar_width/2, rag_vals_right, bar_width,
-               color=rag_color, zorder=3)
+bars3 = ax_right.bar(right_x - bar_width/2, fc_vals_r, bar_width,
+                     color=fc_color, label="Full-context", zorder=3, alpha=0.85)
+bars4 = ax_right.bar(right_x + bar_width/2, rag_vals_r, bar_width,
+                     color=rag_color, label="Naive RAG", zorder=3, alpha=0.85)
 
 for bar in bars3:
-    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1.5,
-            f"{bar.get_height():.1f}", ha="center", va="bottom",
-            fontsize=8.5, fontweight="bold", color=fc_color)
+    ax_right.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1.5,
+                  f"{bar.get_height():.1f}", ha="center", va="bottom",
+                  fontsize=8.5, fontweight="bold", color=fc_color)
 for bar in bars4:
-    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1.5,
-            f"{bar.get_height():.1f}", ha="center", va="bottom",
-            fontsize=8.5, fontweight="bold", color=rag_color)
+    ax_right.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1.5,
+                  f"{bar.get_height():.1f}", ha="center", va="bottom",
+                  fontsize=8.5, fontweight="bold", color=rag_color)
 
-# TTL gap annotation
+# TTL gap annotation — draw bracket between the two bars
 ttl_x = right_x[1]
-ax.annotate("+42pp", xy=(ttl_x, 65), fontsize=8, ha="center",
-            fontweight="bold", color="#C0392B",
-            bbox=dict(boxstyle="round,pad=0.2", facecolor="#FADBD8",
-                      edgecolor="#C0392B", linewidth=0.8))
+ax_right.annotate("+42pp", xy=(ttl_x, 65), fontsize=8.5, ha="center",
+                  fontweight="bold", color="#C0392B",
+                  bbox=dict(boxstyle="round,pad=0.25", facecolor="#FADBD8",
+                            edgecolor="#C0392B", linewidth=0.8))
 
 # CR annotation
 cr_x = right_x[3]
-ax.annotate("~chance", xy=(cr_x, 53), fontsize=7, ha="center",
-            fontstyle="italic", color="#888")
+ax_right.annotate("~chance", xy=(cr_x, 53), fontsize=7.5, ha="center",
+                  fontstyle="italic", color="#888")
 
-# Axis setup
-all_x = np.concatenate([left_x, right_x])
-all_labels = labels_left + labels_right
-ax.set_xticks(all_x)
-ax.set_xticklabels(all_labels, fontsize=9)
-ax.set_ylabel("Accuracy (%)", fontsize=10)
-ax.set_ylim(0, 108)
-ax.set_yticks([0, 20, 40, 60, 80, 100])
+ax_right.set_xticks(right_x)
+ax_right.set_xticklabels(labels_right, fontsize=9)
+ax_right.set_ylim(0, 108)
+ax_right.set_yticks([0, 20, 40, 60, 80, 100])
+ax_right.set_title("MAB Lifecycle Competencies", fontsize=10,
+                   fontweight="bold", color="#444", pad=10)
+ax_right.yaxis.grid(True, alpha=0.3, linestyle="--", zorder=0)
+ax_right.set_axisbelow(True)
+ax_right.spines["top"].set_visible(False)
+ax_right.spines["right"].set_visible(False)
 
-# Grid
-ax.yaxis.grid(True, alpha=0.3, linestyle="--", zorder=0)
-ax.set_axisbelow(True)
-
-# Group labels — use data coordinates, placed just below the x-axis
-ax.text(0.5, -12, "Retrieval Benchmarks", ha="center", fontsize=9,
-        fontweight="bold", color="#555", clip_on=False)
-ax.text(np.mean(right_x), -12, "MAB Lifecycle Competencies", ha="center",
-        fontsize=9, fontweight="bold", color="#555", clip_on=False)
-
-# Divider line
-mid = (left_x[-1] + right_x[0]) / 2
-ax.axvline(x=mid, color="#CCC", linestyle=":", linewidth=1, zorder=1)
-
-# Legend
-ax.legend(loc="upper right", framealpha=0.9, fontsize=9)
-
-# Cleanup
-ax.spines["top"].set_visible(False)
-ax.spines["right"].set_visible(False)
-
-plt.subplots_adjust(bottom=0.18)
 out_path = os.path.join(os.path.dirname(__file__), "benchmark-chart.svg")
 fig.savefig(out_path, format="svg", bbox_inches="tight", transparent=True)
 print(f"Saved to {out_path}")
 
-# Sanity check
 fsize = os.path.getsize(out_path)
 print(f"File size: {fsize/1024:.1f} KB")
 
-# Check viewBox height isn't absurd
 with open(out_path) as f:
-    line4 = [next(f) for _ in range(4)][-1]
-    if "viewBox" in line4:
-        parts = line4.split("viewBox=")[1].split('"')[1].split()
-        h = float(parts[3])
-        print(f"SVG viewBox height: {h:.1f}pt")
-        if h > 600:
-            print("WARNING: viewBox height too large!")
+    for line in f:
+        if "viewBox" in line:
+            parts = line.split("viewBox=")[1].split('"')[1].split()
+            print(f"SVG viewBox: {parts[2]}x{parts[3]}pt")
+            break
