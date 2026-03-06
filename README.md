@@ -440,20 +440,11 @@ methodology and statistical analysis:
 
 ```mermaid
 xychart-beta
-    title "Retrieval Crossover: Full-Context vs Naive RAG"
-    x-axis ["LoCoMo", "LongMemEval"]
-    y-axis "Accuracy (%)" 0 --> 80
-    bar [61.4, 46.2]
-    bar [26.0, 54.6]
-```
-
-```mermaid
-xychart-beta
-    title "MAB: Lifecycle Competencies Expose Baseline Failures"
-    x-axis ["AR (Retrieval)", "TTL (Learning)", "LRU (Understanding)", "CR (Forgetting)"]
+    title "Full-Context (blue) vs Naive RAG (red) — Accuracy (%)"
+    x-axis ["LoCoMo", "LongMemEval", "MAB:AR", "MAB:TTL", "MAB:LRU", "MAB:CR"]
     y-axis "Accuracy (%)" 0 --> 100
-    bar [94.0, 86.0, 82.4, 50.0]
-    bar [90.4, 44.0, 67.6, 41.0]
+    bar [61.4, 46.2, 94.0, 86.0, 82.4, 50.0]
+    bar [26.0, 54.6, 90.4, 44.0, 67.6, 41.0]
 ```
 
 **Key findings:**
