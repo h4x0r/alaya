@@ -1,19 +1,19 @@
 # Benchmark Evaluation — Baseline Replication Study
 
-**Version:** v0.1.0
-**Date:** 2026-03-02
+**Version:** v0.2.0
+**Date:** 2026-03-06
 **Evaluator:** Alaya Benchmark Harness (`bench/`)
 
 ---
 
 ## 1. Objective
 
-Establish controlled baselines for two canonical memory benchmarks —
-LoCoMo and LongMemEval — to characterize the retrieval landscape that
-motivates Alaya's lifecycle operations. This study does **not** evaluate
-Alaya's retrieval pipeline; it replicates the two extreme baselines
-(full-context injection and naive vector RAG) under identical infrastructure
-to enable fair future comparison.
+Establish controlled baselines for three memory benchmarks —
+LoCoMo, LongMemEval, and MemoryAgentBench (MAB) — to characterize the
+retrieval landscape that motivates Alaya's lifecycle operations. This
+study does **not** evaluate Alaya's retrieval pipeline; it replicates the
+two extreme baselines (full-context injection and naive vector RAG) under
+identical infrastructure to enable fair future comparison.
 
 ## 2. Benchmarks
 
@@ -44,6 +44,23 @@ types, drawn from interaction histories averaging ~115K tokens.
 | multi-session | 133 | Information spanning multiple sessions |
 | temporal-reasoning | 133 | Requires reasoning about temporal ordering |
 | knowledge-update | 78 | Facts that were updated or corrected over time |
+
+### 2.3 MemoryAgentBench — MAB (Hu et al., ICLR 2026)
+
+Lifecycle competency benchmark with **734 questions** across four core
+competencies, evaluating capabilities beyond factual retrieval. Data from
+HuggingFace `ai-hyz/MemoryAgentBench`.
+
+| Competency | Abbrev. | Questions | Source Dataset | Description |
+|-----------|---------|-----------|----------------|-------------|
+| Accurate Retrieval | AR | 500 | EventQA | Factual recall from long documents |
+| Test-Time Learning | TTL | 100 | ICL-NLU | Learning task patterns from in-context examples |
+| Long-Range Understanding | LRU | 34 | DetectiveQA | Cross-document reasoning and inference |
+| Conflict Resolution | CR | 100 | FactConsolidation | Resolving contradictions between earlier and later information |
+
+MAB is the first benchmark to explicitly test forgetting quality (CR) and
+in-context learning (TTL) — capabilities invisible to LoCoMo and
+LongMemEval.
 
 ## 3. Methodology
 
@@ -184,6 +201,54 @@ xychart-beta
    Facts stated by the assistant are typically clear, structured
    responses that both approaches handle well.
 
+### 4.4 MemoryAgentBench (MAB) Per-Competency Results
+
+| Competency | N | FC Correct | FC Acc (%) | RAG Correct | RAG Acc (%) | Delta (pp) |
+|-----------|---|-----------|-----------|------------|------------|-----------|
+| AR (Accurate Retrieval) | 500 | 470 | 94.00 | 452 | 90.40 | +3.60 |
+| TTL (Test-Time Learning) | 100 | 86 | 86.00 | 44 | 44.00 | +42.00 |
+| LRU (Long-Range Underst.) | 34 | 28 | 82.35 | 23 | 67.65 | +14.71 |
+| CR (Conflict Resolution) | 100 | 50 | 50.00 | 41 | 41.00 | +9.00 |
+| **All** | **734** | **634** | **86.38** | **560** | **76.29** | **+10.08** |
+
+```mermaid
+xychart-beta
+    title "MAB Accuracy by Competency"
+    x-axis ["AR (Retrieval)", "TTL (Learning)", "LRU (Understanding)", "CR (Forgetting)"]
+    y-axis "Accuracy (%)" 0 --> 100
+    bar [94.0, 86.0, 82.4, 50.0]
+    bar [90.4, 44.0, 67.6, 41.0]
+```
+
+**Observations:**
+
+1. **Accurate retrieval is nearly solved.** Both baselines exceed 90% on
+   AR, confirming that factual lookup over moderate-length contexts is no
+   longer a discriminating test for memory systems.
+
+2. **Test-time learning shows the largest gap across all benchmarks
+   (+42.0 pp).** TTL requires the model to learn task patterns from
+   in-context examples. RAG's top-k retrieval selects semantically similar
+   chunks but destroys the sequential structure that makes in-context
+   learning possible. This echoes the LoCoMo temporal reasoning finding:
+   capabilities that depend on *structural* rather than *semantic*
+   properties of conversation history are systematically destroyed by
+   naive retrieval.
+
+3. **Conflict resolution is near chance for both (50.0% FC, 41.0% RAG).**
+   Neither full-context injection nor retrieval provides a mechanism for
+   resolving contradictions between earlier and later information. This
+   directly validates the gap identified in the survey: only 8% of
+   systems implement contradiction resolution. CR cannot emerge from
+   retrieval alone — it requires explicit lifecycle management that
+   identifies and resolves conflicting facts.
+
+4. **Long-range understanding benefits from full context but is partially
+   recoverable through retrieval.** The moderate gap (82.4% vs 67.6%)
+   indicates that cross-document reasoning benefits from seeing everything,
+   but relevant passages that share vocabulary with the question can still
+   be found by cosine similarity.
+
 ## 5. Statistical Analysis
 
 ### 5.1 McNemar's Test — LoCoMo
@@ -313,10 +378,25 @@ Neither baseline addresses what lifecycle management is designed for:
    recall for categorically related memories without requiring exact
    semantic match.
 
+5. **Contradiction resolution requires explicit lifecycle management.**
+   The MAB conflict resolution results (50% FC, 41% RAG) prove that
+   neither baseline can handle contradictions. This is Alaya's strongest
+   motivation: the `forget()` and `consolidate()` operations are designed
+   precisely to resolve conflicting memories by suppressing outdated
+   information and promoting consistent knowledge.
+
+6. **In-context learning requires structural preservation.** The TTL
+   results show that any retrieval approach that fragments sequential
+   context (as RAG does) will fail on tasks requiring the model to learn
+   from examples. Alaya's episodic store preserves temporal ordering,
+   and graph-based retrieval can follow association chains rather than
+   relying on semantic similarity alone.
+
 The hypothesis is that a system with lifecycle management should **exceed
-both baselines simultaneously on both benchmarks** — achieving
+both baselines simultaneously on all three benchmarks** — achieving
 full-context-level relational reasoning (via graph links and consolidation)
-with RAG-level noise filtering (via forgetting and ranked retrieval).
+with RAG-level noise filtering (via forgetting and ranked retrieval), while
+also handling contradiction resolution and preserving structural context.
 Validating this hypothesis is the immediate next step for Alaya's
 evaluation.
 
@@ -330,6 +410,7 @@ bench/
   runners/
     locomo.py         # LoCoMo benchmark runner
     longmemeval.py    # LongMemEval benchmark runner
+    mab.py            # MemoryAgentBench runner (HuggingFace dataset)
   adapters/
     full_context.py   # Full-context injection adapter
     naive_rag.py      # ChromaDB + MiniLM adapter
@@ -350,6 +431,12 @@ python bench/run.py --benchmark locomo --system full-context
 
 # Run LongMemEval naive RAG baseline
 python bench/run.py --benchmark longmemeval --system naive-rag
+
+# Run MAB full-context baseline (all 4 competencies)
+python bench/run.py --benchmark mab --system full-context
+
+# Run MAB for specific competencies only
+python bench/run.py --benchmark mab --system naive-rag -c AR,CR
 ```
 
 Results are saved as timestamped JSON files in `bench/results/` with
@@ -359,6 +446,7 @@ per-question scores enabling post-hoc statistical analysis.
 
 - Maharana, A., Lee, D., Tulyakov, S., Bansal, M., Barbieri, F., & Fang, Y. (2024). LoCoMo: Long-Context Conversation Memory Benchmark.
 - Wu, Y. et al. (2025). LongMemEval: Benchmarking Chat Assistants on Long-Term Interactive Memory.
+- Hu, Y., Zhang, Y., & Zhao, H. (2025). MemoryAgentBench: Benchmarking LLM-based Agent Memory Systems. *ICLR 2026*.
 - McNemar, Q. (1947). Note on the sampling error of the difference between correlated proportions or percentages. *Psychometrika*, 12(2), 153-157.
 - Wilson, E.B. (1927). Probable inference, the law of succession, and statistical inference. *JASA*, 22(158), 209-212.
 - Cormack, G.V., Clarke, C.L.A., & Buettcher, S. (2009). Reciprocal Rank Fusion outperforms Condorcet and individual Rank Learning Methods.

@@ -61,7 +61,7 @@ def _print_table(results: list[dict]) -> None:
 
 
 @click.command()
-@click.argument("benchmark", type=click.Choice(["locomo", "longmemeval"]))
+@click.argument("benchmark", type=click.Choice(["locomo", "longmemeval", "mab"]))
 @click.option("--systems", "-s", default="fullcontext,naive_rag",
               help="Comma-separated adapter names")
 @click.option("--limit", "-n", type=int, default=None,
@@ -69,12 +69,15 @@ def _print_table(results: list[dict]) -> None:
 @click.option("--dry-run", is_flag=True, help="Estimate cost without running")
 @click.option("--dataset", type=click.Path(exists=True), default=None,
               help="Override dataset path")
-def cli(benchmark: str, systems: str, limit: int | None, dry_run: bool, dataset: str | None):
+@click.option("--competencies", "-c", default=None,
+              help="MAB only: comma-separated competency keys (AR,TTL,LRU,CR)")
+def cli(benchmark: str, systems: str, limit: int | None, dry_run: bool, dataset: str | None, competencies: str | None):
     """Run memory system benchmarks.
 
     Examples:
         python run.py locomo --systems fullcontext,naive_rag --limit 10
         python run.py longmemeval --systems alaya,mem0 --dry-run
+        python run.py mab --systems fullcontext,naive_rag -c AR,CR
     """
     _register_adapters()
 
@@ -87,22 +90,29 @@ def cli(benchmark: str, systems: str, limit: int | None, dry_run: bool, dataset:
             sys.exit(1)
         adapters.append(ADAPTER_REGISTRY[name]())
 
-    # Resolve dataset path
-    if dataset:
-        dataset_path = Path(dataset)
-    elif benchmark == "locomo":
-        dataset_path = DATASETS_DIR / "locomo10.json"
-    else:
-        dataset_path = DATASETS_DIR / "longmemeval_s.json"
+    # Resolve dataset path (not needed for MAB which loads from HuggingFace)
+    dataset_path = None
+    if benchmark != "mab":
+        if dataset:
+            dataset_path = Path(dataset)
+        elif benchmark == "locomo":
+            dataset_path = DATASETS_DIR / "locomo10.json"
+        else:
+            dataset_path = DATASETS_DIR / "longmemeval_s.json"
 
-    if not dataset_path.exists():
-        click.echo(f"Dataset not found: {dataset_path}. Run: python datasets/download.py", err=True)
-        sys.exit(1)
+        if not dataset_path.exists():
+            click.echo(f"Dataset not found: {dataset_path}. Run: python datasets/download.py", err=True)
+            sys.exit(1)
 
     llm_call_fn = make_llm_call()
 
     def judge_fn(question: str, gold: str, prediction: str) -> float:
         return score_answer(question, gold, prediction)
+
+    # Parse MAB competency filter
+    comp_list = None
+    if competencies:
+        comp_list = [c.strip().upper() for c in competencies.split(",")]
 
     all_results = []
 
@@ -113,6 +123,10 @@ def cli(benchmark: str, systems: str, limit: int | None, dry_run: bool, dataset:
             from runners.locomo import run_locomo
             result = run_locomo(adapter, dataset_path, judge_fn, llm_call_fn,
                                 limit=limit, dry_run=dry_run)
+        elif benchmark == "mab":
+            from runners.mab import run_mab
+            result = run_mab(adapter, judge_fn, llm_call_fn,
+                             competencies=comp_list, limit=limit, dry_run=dry_run)
         else:
             from runners.longmemeval import run_longmemeval
             result = run_longmemeval(adapter, dataset_path, judge_fn, llm_call_fn,

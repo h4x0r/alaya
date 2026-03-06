@@ -66,8 +66,32 @@ def download_longmemeval_oracle() -> Path:
     return dest
 
 
+def download_mab() -> None:
+    """Verify MemoryAgentBench is accessible on HuggingFace.
+
+    MAB loads dynamically via ``datasets.load_dataset`` at runtime,
+    so no upfront download is needed.  This function validates that
+    the HuggingFace dataset is reachable.
+    """
+    try:
+        from datasets import load_dataset
+        ds = load_dataset(
+            "ai-hyz/MemoryAgentBench",
+            split="Accurate_Retrieval",
+            revision="main",
+            streaming=True,
+        )
+        # Just verify we can iterate
+        next(iter(ds))
+        print("MemoryAgentBench: verified on HuggingFace (ai-hyz/MemoryAgentBench)")
+    except Exception as e:
+        print(f"MemoryAgentBench: could not verify ({e}). "
+              "It will be downloaded automatically on first run.")
+
+
 if __name__ == "__main__":
     download_locomo()
     download_longmemeval_oracle()
     download_longmemeval_s()
+    download_mab()
     print("All datasets downloaded.")

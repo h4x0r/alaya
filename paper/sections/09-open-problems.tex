@@ -137,28 +137,37 @@ environments demand.
 
 \subsection{Evaluation Methodology}
 
-Current benchmarks---LoCoMo, LongMemEval, and DMR---evaluate memory
-systems primarily on retrieval accuracy: given a query about past
-interactions, does the system return the correct information? While
-valuable, these benchmarks treat memory as a static store and fail to
-evaluate the lifecycle processes that distinguish sophisticated memory
-architectures from simple retrieval systems. No existing benchmark
-measures forgetting quality (does principled forgetting improve
-retrieval precision on subsequent queries?), consolidation quality
-(are semantic nodes more useful for downstream tasks than the raw
-episodes they replace?), or preference modeling accuracy (does the
-system correctly infer and apply user preferences over extended
-interaction horizons?). Furthermore, existing benchmarks operate on
-fixed conversation histories, precluding evaluation of how memory
-evolves under continuous interaction. We argue that the field requires
-process-oriented benchmarks that evaluate memory as a dynamic system:
-measuring not only what is retrieved but how retrieval changes over
-time, whether forgetting improves signal-to-noise ratio, and whether
-consolidation produces representations that generalize better than
-raw storage. Such benchmarks would need to simulate multi-session
-interactions spanning weeks or months, with evaluation criteria that
-capture the trajectory of memory quality rather than point-in-time
-accuracy alone.
+The first generation of memory benchmarks---LoCoMo, LongMemEval, and
+DMR---evaluate memory systems primarily on retrieval accuracy: given a
+query about past interactions, does the system return the correct
+information?  While valuable, these benchmarks treat memory as a static
+store and fail to evaluate the lifecycle processes that distinguish
+sophisticated memory architectures from simple retrieval systems.
+
+Recent benchmarks have begun to close specific gaps.
+TReMu~\cite{ge2025tremu} targets temporal reasoning,
+LoCoMo-Plus~\cite{li2026locomoplus} evaluates cognitive memory under
+cue--trigger semantic disconnect, and
+MemoryAgentBench~\cite{hu2025mab} explicitly tests selective forgetting
+and conflict resolution alongside retrieval and learning
+(\S\ref{sec:benchmark-landscape}).  Yet even collectively, these
+benchmarks leave critical dimensions untested: no existing benchmark
+measures consolidation quality (are semantic nodes more useful for
+downstream tasks than the raw episodes they replace?), preference
+modeling accuracy (does the system correctly infer and apply user
+preferences over extended interaction horizons?), or the interaction
+between forgetting and retrieval precision over time.  Furthermore,
+all current benchmarks operate on fixed histories, precluding evaluation
+of how memory evolves under continuous interaction.
+
+We argue that the field requires process-oriented benchmarks that
+evaluate memory as a dynamic system: measuring not only what is
+retrieved but how retrieval changes over time, whether forgetting
+improves signal-to-noise ratio, and whether consolidation produces
+representations that generalize better than raw storage.  Such
+benchmarks would need to simulate multi-session interactions spanning
+weeks or months, with evaluation criteria that capture the trajectory
+of memory quality rather than point-in-time accuracy alone.
 
 \subsection{Ethical Considerations}
 

@@ -109,6 +109,65 @@ decomposition is finer-grained than most systems' two- or three-store
 architectures, but Hindsight lacks a graph overlay and does not
 implement principled forgetting beyond confidence evolution.
 
+\paragraph{ChatGPT Memory (OpenAI).}
+OpenAI's built-in memory for ChatGPT~\cite{openai2024memoryfaq}
+represents the largest-scale deployment of persistent agent memory,
+available to hundreds of millions of users since early 2024. The
+architecture implements a two-tier system: \emph{saved memories}
+(explicit facts the user asks ChatGPT to remember, persisted
+indefinitely until deleted) and \emph{reference chat history} (implicit
+recall from past conversations, where details change over time as the
+model decides what is most helpful to retain). Saved memories function
+as auto-managed custom instructions---the model can create, update,
+combine, or remove them without user intervention. When both tiers are
+active, relevant information from both is injected as context into new
+conversations.
+
+Notably, ChatGPT Plus and Pro users have access to automatic memory
+management that prioritizes memories based on recency and frequency of
+mention, deprioritizing less-relevant memories to the
+``background''---effectively a rudimentary forgetting mechanism based on
+single-curve decay. The system also enforces a capacity limit (a
+``memory full'' state), creating implicit pressure toward concise,
+high-value memories. However, there is no structured retrieval:
+memories are injected as context without ranking, no graph structure
+links related memories, and no consolidation promotes episodic
+interactions into semantic knowledge. Mem0 reports a 26\% accuracy
+improvement over OpenAI Memory on LoCoMo~\cite{choudhary2025mem0},
+consistent with our finding that full-context injection degrades as
+memory stores grow. In our taxonomy, ChatGPT Memory is a Naive RAG
+system with implicit preference storage and rudimentary forgetting, but
+no graph, no consolidation, and no hybrid retrieval.
+
+\paragraph{Claude Memory (Anthropic).}
+Anthropic provides two distinct memory mechanisms. The \emph{Claude API
+Memory Tool}~\cite{anthropic2026memorytool} enables developers to give
+Claude persistent memory across conversations through a file-based
+storage directory. Claude autonomously decides when to save, update, or
+delete memories, storing them as structured Markdown documents organized
+by topic. The tool exposes three operations---create, update, and
+delete---and memories are injected as context at the start of each
+conversation. This is architecturally simpler than Mem0 or Zep: no
+vector retrieval, no graph traversal, no scoring---every saved memory
+is included in full.
+
+At the product level, \emph{Claude Code}'s auto-memory
+system~\cite{gurgone2026claudememory} maintains a
+\texttt{MEMORY.md} file per project
+(\texttt{\~{}/.claude/projects/<path>/memory/MEMORY.md}), injected into
+the system prompt at session start. A hard 200-line limit constrains
+the file; beyond this, only the first 200 lines are loaded with a
+warning nudging users toward a hub-and-spoke pattern where
+\texttt{MEMORY.md} serves as an index and details live in separate
+topic files (this topic-file loading is behind a feature flag and not
+yet active by default). Custom agents have a three-scope memory
+system: project-level (git-committable, team-shared), local
+(machine-only), and user-level (global across projects). Both the API
+tool and Claude Code's system are canonical examples of the
+MEMORY.md problem analyzed in \S\ref{sec:memorymd}: full-context
+injection with no retrieval, no lifecycle management, and a linear
+scaling cost in memory size.
+
 %% ===============================================================
 \subsection{Standalone Memory Servers}
 \label{sec:standalone}

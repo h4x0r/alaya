@@ -431,8 +431,11 @@ lateral inhibition).
 
 ## Benchmark Evaluation
 
-We evaluate two canonical baselines on LoCoMo (1,540 questions) and
-LongMemEval (500 questions). Full methodology and statistical analysis:
+We evaluate two canonical baselines — full-context injection and naive
+vector RAG — on three benchmarks: LoCoMo (1,540 questions), LongMemEval
+(500 questions), and MemoryAgentBench (734 questions across 4
+competencies). Generator: Gemini-2.0-Flash-001; Judge: GPT-4o-mini. Full
+methodology and statistical analysis:
 [docs/benchmark-evaluation.md](docs/benchmark-evaluation.md).
 
 ```mermaid
@@ -444,11 +447,27 @@ xychart-beta
     bar [26.0, 54.6]
 ```
 
-**Key finding:** Full-context dominates on shorter conversations (LoCoMo,
-16-26K tokens) but naive RAG wins on longer histories (LongMemEval, ~115K
-tokens). Both differences are statistically significant (McNemar's test,
-p < 0.001). Neither baseline addresses what lifecycle management is designed
-for — the regime between these extremes.
+```mermaid
+xychart-beta
+    title "MAB: Lifecycle Competencies Expose Baseline Failures"
+    x-axis ["AR (Retrieval)", "TTL (Learning)", "LRU (Understanding)", "CR (Forgetting)"]
+    y-axis "Accuracy (%)" 0 --> 100
+    bar [94.0, 86.0, 82.4, 50.0]
+    bar [90.4, 44.0, 67.6, 41.0]
+```
+
+**Key findings:**
+- **Retrieval crossover:** Full-context dominates on shorter conversations
+  (LoCoMo, 16–26K tokens) but naive RAG wins on longer histories
+  (LongMemEval, ~115K tokens). Both differences statistically significant
+  (McNemar's test, p < 0.001).
+- **Test-time learning gap:** The largest gap across all benchmarks — 86%
+  vs 44% (+42pp) — RAG destroys the sequential structure needed for
+  in-context learning.
+- **Conflict resolution is unsolved:** Both baselines score ~50% on
+  contradiction handling, confirming that neither full-context nor
+  retrieval provides a mechanism for resolving conflicting information.
+- Neither baseline addresses what lifecycle management is designed for.
 
 ## Development
 
