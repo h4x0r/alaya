@@ -239,7 +239,7 @@ fn discover_categories(conn: &Connection) -> Result<u32> {
         };
 
         // Store category
-        let cat_id = categories::store_category(conn, &label, prototype_id, Some(&centroid))?;
+        let cat_id = categories::store_category(conn, &label, prototype_id, Some(&centroid), None)?;
 
         // Assign each member and create MemberOf link
         for &idx in members {
@@ -523,7 +523,7 @@ mod tests {
         ).unwrap();
 
         // Create a category with 0 members
-        categories::store_category(&conn, "empty-cat", NodeId(1), None).unwrap();
+        categories::store_category(&conn, "empty-cat", NodeId(1), None, None).unwrap();
         assert_eq!(categories::count_categories(&conn).unwrap(), 1);
 
         let report = transform(&conn).unwrap();
@@ -584,8 +584,8 @@ mod tests {
         }
 
         let c1 =
-            categories::store_category(&conn, "cat-a", NodeId(1), Some(&[1.0, 0.0, 0.0])).unwrap();
-        let c2 = categories::store_category(&conn, "cat-b", NodeId(2), Some(&[0.99, 0.01, 0.0]))
+            categories::store_category(&conn, "cat-a", NodeId(1), Some(&[1.0, 0.0, 0.0]), None).unwrap();
+        let c2 = categories::store_category(&conn, "cat-b", NodeId(2), Some(&[0.99, 0.01, 0.0]), None)
             .unwrap();
 
         // Assign one member to each so they're non-empty and don't get GC'd

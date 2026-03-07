@@ -272,7 +272,7 @@ mod tests {
         // Create a category with a centroid (needs a real prototype node)
         let proto = insert_prototype(&conn);
         let cat_id =
-            categories::store_category(&conn, "rust-topics", proto, Some(&[1.0, 0.0, 0.0]))
+            categories::store_category(&conn, "rust-topics", proto, Some(&[1.0, 0.0, 0.0]), None)
                 .unwrap();
 
         // Store 5 episodes (enough for consolidation threshold of 3)
@@ -354,7 +354,7 @@ mod tests {
 
         // Category centroid is far from node embedding
         let proto = insert_prototype(&conn);
-        categories::store_category(&conn, "cooking", proto, Some(&[0.0, 0.0, 1.0])).unwrap();
+        categories::store_category(&conn, "cooking", proto, Some(&[0.0, 0.0, 1.0]), None).unwrap();
 
         let mut ep_ids = vec![];
         for i in 0..5 {

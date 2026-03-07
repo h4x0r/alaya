@@ -15,13 +15,14 @@ pub fn store_category(
     label: &str,
     prototype_node: NodeId,
     centroid: Option<&[f32]>,
+    parent_id: Option<CategoryId>,
 ) -> Result<CategoryId> {
     let ts = now();
     let blob = centroid.map(serialize_embedding);
     conn.execute(
-        "INSERT INTO categories (label, prototype_node_id, centroid_embedding, created_at, last_updated)
-         VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![label, prototype_node.0, blob, ts, ts],
+        "INSERT INTO categories (label, prototype_node_id, centroid_embedding, created_at, last_updated, parent_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        params![label, prototype_node.0, blob, ts, ts, parent_id.map(|p| p.0)],
     )?;
     Ok(CategoryId(conn.last_insert_rowid()))
 }
@@ -29,11 +30,12 @@ pub fn store_category(
 pub fn get_category(conn: &Connection, id: CategoryId) -> Result<Category> {
     conn.query_row(
         "SELECT id, label, prototype_node_id, member_count, centroid_embedding,
-                created_at, last_updated, stability
+                created_at, last_updated, stability, parent_id
          FROM categories WHERE id = ?1",
         [id.0],
         |row| {
             let blob: Option<Vec<u8>> = row.get(4)?;
+            let pid: Option<i64> = row.get(8)?;
             Ok(Category {
                 id: CategoryId(row.get(0)?),
                 label: row.get(1)?,
@@ -43,7 +45,7 @@ pub fn get_category(conn: &Connection, id: CategoryId) -> Result<Category> {
                 created_at: row.get(5)?,
                 last_updated: row.get(6)?,
                 stability: row.get(7)?,
-                parent_id: None,
+                parent_id: pid.map(CategoryId),
             })
         },
     )
@@ -57,14 +59,14 @@ pub fn list_categories(conn: &Connection, min_stability: Option<f32>) -> Result<
     let (sql, has_filter) = match min_stability {
         Some(_) => (
             "SELECT id, label, prototype_node_id, member_count, centroid_embedding,
-                    created_at, last_updated, stability
+                    created_at, last_updated, stability, parent_id
              FROM categories WHERE stability >= ?1
              ORDER BY stability DESC, member_count DESC",
             true,
         ),
         None => (
             "SELECT id, label, prototype_node_id, member_count, centroid_embedding,
-                    created_at, last_updated, stability
+                    created_at, last_updated, stability, parent_id
              FROM categories
              ORDER BY stability DESC, member_count DESC",
             false,
@@ -75,6 +77,7 @@ pub fn list_categories(conn: &Connection, min_stability: Option<f32>) -> Result<
 
     let row_mapper = |row: &rusqlite::Row<'_>| {
         let blob: Option<Vec<u8>> = row.get(4)?;
+        let pid: Option<i64> = row.get(8)?;
         Ok(Category {
             id: CategoryId(row.get(0)?),
             label: row.get(1)?,
@@ -84,7 +87,7 @@ pub fn list_categories(conn: &Connection, min_stability: Option<f32>) -> Result<
             created_at: row.get(5)?,
             last_updated: row.get(6)?,
             stability: row.get(7)?,
-            parent_id: None,
+            parent_id: pid.map(CategoryId),
         })
     };
 
@@ -99,6 +102,31 @@ pub fn list_categories(conn: &Connection, min_stability: Option<f32>) -> Result<
     };
 
     Ok(rows)
+}
+
+pub fn get_subcategories(conn: &Connection, parent_id: CategoryId) -> Result<Vec<Category>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, label, prototype_node_id, member_count, centroid_embedding,
+                created_at, last_updated, stability, parent_id
+         FROM categories WHERE parent_id = ?1
+         ORDER BY member_count DESC",
+    )?;
+    let rows = stmt.query_map([parent_id.0], |row| {
+        let blob: Option<Vec<u8>> = row.get(4)?;
+        let pid: Option<i64> = row.get(8)?;
+        Ok(Category {
+            id: CategoryId(row.get(0)?),
+            label: row.get(1)?,
+            prototype_node: NodeId(row.get(2)?),
+            member_count: row.get(3)?,
+            centroid_embedding: blob.map(|b| deserialize_embedding(&b)),
+            created_at: row.get(5)?,
+            last_updated: row.get(6)?,
+            stability: row.get(7)?,
+            parent_id: pid.map(CategoryId),
+        })
+    })?;
+    Ok(rows.filter_map(|r| r.ok()).collect())
 }
 
 pub fn assign_node_to_category(
@@ -200,7 +228,7 @@ mod tests {
         let proto = insert_semantic_node(&conn);
 
         let centroid = vec![1.0f32, 2.0, 3.0];
-        let id = store_category(&conn, "animals", proto, Some(&centroid)).unwrap();
+        let id = store_category(&conn, "animals", proto, Some(&centroid), None).unwrap();
 
         let cat = get_category(&conn, id).unwrap();
         assert_eq!(cat.label, "animals");
@@ -218,8 +246,8 @@ mod tests {
         let p1 = insert_semantic_node(&conn);
         let p2 = insert_semantic_node(&conn);
 
-        let _id1 = store_category(&conn, "alpha", p1, None).unwrap();
-        let id2 = store_category(&conn, "beta", p2, None).unwrap();
+        let _id1 = store_category(&conn, "alpha", p1, None, None).unwrap();
+        let id2 = store_category(&conn, "beta", p2, None, None).unwrap();
 
         // Bump stability of id2 so it sorts first
         increment_stability(&conn, id2).unwrap();
@@ -244,7 +272,7 @@ mod tests {
         let conn = open_memory_db().unwrap();
         let proto = insert_semantic_node(&conn);
         let node = insert_semantic_node(&conn);
-        let cat_id = store_category(&conn, "tools", proto, None).unwrap();
+        let cat_id = store_category(&conn, "tools", proto, None, None).unwrap();
 
         assign_node_to_category(&conn, node, cat_id).unwrap();
 
@@ -257,7 +285,7 @@ mod tests {
         let conn = open_memory_db().unwrap();
         let proto = insert_semantic_node(&conn);
         let node = insert_semantic_node(&conn);
-        let cat_id = store_category(&conn, "colors", proto, None).unwrap();
+        let cat_id = store_category(&conn, "colors", proto, None, None).unwrap();
 
         assign_node_to_category(&conn, node, cat_id).unwrap();
 
@@ -279,7 +307,7 @@ mod tests {
     fn test_update_centroid() {
         let conn = open_memory_db().unwrap();
         let proto = insert_semantic_node(&conn);
-        let id = store_category(&conn, "shapes", proto, None).unwrap();
+        let id = store_category(&conn, "shapes", proto, None, None).unwrap();
 
         // Initially no centroid
         let cat = get_category(&conn, id).unwrap();
@@ -300,7 +328,7 @@ mod tests {
     fn test_increment_stability() {
         let conn = open_memory_db().unwrap();
         let proto = insert_semantic_node(&conn);
-        let id = store_category(&conn, "stable", proto, None).unwrap();
+        let id = store_category(&conn, "stable", proto, None, None).unwrap();
 
         assert_eq!(get_category(&conn, id).unwrap().stability, 0.0);
 
@@ -321,7 +349,7 @@ mod tests {
         let conn = open_memory_db().unwrap();
         let proto = insert_semantic_node(&conn);
         let node = insert_semantic_node(&conn);
-        let cat_id = store_category(&conn, "temp", proto, None).unwrap();
+        let cat_id = store_category(&conn, "temp", proto, None, None).unwrap();
         assign_node_to_category(&conn, node, cat_id).unwrap();
 
         delete_category(&conn, cat_id).unwrap();
@@ -345,7 +373,7 @@ mod tests {
 
         // Assign one
         let proto = insert_semantic_node(&conn);
-        let cat_id = store_category(&conn, "misc", proto, None).unwrap();
+        let cat_id = store_category(&conn, "misc", proto, None, None).unwrap();
         assign_node_to_category(&conn, n1, cat_id).unwrap();
 
         let uncategorized = get_uncategorized_node_ids(&conn).unwrap();
@@ -361,9 +389,47 @@ mod tests {
 
         let p1 = insert_semantic_node(&conn);
         let p2 = insert_semantic_node(&conn);
-        store_category(&conn, "cat1", p1, None).unwrap();
-        store_category(&conn, "cat2", p2, None).unwrap();
+        store_category(&conn, "cat1", p1, None, None).unwrap();
+        store_category(&conn, "cat2", p2, None, None).unwrap();
 
         assert_eq!(count_categories(&conn).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_store_category_with_parent() {
+        let conn = open_memory_db().unwrap();
+        let p1 = insert_semantic_node(&conn);
+        let p2 = insert_semantic_node(&conn);
+
+        let parent = store_category(&conn, "tech", p1, None, None).unwrap();
+        let child = store_category(&conn, "rust", p2, None, Some(parent)).unwrap();
+
+        let cat = get_category(&conn, child).unwrap();
+        assert_eq!(cat.parent_id, Some(parent));
+    }
+
+    #[test]
+    fn test_get_subcategories() {
+        let conn = open_memory_db().unwrap();
+        let p1 = insert_semantic_node(&conn);
+        let p2 = insert_semantic_node(&conn);
+        let p3 = insert_semantic_node(&conn);
+
+        let parent = store_category(&conn, "tech", p1, None, None).unwrap();
+        let _child1 = store_category(&conn, "rust", p2, None, Some(parent)).unwrap();
+        let _child2 = store_category(&conn, "python", p3, None, Some(parent)).unwrap();
+
+        let subs = get_subcategories(&conn, parent).unwrap();
+        assert_eq!(subs.len(), 2);
+    }
+
+    #[test]
+    fn test_get_subcategories_empty() {
+        let conn = open_memory_db().unwrap();
+        let p1 = insert_semantic_node(&conn);
+        let leaf = store_category(&conn, "leaf", p1, None, None).unwrap();
+
+        let subs = get_subcategories(&conn, leaf).unwrap();
+        assert!(subs.is_empty());
     }
 }

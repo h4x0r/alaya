@@ -1190,7 +1190,7 @@ mod tests {
         let proto_id = NodeId(store.conn.last_insert_rowid());
 
         // Create a category directly
-        store::categories::store_category(&store.conn, "test-cat", proto_id, None).unwrap();
+        store::categories::store_category(&store.conn, "test-cat", proto_id, None, None).unwrap();
         assert_eq!(store.categories(None).unwrap().len(), 1);
 
         store.purge(PurgeFilter::All).unwrap();
