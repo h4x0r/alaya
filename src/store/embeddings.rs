@@ -139,6 +139,47 @@ pub fn count_embeddings(conn: &Connection) -> Result<u64> {
 mod tests {
     use super::*;
     use crate::schema::open_memory_db;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn prop_cosine_similarity_bounded(
+            a in proptest::collection::vec(-10.0f32..10.0f32, 3..8),
+            b in proptest::collection::vec(-10.0f32..10.0f32, 3..8),
+        ) {
+            if a.len() == b.len() {
+                let sim = cosine_similarity(&a, &b);
+                prop_assert!(sim >= -1.0 - f32::EPSILON, "cosine sim {} below -1.0", sim);
+                prop_assert!(sim <= 1.0 + f32::EPSILON, "cosine sim {} above 1.0", sim);
+            }
+        }
+
+        #[test]
+        fn prop_cosine_self_similarity_is_one(
+            a in proptest::collection::vec(0.1f32..10.0f32, 3..8),
+        ) {
+            let sim = cosine_similarity(&a, &a);
+            prop_assert!((sim - 1.0).abs() < 0.001, "self-similarity should be ~1.0, got {}", sim);
+        }
+
+        #[test]
+        fn prop_cosine_different_lengths_returns_zero(
+            a in proptest::collection::vec(-10.0f32..10.0f32, 3..5),
+            b in proptest::collection::vec(-10.0f32..10.0f32, 6..8),
+        ) {
+            let sim = cosine_similarity(&a, &b);
+            prop_assert!((sim - 0.0).abs() < f32::EPSILON, "different lengths should return 0.0");
+        }
+
+        #[test]
+        fn prop_cosine_zero_vector_returns_zero(
+            a in proptest::collection::vec(-10.0f32..10.0f32, 3..8),
+        ) {
+            let zeros = vec![0.0f32; a.len()];
+            let sim = cosine_similarity(&a, &zeros);
+            prop_assert!((sim - 0.0).abs() < f32::EPSILON, "zero vector should return 0.0");
+        }
+    }
 
     #[test]
     fn test_serialize_roundtrip() {

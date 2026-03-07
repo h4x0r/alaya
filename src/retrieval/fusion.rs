@@ -25,6 +25,42 @@ pub fn rrf_merge(result_sets: &[Vec<(NodeRef, f64)>], k: u32) -> Vec<(NodeRef, f
 mod tests {
     use super::*;
     use crate::types::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn prop_rrf_scores_are_positive(
+            scores in proptest::collection::vec(0.0f64..1.0f64, 1..10),
+        ) {
+            let items: Vec<(NodeRef, f64)> = scores.into_iter()
+                .enumerate()
+                .map(|(i, s)| (NodeRef::Episode(EpisodeId(i as i64 + 1)), s))
+                .collect();
+            let result = rrf_merge(&[items], 60);
+            for (_, score) in &result {
+                prop_assert!(*score > 0.0, "RRF score should be positive, got {}", score);
+            }
+        }
+
+        #[test]
+        fn prop_rrf_preserves_ordering(
+            n in 2usize..10,
+        ) {
+            // Items ranked 1..n should produce monotonically decreasing RRF scores
+            let items: Vec<(NodeRef, f64)> = (0..n)
+                .map(|i| (NodeRef::Episode(EpisodeId(i as i64 + 1)), 1.0 - (i as f64 / n as f64)))
+                .collect();
+            let result = rrf_merge(&[items], 60);
+            for i in 1..result.len() {
+                prop_assert!(
+                    result[i - 1].1 >= result[i].1,
+                    "RRF should preserve ordering: {} < {}",
+                    result[i - 1].1,
+                    result[i].1
+                );
+            }
+        }
+    }
 
     #[test]
     fn test_rrf_single_set() {

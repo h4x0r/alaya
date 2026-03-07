@@ -139,6 +139,43 @@ fn map_link(row: &rusqlite::Row<'_>) -> rusqlite::Result<Link> {
 mod tests {
     use super::*;
     use crate::schema::open_memory_db;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn prop_co_retrieval_weight_bounded(iterations in 1u32..50) {
+            let conn = open_memory_db().unwrap();
+            let a = NodeRef::Episode(EpisodeId(1));
+            let b = NodeRef::Episode(EpisodeId(2));
+            create_link(&conn, a, b, LinkType::CoRetrieval, 0.3).unwrap();
+
+            for _ in 0..iterations {
+                on_co_retrieval(&conn, a, b).unwrap();
+            }
+
+            let links = get_links_from(&conn, a).unwrap();
+            prop_assert!(!links.is_empty());
+            let w = links[0].forward_weight;
+            prop_assert!(w >= 0.0, "weight below 0: {}", w);
+            prop_assert!(w <= 1.0, "weight above 1: {}", w);
+        }
+
+        #[test]
+        fn prop_decay_links_weight_bounded(factor in 0.0f32..1.0f32) {
+            let conn = open_memory_db().unwrap();
+            let a = NodeRef::Episode(EpisodeId(1));
+            let b = NodeRef::Episode(EpisodeId(2));
+            create_link(&conn, a, b, LinkType::Temporal, 0.5).unwrap();
+
+            decay_links(&conn, factor).unwrap();
+            let links = get_links_from(&conn, a).unwrap();
+            if !links.is_empty() {
+                let w = links[0].forward_weight;
+                prop_assert!(w >= 0.0, "weight below 0: {}", w);
+                prop_assert!(w <= 1.0, "weight above 1: {}", w);
+            }
+        }
+    }
 
     #[test]
     fn test_create_and_query_links() {

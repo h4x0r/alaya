@@ -68,6 +68,35 @@ fn jaccard(a: &[String], b: &[String]) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn prop_recency_decay_bounded(
+            age_secs in 0i64..=86400 * 365 * 10,  // up to 10 years
+        ) {
+            let now = 1_000_000_000i64;
+            let timestamp = now - age_secs;
+            let decay = recency_decay(timestamp, now);
+            prop_assert!(decay >= 0.0, "recency decay {} below 0.0", decay);
+            prop_assert!(decay <= 1.0, "recency decay {} above 1.0", decay);
+        }
+
+        #[test]
+        fn prop_recency_decay_monotonic(
+            age1 in 0i64..86400 * 365,
+            age2 in 0i64..86400 * 365,
+        ) {
+            let now = 1_000_000_000i64;
+            let decay1 = recency_decay(now - age1, now);
+            let decay2 = recency_decay(now - age2, now);
+            if age1 <= age2 {
+                prop_assert!(decay1 >= decay2,
+                    "younger memory (age={}) should have >= decay than older (age={}): {} < {}",
+                    age1, age2, decay1, decay2);
+            }
+        }
+    }
 
     #[test]
     fn test_recency_recent() {
