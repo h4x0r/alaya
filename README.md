@@ -93,17 +93,20 @@ Add to your agent's MCP config (e.g. `claude_desktop_config.json`):
 }
 ```
 
-That's it. Your agent now has 7 memory tools:
+That's it. Your agent now has 10 memory tools:
 
 | Tool | What it does |
 |------|-------------|
 | `remember` | Store a conversation message |
-| `recall` | Search memory with hybrid retrieval |
+| `recall` | Search memory with hybrid retrieval (+ category boost) |
 | `status` | Get memory statistics |
 | `preferences` | Get learned user preferences |
-| `knowledge` | Get distilled semantic facts |
+| `knowledge` | Get distilled semantic facts (+ category filter) |
 | `maintain` | Run memory cleanup (dedup, decay) |
 | `purge` | Delete memories by session, age, or all |
+| `categories` | List emergent categories with stability filter |
+| `neighbors` | Graph neighbors via spreading activation |
+| `node_category` | Which category a node belongs to |
 
 Data is stored in `~/.alaya/memory.db` (override with `ALAYA_DB` env var).
 Single SQLite file, no external services.
@@ -175,7 +178,7 @@ store.forget()?;
 
 ### Run the Demo
 
-The demo walks through all ten capabilities with annotated output and no
+The demo walks through all eleven capabilities with annotated output and no
 external dependencies:
 
 ```bash
@@ -426,16 +429,16 @@ lateral inhibition).
 - **Emergent flat categories** via dual-signal clustering (embedding + graph)
 - **Tombstone tracking:** cascade deletion records audit trail for every purged node
 - **Zero-dependency Rust library** with SQLite WAL + FTS5
-- **201 tests** (174 unit + 9 integration + 18 doc) + property-based tests via proptest
+- **231 tests** (222 core + 9 MCP) + property-based tests via proptest
 - **MCP server** (optional `mcp` feature flag)
 
-## v0.2.0 Roadmap
+## v0.2.0 (current)
 
-- Category hierarchy (*vikalpa*), prototype theory (*nama-rupa*), category seeds (*bija*)
-- Conceptual transformation (*asraya-paravrtti*) — categories evolve through use
-- Cross-domain bridging via spreading activation through category nodes
-- MCP tool extensions (categories, knowledge filter, recall boost)
-- EmbeddingProvider trait
+- **Category hierarchy** with `parent_id` — categories form tree structures via `store_category` and `categories()`
+- **Category evolution** — categories with 8+ members and coherence < 0.6 automatically split into sub-categories during `transform()`
+- **Cross-domain bridging** via `MemberOf` links — spreading activation traverses category boundaries
+- **EmbeddingProvider trait** — `embed()` + `embed_batch()` with default implementation; wired into `store_episode()` and `query()` for automatic embedding generation
+- **5 MCP tool extensions** — `categories`, `neighbors`, `node_category` + `knowledge` category filter + `recall` category boost
 
 ## Benchmark Evaluation
 

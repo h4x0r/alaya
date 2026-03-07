@@ -172,6 +172,10 @@ preference, but mentioning it across fifty sessions does.
 \paragraph{Emergent ontology}
 Categories emerge from clustering patterns in the semantic store, providing
 a lightweight taxonomic structure without manual curation or supervision.
+In v0.2.0, categories support hierarchical nesting via \texttt{parent\_id}:
+when a category accumulates 8 or more members with coherence below~0.6,
+\texttt{transform()} automatically splits it into sub-categories,
+producing a tree that refines as knowledge grows.
 Detailed in \Cref{sec:ontology}.
 
 \paragraph{Purge (\texttt{purge()})}

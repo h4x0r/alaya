@@ -12,10 +12,11 @@ eight tables: \texttt{episodes} (with FTS5 virtual table for full-text
 search), \texttt{semantic\_nodes}, \texttt{impressions},
 \texttt{preferences}, \texttt{embeddings}, \texttt{links} (the Hebbian
 graph), \texttt{node\_strengths} (Bjork dual-strength values),
-\texttt{categories} (emergent ontology), and \texttt{tombstones} (cascade
-deletion audit trail, recording node type, ID, deletion timestamp, and
-reason for each purged node). Schema versioning uses SQLite's
-\texttt{PRAGMA user\_version} (currently version~3) with forward migration
+\texttt{categories} (emergent ontology, with optional \texttt{parent\_id}
+for hierarchical nesting), and \texttt{tombstones} (cascade deletion audit
+trail, recording node type, ID, deletion timestamp, and reason for each
+purged node). Schema versioning uses SQLite's
+\texttt{PRAGMA user\_version} (currently version~4) with forward migration
 on database open.
 
 The choice of SQLite over a dedicated vector database or graph database is
@@ -29,8 +30,13 @@ via the \texttt{ConsolidationProvider} trait.
 
 \subsection{Provider Interface}
 
-\alaya{} does not embed any LLM or embedding model. Instead, it defines a
-\texttt{ConsolidationProvider} trait that applications implement:
+\alaya{} does not embed any LLM or embedding model. Instead, it defines two
+provider traits. The \texttt{ConsolidationProvider} trait handles knowledge
+extraction, while the \texttt{EmbeddingProvider} trait (v0.2.0) provides
+automatic embedding generation via \texttt{embed()} and
+\texttt{embed\_batch()} methods, wired into \texttt{store\_episode()} and
+\texttt{query()} so that applications need not manage vectors manually.
+The \texttt{ConsolidationProvider} interface:
 
 \begin{lstlisting}[caption={Provider trait (simplified)}]
 pub trait ConsolidationProvider {
@@ -78,15 +84,16 @@ when enabled. The default library crate has four dependencies:
 
 \subsection{Testing}
 
-\alaya{} follows test-driven development with 201 tests across four
-categories: 161 deterministic unit tests covering individual store
-operations, graph algorithms, lifecycle functions, and category CRUD;
-13 property-based tests using \texttt{proptest} that verify mathematical
-invariants (cosine similarity bounds, RRF score positivity and ordering,
-Bjork strength clamping, Hebbian weight bounds, recency decay monotonicity);
-9 integration tests covering full lifecycle pipelines (episode ingestion
-through category emergence, including LTD decay, RIF suppression, and
-tombstone tracking); and 18 documentation tests ensuring code examples in
-the API documentation compile and produce correct results. Continuous
+\alaya{} follows test-driven development with 231 tests (222 core + 9 MCP)
+across four categories: deterministic unit tests covering individual store
+operations, graph algorithms, lifecycle functions, category CRUD, hierarchy,
+and splitting; property-based tests using \texttt{proptest} that verify
+mathematical invariants (cosine similarity bounds, RRF score positivity and
+ordering, Bjork strength clamping, Hebbian weight bounds, recency decay
+monotonicity); integration tests covering full lifecycle pipelines (episode
+ingestion through category emergence, including LTD decay, RIF suppression,
+category splitting, and tombstone tracking); and documentation tests
+ensuring code examples in the API documentation compile and produce correct
+results. Continuous
 integration runs the full test suite across three operating systems (Linux,
 macOS, Windows) and two Rust toolchains (stable and MSRV 1.75).
