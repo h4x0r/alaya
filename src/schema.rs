@@ -35,7 +35,7 @@ fn init_db(conn: &Connection) -> Result<()> {
     conn.execute_batch("PRAGMA journal_mode = WAL;")?;
     conn.execute_batch("PRAGMA foreign_keys = ON;")?;
     conn.execute_batch("PRAGMA synchronous = NORMAL;")?;
-    conn.execute_batch("PRAGMA user_version = 3;")?;
+    conn.execute_batch("PRAGMA user_version = 4;")?;
 
     conn.execute_batch(
         "
@@ -191,7 +191,8 @@ fn init_db(conn: &Connection) -> Result<()> {
             centroid_embedding  BLOB,
             created_at          INTEGER NOT NULL,
             last_updated        INTEGER NOT NULL,
-            stability           REAL    NOT NULL DEFAULT 0.0
+            stability           REAL    NOT NULL DEFAULT 0.0,
+            parent_id           INTEGER REFERENCES categories(id)
         );
 
         CREATE INDEX IF NOT EXISTS idx_categories_stability
@@ -322,16 +323,16 @@ mod tests {
         let version: i64 = conn
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .unwrap();
-        assert_eq!(version, 3, "schema version should be 3 after tombstone migration");
+        assert_eq!(version, 4, "schema version should be 4 after parent_id migration");
     }
 
     #[test]
-    fn test_schema_version_is_3() {
+    fn test_schema_version_is_4_compat() {
         let conn = open_memory_db().unwrap();
         let version: i64 = conn
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .unwrap();
-        assert_eq!(version, 3, "schema version should be 3 after tombstone migration");
+        assert_eq!(version, 4, "schema version should be 4 after parent_id migration");
     }
 
     #[test]
@@ -426,6 +427,37 @@ mod tests {
 
         semantic::delete_node(&conn, id).unwrap();
         assert_eq!(count_tombstones(&conn).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_schema_version_is_4() {
+        let conn = open_memory_db().unwrap();
+        let version: i64 = conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, 4);
+    }
+
+    #[test]
+    fn test_categories_has_parent_id() {
+        let conn = open_memory_db().unwrap();
+        // Insert a semantic node so the FK on prototype_node_id is satisfied
+        conn.execute(
+            "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated)
+             VALUES ('proto', 'fact', 0.5, 1000, 1000)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO categories (label, prototype_node_id, created_at, last_updated, parent_id)
+             VALUES ('test', 1, 1000, 1000, NULL)",
+            [],
+        )
+        .unwrap();
+        let parent_id: Option<i64> = conn
+            .query_row("SELECT parent_id FROM categories WHERE id = 1", [], |row| row.get(0))
+            .unwrap();
+        assert!(parent_id.is_none());
     }
 
     #[test]

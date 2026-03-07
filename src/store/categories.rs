@@ -43,6 +43,7 @@ pub fn get_category(conn: &Connection, id: CategoryId) -> Result<Category> {
                 created_at: row.get(5)?,
                 last_updated: row.get(6)?,
                 stability: row.get(7)?,
+                parent_id: None,
             })
         },
     )
@@ -83,6 +84,7 @@ pub fn list_categories(conn: &Connection, min_stability: Option<f32>) -> Result<
             created_at: row.get(5)?,
             last_updated: row.get(6)?,
             stability: row.get(7)?,
+            parent_id: None,
         })
     };
 

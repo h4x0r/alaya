@@ -293,6 +293,7 @@ pub struct Category {
     pub created_at: i64,
     pub last_updated: i64,
     pub stability: f32,
+    pub parent_id: Option<CategoryId>,
 }
 
 // ---------------------------------------------------------------------------
