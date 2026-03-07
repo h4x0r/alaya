@@ -245,13 +245,6 @@ fn discover_categories(conn: &Connection) -> Result<u32> {
         for &idx in members {
             let member_id = nodes_with_emb[idx].0;
             categories::assign_node_to_category(conn, member_id, cat_id)?;
-            links::create_link(
-                conn,
-                NodeRef::Semantic(member_id),
-                NodeRef::Category(cat_id),
-                LinkType::MemberOf,
-                0.8,
-            )?;
         }
 
         categories_created += 1;
@@ -567,7 +560,7 @@ mod tests {
                 |r| r.get(0),
             )
             .unwrap();
-        assert_eq!(link_count, 3, "should have 3 MemberOf links");
+        assert_eq!(link_count, 6, "should have 6 bidirectional MemberOf links (2 per node)");
     }
 
     #[test]

@@ -135,6 +135,32 @@ pub fn assign_node_to_category(
     category_id: CategoryId,
 ) -> Result<()> {
     let ts = now();
+
+    // Check if node was previously in a different category
+    let old_cat: Option<i64> = conn
+        .query_row(
+            "SELECT category_id FROM semantic_nodes WHERE id = ?1",
+            [node_id.0],
+            |row| row.get(0),
+        )
+        .unwrap_or(None);
+
+    if let Some(old_id) = old_cat {
+        if old_id != category_id.0 {
+            // Remove old MemberOf links for this node
+            conn.execute(
+                "DELETE FROM links WHERE link_type = 'member_of'
+                 AND ((source_type = 'semantic' AND source_id = ?1 AND target_type = 'category' AND target_id = ?2)
+                   OR (source_type = 'category' AND source_id = ?2 AND target_type = 'semantic' AND target_id = ?1))",
+                params![node_id.0, old_id],
+            )?;
+            conn.execute(
+                "UPDATE categories SET member_count = MAX(0, member_count - 1) WHERE id = ?1",
+                [old_id],
+            )?;
+        }
+    }
+
     conn.execute(
         "UPDATE semantic_nodes SET category_id = ?1 WHERE id = ?2",
         params![category_id.0, node_id.0],
@@ -143,6 +169,24 @@ pub fn assign_node_to_category(
         "UPDATE categories SET member_count = member_count + 1, last_updated = ?2 WHERE id = ?1",
         params![category_id.0, ts],
     )?;
+
+    // Create bidirectional MemberOf links
+    let bridging_weight = 0.3f32;
+    crate::graph::links::create_link(
+        conn,
+        NodeRef::Semantic(node_id),
+        NodeRef::Category(category_id),
+        LinkType::MemberOf,
+        bridging_weight,
+    )?;
+    crate::graph::links::create_link(
+        conn,
+        NodeRef::Category(category_id),
+        NodeRef::Semantic(node_id),
+        LinkType::MemberOf,
+        bridging_weight,
+    )?;
+
     Ok(())
 }
 
@@ -188,6 +232,12 @@ pub fn increment_stability(conn: &Connection, category_id: CategoryId) -> Result
 pub fn delete_category(conn: &Connection, category_id: CategoryId) -> Result<()> {
     conn.execute(
         "UPDATE semantic_nodes SET category_id = NULL WHERE category_id = ?1",
+        [category_id.0],
+    )?;
+    // Delete all MemberOf links involving this category
+    conn.execute(
+        "DELETE FROM links WHERE link_type = 'member_of'
+         AND ((source_type = 'category' AND source_id = ?1) OR (target_type = 'category' AND target_id = ?1))",
         [category_id.0],
     )?;
     conn.execute("DELETE FROM categories WHERE id = ?1", [category_id.0])?;
@@ -431,5 +481,80 @@ mod tests {
 
         let subs = get_subcategories(&conn, leaf).unwrap();
         assert!(subs.is_empty());
+    }
+
+    #[test]
+    fn test_assign_creates_member_of_links() {
+        let conn = open_memory_db().unwrap();
+        let proto = insert_semantic_node(&conn);
+        let node = insert_semantic_node(&conn);
+        let cat_id = store_category(&conn, "tech", proto, None, None).unwrap();
+
+        assign_node_to_category(&conn, node, cat_id).unwrap();
+
+        // Check bidirectional MemberOf links exist
+        let fwd = crate::graph::links::get_links_from(&conn, NodeRef::Semantic(node)).unwrap();
+        let has_fwd = fwd.iter().any(|l| l.target == NodeRef::Category(cat_id)
+            && l.link_type == LinkType::MemberOf);
+        assert!(has_fwd, "should have Semantic→Category MemberOf link");
+
+        let rev = crate::graph::links::get_links_from(&conn, NodeRef::Category(cat_id)).unwrap();
+        let has_rev = rev.iter().any(|l| l.target == NodeRef::Semantic(node)
+            && l.link_type == LinkType::MemberOf);
+        assert!(has_rev, "should have Category→Semantic MemberOf link");
+    }
+
+    #[test]
+    fn test_member_of_link_weight_is_0_3() {
+        let conn = open_memory_db().unwrap();
+        let proto = insert_semantic_node(&conn);
+        let node = insert_semantic_node(&conn);
+        let cat_id = store_category(&conn, "tech", proto, None, None).unwrap();
+
+        assign_node_to_category(&conn, node, cat_id).unwrap();
+
+        let fwd = crate::graph::links::get_links_from(&conn, NodeRef::Semantic(node)).unwrap();
+        let member_of = fwd.iter().find(|l| l.link_type == LinkType::MemberOf).unwrap();
+        assert!((member_of.forward_weight - 0.3).abs() < 0.01, "MemberOf weight should be 0.3");
+    }
+
+    #[test]
+    fn test_delete_category_removes_member_of_links() {
+        let conn = open_memory_db().unwrap();
+        let proto = insert_semantic_node(&conn);
+        let node = insert_semantic_node(&conn);
+        let cat_id = store_category(&conn, "temp", proto, None, None).unwrap();
+
+        assign_node_to_category(&conn, node, cat_id).unwrap();
+        delete_category(&conn, cat_id).unwrap();
+
+        let fwd = crate::graph::links::get_links_from(&conn, NodeRef::Semantic(node)).unwrap();
+        let has_member_of = fwd.iter().any(|l| l.link_type == LinkType::MemberOf);
+        assert!(!has_member_of, "MemberOf links should be deleted after category deletion");
+    }
+
+    #[test]
+    fn test_reassign_removes_old_member_of_links() {
+        let conn = open_memory_db().unwrap();
+        let p1 = insert_semantic_node(&conn);
+        let p2 = insert_semantic_node(&conn);
+        let node = insert_semantic_node(&conn);
+        let cat1 = store_category(&conn, "cat1", p1, None, None).unwrap();
+        let cat2 = store_category(&conn, "cat2", p2, None, None).unwrap();
+
+        assign_node_to_category(&conn, node, cat1).unwrap();
+
+        // Reassign to cat2 — should remove old MemberOf links to cat1
+        assign_node_to_category(&conn, node, cat2).unwrap();
+
+        let fwd = crate::graph::links::get_links_from(&conn, NodeRef::Semantic(node)).unwrap();
+        let member_of_targets: Vec<NodeRef> = fwd.iter()
+            .filter(|l| l.link_type == LinkType::MemberOf)
+            .map(|l| l.target)
+            .collect();
+
+        // Should only have link to cat2, not cat1
+        assert!(member_of_targets.contains(&NodeRef::Category(cat2)), "should have link to new category");
+        assert!(!member_of_targets.contains(&NodeRef::Category(cat1)), "should NOT have link to old category");
     }
 }
