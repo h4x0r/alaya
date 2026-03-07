@@ -57,6 +57,7 @@ pub use types::*;
 /// ```
 pub struct AlayaStore {
     conn: Connection,
+    embedding_provider: Option<Box<dyn EmbeddingProvider>>,
 }
 
 impl AlayaStore {
@@ -70,7 +71,7 @@ impl AlayaStore {
     /// ```
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let conn = schema::open_db(path.as_ref().to_str().unwrap_or("alaya.db"))?;
-        Ok(Self { conn })
+        Ok(Self { conn, embedding_provider: None })
     }
 
     /// Open an ephemeral in-memory database (useful for tests).
@@ -82,7 +83,15 @@ impl AlayaStore {
     /// ```
     pub fn open_in_memory() -> Result<Self> {
         let conn = schema::open_memory_db()?;
-        Ok(Self { conn })
+        Ok(Self { conn, embedding_provider: None })
+    }
+
+    /// Set an embedding provider for automatic embedding generation.
+    ///
+    /// When set, `store_episode` and `query` will auto-generate embeddings
+    /// if none are provided explicitly.
+    pub fn set_embedding_provider(&mut self, provider: Box<dyn EmbeddingProvider>) {
+        self.embedding_provider = Some(provider);
     }
 
     // -----------------------------------------------------------------------
@@ -127,7 +136,13 @@ impl AlayaStore {
 
         let id = store::episodic::store_episode(&tx, episode)?;
 
-        if let Some(ref emb) = episode.embedding {
+        // Use explicit embedding if provided, otherwise auto-embed via provider
+        let effective_embedding = match &episode.embedding {
+            Some(emb) => Some(emb.clone()),
+            None => self.embedding_provider.as_ref()
+                .and_then(|p| p.embed(&episode.content).ok()),
+        };
+        if let Some(ref emb) = effective_embedding {
             store::embeddings::store_embedding(&tx, "episode", id.0, emb, "")?;
         }
 
@@ -187,6 +202,14 @@ impl AlayaStore {
             ));
         }
 
+        // Auto-embed query text if no embedding provided and provider is set
+        if q.embedding.is_none() {
+            if let Some(ref provider) = self.embedding_provider {
+                let mut q2 = q.clone();
+                q2.embedding = provider.embed(&q.text).ok();
+                return retrieval::pipeline::execute_query(&self.conn, &q2);
+            }
+        }
         retrieval::pipeline::execute_query(&self.conn, q)
     }
 
@@ -1241,6 +1264,85 @@ mod tests {
         // Without category filter, should find the node
         let all = store.knowledge(None).unwrap();
         assert!(!all.is_empty(), "without filter should find nodes");
+    }
+
+    // -----------------------------------------------------------------------
+    // Task 7 (embedding wiring): EmbeddingProvider integration tests
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_set_embedding_provider_auto_embeds_episode() {
+        let mut store = AlayaStore::open_in_memory().unwrap();
+        store.set_embedding_provider(Box::new(MockEmbeddingProvider::new(4)));
+
+        store.store_episode(&NewEpisode {
+            content: "auto-embedded episode".into(),
+            role: Role::User,
+            session_id: "s1".into(),
+            timestamp: 1000,
+            context: EpisodeContext::default(),
+            embedding: None, // should auto-embed
+        }).unwrap();
+
+        let status = store.status().unwrap();
+        assert_eq!(status.embedding_count, 1, "should have auto-embedded the episode");
+    }
+
+    #[test]
+    fn test_explicit_embedding_overrides_provider() {
+        let mut store = AlayaStore::open_in_memory().unwrap();
+        store.set_embedding_provider(Box::new(MockEmbeddingProvider::new(4)));
+
+        let explicit_emb = vec![1.0, 2.0, 3.0, 4.0];
+        store.store_episode(&NewEpisode {
+            content: "explicit embedding".into(),
+            role: Role::User,
+            session_id: "s1".into(),
+            timestamp: 1000,
+            context: EpisodeContext::default(),
+            embedding: Some(explicit_emb.clone()),
+        }).unwrap();
+
+        // Should use explicit embedding, not provider's
+        let status = store.status().unwrap();
+        assert_eq!(status.embedding_count, 1);
+    }
+
+    #[test]
+    fn test_no_provider_preserves_v1_behavior() {
+        let store = AlayaStore::open_in_memory().unwrap();
+
+        store.store_episode(&NewEpisode {
+            content: "no provider episode".into(),
+            role: Role::User,
+            session_id: "s1".into(),
+            timestamp: 1000,
+            context: EpisodeContext::default(),
+            embedding: None,
+        }).unwrap();
+
+        let status = store.status().unwrap();
+        assert_eq!(status.embedding_count, 0, "no auto-embed without provider");
+    }
+
+    #[test]
+    fn test_embedding_provider_auto_embeds_query() {
+        let mut store = AlayaStore::open_in_memory().unwrap();
+        store.set_embedding_provider(Box::new(MockEmbeddingProvider::new(4)));
+
+        // Store an episode with auto-embed
+        store.store_episode(&NewEpisode {
+            content: "Rust programming language".into(),
+            role: Role::User,
+            session_id: "s1".into(),
+            timestamp: 1000,
+            context: EpisodeContext::default(),
+            embedding: None,
+        }).unwrap();
+
+        // Query without embedding — provider should auto-embed the query text
+        let results = store.query(&Query::simple("Rust programming")).unwrap();
+        assert!(!results.is_empty(), "query with auto-embedded text should return results");
     }
 
     #[test]
