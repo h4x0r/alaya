@@ -36,7 +36,7 @@ impl ConsolidationProvider for NoOpProvider {
 ///
 /// Implement this to auto-embed episodes, semantic nodes, and queries.
 /// When no provider is set, embeddings must be provided manually.
-pub trait EmbeddingProvider {
+pub trait EmbeddingProvider: Send + Sync {
     /// Generate an embedding vector for the given text.
     fn embed(&self, text: &str) -> Result<Vec<f32>>;
 
