@@ -7,6 +7,7 @@
 [![Rust](https://img.shields.io/badge/Rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
 [![GitHub stars](https://img.shields.io/github/stars/SecurityRonin/alaya?style=social)](https://github.com/SecurityRonin/alaya)
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=github)](https://github.com/sponsors/h4x0r)
 
 A memory engine for AI agents that remembers, forgets, and learns.
 
@@ -475,14 +476,6 @@ cargo build --release --features mcp
 # Run the demo (no external dependencies)
 cargo run --example demo
 ```
-
-## Support
-
-If Alaya is useful to you, consider supporting development:
-
-[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=github)](https://github.com/sponsors/h4x0r)
-
-Star the repo if you find it useful — it helps others discover Alaya.
 
 ## License
 
