@@ -35,7 +35,7 @@ fn init_db(conn: &Connection) -> Result<()> {
     conn.execute_batch("PRAGMA journal_mode = WAL;")?;
     conn.execute_batch("PRAGMA foreign_keys = ON;")?;
     conn.execute_batch("PRAGMA synchronous = NORMAL;")?;
-    conn.execute_batch("PRAGMA user_version = 2;")?;
+    conn.execute_batch("PRAGMA user_version = 3;")?;
 
     conn.execute_batch(
         "
@@ -196,6 +196,18 @@ fn init_db(conn: &Connection) -> Result<()> {
 
         CREATE INDEX IF NOT EXISTS idx_categories_stability
             ON categories(stability);
+
+        -- =================================================================
+        -- Tombstones: track deleted nodes for cascade auditing
+        -- =================================================================
+        CREATE TABLE IF NOT EXISTS tombstones (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            node_type   TEXT NOT NULL,
+            node_id     INTEGER NOT NULL,
+            deleted_at  INTEGER NOT NULL,
+            reason      TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_tombstones_type_id ON tombstones(node_type, node_id);
         ",
     )?;
 
@@ -211,6 +223,30 @@ fn init_db(conn: &Connection) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Record a tombstone for a deleted node.
+pub(crate) fn record_tombstone(
+    conn: &Connection,
+    node_type: &str,
+    node_id: i64,
+    reason: Option<&str>,
+) -> Result<()> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64;
+    conn.execute(
+        "INSERT INTO tombstones (node_type, node_id, deleted_at, reason) VALUES (?1, ?2, ?3, ?4)",
+        rusqlite::params![node_type, node_id, now, reason],
+    )?;
+    Ok(())
+}
+
+/// Count tombstones (for testing/diagnostics).
+pub(crate) fn count_tombstones(conn: &Connection) -> Result<u64> {
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM tombstones", [], |row| row.get(0))?;
+    Ok(count as u64)
 }
 
 #[cfg(test)]
@@ -286,7 +322,25 @@ mod tests {
         let version: i64 = conn
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .unwrap();
-        assert_eq!(version, 2, "schema version should be 2 after init");
+        assert_eq!(version, 3, "schema version should be 3 after tombstone migration");
+    }
+
+    #[test]
+    fn test_schema_version_is_3() {
+        let conn = open_memory_db().unwrap();
+        let version: i64 = conn
+            .pragma_query_value(None, "user_version", |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, 3, "schema version should be 3 after tombstone migration");
+    }
+
+    #[test]
+    fn test_tombstones_table_exists() {
+        let conn = open_memory_db().unwrap();
+        let exists: bool = conn
+            .prepare("SELECT 1 FROM tombstones LIMIT 0")
+            .is_ok();
+        assert!(exists, "tombstones table should exist");
     }
 
     #[test]
@@ -327,6 +381,51 @@ mod tests {
              VALUES ('test', 'fact', 0.5, 1000, 1000, NULL)",
             [],
         ).unwrap();
+    }
+
+    #[test]
+    fn test_tombstone_recorded_on_episode_delete() {
+        use crate::store::episodic;
+        use crate::types::*;
+
+        let conn = open_memory_db().unwrap();
+        let id = episodic::store_episode(
+            &conn,
+            &NewEpisode {
+                content: "temp data".to_string(),
+                role: Role::User,
+                session_id: "s1".to_string(),
+                timestamp: 1000,
+                context: EpisodeContext::default(),
+                embedding: None,
+            },
+        )
+        .unwrap();
+
+        episodic::delete_episodes(&conn, &[id]).unwrap();
+        assert_eq!(count_tombstones(&conn).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_tombstone_recorded_on_semantic_delete() {
+        use crate::store::semantic;
+        use crate::types::*;
+
+        let conn = open_memory_db().unwrap();
+        let id = semantic::store_semantic_node(
+            &conn,
+            &NewSemanticNode {
+                content: "temp fact".to_string(),
+                node_type: SemanticType::Fact,
+                confidence: 0.5,
+                source_episodes: vec![],
+                embedding: None,
+            },
+        )
+        .unwrap();
+
+        semantic::delete_node(&conn, id).unwrap();
+        assert_eq!(count_tombstones(&conn).unwrap(), 1);
     }
 
     #[test]

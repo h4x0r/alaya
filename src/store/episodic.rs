@@ -129,6 +129,12 @@ pub fn delete_episodes(conn: &Connection, ids: &[EpisodeId]) -> Result<u64> {
         .map(|id| &id.0 as &dyn rusqlite::types::ToSql)
         .collect();
     let count = stmt.execute(params.as_slice())?;
+
+    // Record tombstones for deleted episodes
+    for id in ids {
+        crate::schema::record_tombstone(conn, "episode", id.0, Some("purge"))?;
+    }
+
     Ok(count as u64)
 }
 

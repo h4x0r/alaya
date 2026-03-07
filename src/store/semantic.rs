@@ -109,6 +109,8 @@ pub fn delete_node(conn: &Connection, id: NodeId) -> Result<()> {
         "DELETE FROM node_strengths WHERE node_type = 'semantic' AND node_id = ?1",
         [id.0],
     )?;
+    // Record tombstone for audit trail
+    crate::schema::record_tombstone(conn, "semantic", id.0, Some("dedup/transform"))?;
     Ok(())
 }
 
