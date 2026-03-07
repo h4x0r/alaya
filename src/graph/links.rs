@@ -90,7 +90,6 @@ pub fn on_co_retrieval(conn: &Connection, source: NodeRef, target: NodeRef) -> R
     Ok(())
 }
 
-#[allow(dead_code)]
 pub fn decay_links(conn: &Connection, decay_factor: f32) -> Result<u64> {
     let changed = conn.execute(
         "UPDATE links SET

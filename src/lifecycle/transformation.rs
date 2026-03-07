@@ -40,6 +40,7 @@ const CATEGORY_DISSOLVE_THRESHOLD: f32 = 0.1;
 pub fn transform(conn: &Connection) -> Result<TransformationReport> {
     let mut report = TransformationReport {
         duplicates_merged: dedup_semantic_nodes(conn)?,
+        links_decayed: links::decay_links(conn, 0.95)? as u32,
         links_pruned: links::prune_weak_links(conn, LINK_PRUNE_THRESHOLD)? as u32,
         ..Default::default()
     };
@@ -402,6 +403,32 @@ mod tests {
         let report = transform(&conn).unwrap();
         assert_eq!(report.duplicates_merged, 0);
         assert_eq!(report.links_pruned, 0);
+    }
+
+    #[test]
+    fn test_transform_decays_link_weights() {
+        let conn = open_memory_db().unwrap();
+        // Create a link with moderate weight
+        links::create_link(
+            &conn,
+            NodeRef::Episode(EpisodeId(1)),
+            NodeRef::Episode(EpisodeId(2)),
+            LinkType::CoRetrieval,
+            0.5,
+        )
+        .unwrap();
+
+        let report = transform(&conn).unwrap();
+        assert!(report.links_decayed > 0, "should report decayed links");
+
+        // Verify the weight actually decreased
+        let remaining = links::get_links_from(&conn, NodeRef::Episode(EpisodeId(1))).unwrap();
+        assert_eq!(remaining.len(), 1);
+        assert!(
+            remaining[0].forward_weight < 0.5,
+            "weight should have decreased from 0.5, got {}",
+            remaining[0].forward_weight
+        );
     }
 
     #[test]

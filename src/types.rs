@@ -403,6 +403,7 @@ pub struct PerfumingReport {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TransformationReport {
     pub duplicates_merged: u32,
+    pub links_decayed: u32,
     pub links_pruned: u32,
     pub preferences_decayed: u32,
     pub impressions_pruned: u32,
