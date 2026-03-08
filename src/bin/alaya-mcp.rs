@@ -8,11 +8,12 @@
 //!   ALAYA_DB — path to SQLite database (default: ~/.alaya/memory.db)
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Mutex;
 
 use alaya::{
-    AlayaStore, CategoryId, EpisodeContext, EpisodeId, KnowledgeFilter, NewEpisode, NodeId, NodeRef,
-    PreferenceId, PurgeFilter, Query, Role, SemanticType,
+    AlayaStore, CategoryId, EpisodeContext, EpisodeId, KnowledgeFilter, NewEpisode, NewSemanticNode,
+    NodeId, NodeRef, PreferenceId, PurgeFilter, Query, Role, SemanticType,
 };
 use rmcp::{model::ServerInfo, schemars, tool, ServerHandler, ServiceExt};
 use tokio::io::{stdin, stdout};
@@ -121,19 +122,109 @@ pub struct NodeCategoryParams {
     pub node_id: i64,
 }
 
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct LearnFactEntry {
+    /// The knowledge content
+    #[schemars(description = "The knowledge content")]
+    pub content: String,
+
+    /// Type: fact, relationship, event, or concept
+    #[schemars(description = "Type: fact, relationship, event, or concept")]
+    pub node_type: String,
+
+    /// Confidence level 0.0-1.0 (default: 0.8)
+    #[schemars(description = "Confidence level 0.0-1.0 (default: 0.8)")]
+    pub confidence: Option<f32>,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct LearnParams {
+    /// Facts to learn
+    #[schemars(description = "Facts to learn: [{content, node_type, confidence?}]")]
+    pub facts: Vec<LearnFactEntry>,
+
+    /// Session ID to link facts to (episodes in this session become source episodes)
+    #[schemars(description = "Session ID to link facts to (episodes in this session become source episodes)")]
+    pub session_id: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct ImportClaudeMemParams {
+    /// Path to claude-mem.db (default: ~/.claude-mem/claude-mem.db)
+    #[schemars(description = "Path to claude-mem.db (default: ~/.claude-mem/claude-mem.db)")]
+    pub path: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct ImportClaudeCodeParams {
+    /// Path to Claude Code JSONL conversation file
+    #[schemars(description = "Path to Claude Code JSONL conversation file (e.g., ~/.claude/projects/-Users-me-myproject/{uuid}.jsonl)")]
+    pub path: String,
+}
+
+// ---------------------------------------------------------------------------
+// Claude Code JSONL parsing helpers
+// ---------------------------------------------------------------------------
+
+#[derive(serde::Deserialize)]
+struct ClaudeCodeEntry {
+    #[serde(rename = "type")]
+    entry_type: Option<String>,
+    message: Option<ClaudeCodeMessage>,
+    timestamp: Option<String>,
+    #[serde(rename = "sessionId")]
+    session_id: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct ClaudeCodeMessage {
+    #[allow(dead_code)]
+    role: Option<String>,
+    content: Option<serde_json::Value>,
+}
+
+/// Expand `~/` prefix to the user's home directory.
+fn expand_tilde(path: &str) -> String {
+    if let Some(rest) = path.strip_prefix("~/") {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        format!("{home}/{rest}")
+    } else {
+        path.to_string()
+    }
+}
+
+fn extract_content(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::String(s) => s.clone(),
+        serde_json::Value::Array(arr) => {
+            arr.iter()
+                .filter_map(|item| {
+                    item.get("text").and_then(|t| t.as_str()).map(String::from)
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+        _ => String::new(),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // MCP Server
 // ---------------------------------------------------------------------------
 
 pub struct AlayaMcp {
     store: Mutex<AlayaStore>,
+    /// Total episodes stored this session.
+    episode_count: AtomicU32,
+    /// Episodes stored since last `learn` call.
+    unconsolidated_count: AtomicU32,
 }
 
 impl Clone for AlayaMcp {
     fn clone(&self) -> Self {
         // MCP servers are single-instance; clone should not be called in practice.
         // This satisfies the derive requirement from rmcp.
-        panic!("AlayaMcp should not be cloned — single-instance server")
+        panic!("AlayaMcp should not be cloned \u{2014} single-instance server")
     }
 }
 
@@ -141,6 +232,8 @@ impl AlayaMcp {
     pub fn new(store: AlayaStore) -> Self {
         Self {
             store: Mutex::new(store),
+            episode_count: AtomicU32::new(0),
+            unconsolidated_count: AtomicU32::new(0),
         }
     }
 
@@ -187,7 +280,60 @@ impl AlayaMcp {
         };
 
         match self.with_store(|s| s.store_episode(&episode)) {
-            Ok(id) => format!("Stored episode {} in session '{}'", id.0, params.session_id),
+            Ok(id) => {
+                let ep_total = self.episode_count.fetch_add(1, Ordering::Relaxed) + 1;
+                let uncons = self.unconsolidated_count.fetch_add(1, Ordering::Relaxed) + 1;
+
+                let mut response =
+                    format!("Stored episode {} in session '{}'.", id.0, params.session_id);
+
+                // Consolidation prompt at 10 unconsolidated episodes
+                if uncons >= 10 {
+                    if let Ok(episodes) = self.with_store(|s| s.unconsolidated_episodes(20)) {
+                        response.push_str(&format!(
+                            "\n\n--- Consolidation suggested ---\n\
+                             You have {} unconsolidated episodes. \
+                             Please extract key facts and call the 'learn' tool.\n\
+                             Recent unconsolidated episodes:",
+                            episodes.len()
+                        ));
+                        for ep in &episodes {
+                            response.push_str(&format!(
+                                "\n[{}] {}: {}",
+                                ep.id.0,
+                                ep.role.as_str(),
+                                ep.content
+                            ));
+                        }
+                    }
+                }
+
+                // Auto-maintenance every 25 episodes
+                if ep_total % 25 == 0 {
+                    let tr = self.with_store(|s| s.transform());
+                    let fr = self.with_store(|s| s.forget());
+                    match (tr, fr) {
+                        (Ok(tr), Ok(fr)) => {
+                            response.push_str(&format!(
+                                "\n\n--- Auto-maintenance ---\n\
+                                 Transform: {} merged, {} links pruned, {} categories discovered\n\
+                                 Forget: {} decayed, {} archived",
+                                tr.duplicates_merged,
+                                tr.links_pruned,
+                                tr.categories_discovered,
+                                fr.nodes_decayed,
+                                fr.nodes_archived,
+                            ));
+                        }
+                        (Err(e), _) | (_, Err(e)) => {
+                            response
+                                .push_str(&format!("\n\n--- Auto-maintenance error: {} ---", e));
+                        }
+                    }
+                }
+
+                response
+            }
             Err(e) => format!("Error: {e}"),
         }
     }
@@ -227,22 +373,102 @@ impl AlayaMcp {
 
     /// Get memory statistics.
     #[tool(
-        description = "Get Alaya memory statistics: counts of episodes, semantic nodes, preferences, impressions, links, and embeddings."
+        description = "Get Alaya memory statistics: episode counts, knowledge breakdown by type, categories, preferences, graph links with strongest connection, and embedding coverage."
     )]
     fn status(&self) -> String {
-        match self.with_store(|s| s.status()) {
-            Ok(st) => format!(
-                "Memory Status:\n  Episodes: {}\n  Semantic nodes: {}\n  Preferences: {}\n  Impressions: {}\n  Links: {}\n  Embeddings: {}\n  Categories: {}",
-                st.episode_count,
-                st.semantic_node_count,
-                st.preference_count,
-                st.impression_count,
-                st.link_count,
-                st.embedding_count,
-                st.category_count,
-            ),
-            Err(e) => format!("Error: {e}"),
+        let st = match self.with_store(|s| s.status()) {
+            Ok(st) => st,
+            Err(e) => return format!("Error: {e}"),
+        };
+
+        let session_eps = self.episode_count.load(Ordering::Relaxed);
+        let unconsolidated = self.unconsolidated_count.load(Ordering::Relaxed);
+
+        // Episodes line
+        let mut out = format!("Memory Status:\n  Episodes: {}", st.episode_count);
+        if session_eps > 0 || unconsolidated > 0 {
+            out.push_str(&format!(
+                " ({session_eps} this session, {unconsolidated} unconsolidated)"
+            ));
         }
+
+        // Knowledge breakdown
+        let knowledge_line = match self.with_store(|s| s.knowledge_breakdown()) {
+            Ok(breakdown) if !breakdown.is_empty() => {
+                let mut parts = Vec::new();
+                for (st, label) in [
+                    (SemanticType::Fact, "facts"),
+                    (SemanticType::Relationship, "relationships"),
+                    (SemanticType::Event, "events"),
+                    (SemanticType::Concept, "concepts"),
+                ] {
+                    if let Some(&count) = breakdown.get(&st) {
+                        parts.push(format!("{count} {label}"));
+                    }
+                }
+                parts.join(", ")
+            }
+            Ok(_) => "none".to_string(),
+            Err(_) => "error".to_string(),
+        };
+        out.push_str(&format!("\n  Knowledge: {knowledge_line}"));
+
+        // Categories
+        let cat_line = match self.with_store(|s| s.categories(None)) {
+            Ok(cats) if !cats.is_empty() => {
+                let labels: Vec<&str> = cats.iter().map(|c| c.label.as_str()).collect();
+                format!("{} ({})", cats.len(), labels.join(", "))
+            }
+            Ok(_) => "0".to_string(),
+            Err(_) => "error".to_string(),
+        };
+        out.push_str(&format!("\n  Categories: {cat_line}"));
+
+        // Preferences
+        out.push_str(&format!(
+            "\n  Preferences: {} crystallized, {} impressions accumulating",
+            st.preference_count, st.impression_count
+        ));
+
+        // Graph + strongest link
+        let strongest_desc = match self.with_store(|s| {
+            let link = s.strongest_link()?;
+            match link {
+                Some((src, tgt, w)) => {
+                    let src_label = s.node_content(src)?
+                        .unwrap_or_else(|| format!("{}#{}", src.type_str(), src.id()));
+                    let tgt_label = s.node_content(tgt)?
+                        .unwrap_or_else(|| format!("{}#{}", tgt.type_str(), tgt.id()));
+                    Ok(Some(format!(
+                        " (strongest: \"{src_label}\" <-> \"{tgt_label}\" weight {w:.2})"
+                    )))
+                }
+                None => Ok(None),
+            }
+        }) {
+            Ok(Some(desc)) => desc,
+            _ => String::new(),
+        };
+        out.push_str(&format!(
+            "\n  Graph: {} links{strongest_desc}",
+            st.link_count
+        ));
+
+        // Embedding coverage
+        let total_nodes = st.episode_count + st.semantic_node_count;
+        let coverage = if total_nodes > 0 {
+            format!(
+                "{}/{} nodes ({}%)",
+                st.embedding_count,
+                total_nodes,
+                st.embedding_count * 100 / total_nodes
+            )
+        } else {
+            "0/0 nodes".to_string()
+        };
+        out.push_str(&format!("\n  Embedding coverage: {coverage}"));
+
+        out
     }
 
     /// Get user preferences.
@@ -402,6 +628,274 @@ impl AlayaMcp {
         }
     }
 
+    /// Teach Alaya extracted knowledge directly.
+    #[tool(
+        description = "Teach Alaya extracted knowledge directly. The agent extracts facts from conversation and calls this tool. Each fact becomes a semantic node with full lifecycle wiring (strength, categories, graph links)."
+    )]
+    fn learn(&self, #[tool(aggr)] params: LearnParams) -> String {
+        // Resolve session_id → source episode IDs
+        let source_episodes = match &params.session_id {
+            Some(sid) => match self.with_store(|s| s.episodes_by_session(sid)) {
+                Ok(eps) => eps.iter().map(|e| e.id).collect::<Vec<_>>(),
+                Err(e) => return format!("Error resolving session '{}': {}", sid, e),
+            },
+            None => vec![],
+        };
+
+        // Convert LearnFactEntry → NewSemanticNode
+        let nodes: Vec<NewSemanticNode> = params
+            .facts
+            .iter()
+            .map(|fact| {
+                let node_type = SemanticType::from_str(&fact.node_type).unwrap_or(SemanticType::Fact);
+                let confidence = fact.confidence.unwrap_or(0.8).clamp(0.0, 1.0);
+                NewSemanticNode {
+                    content: fact.content.clone(),
+                    node_type,
+                    confidence,
+                    source_episodes: source_episodes.clone(),
+                    embedding: None,
+                }
+            })
+            .collect();
+
+        let count = nodes.len();
+        match self.with_store(|s| s.learn(nodes)) {
+            Ok(report) => {
+                self.unconsolidated_count.store(0, Ordering::Relaxed);
+                format!(
+                    "Learned {} facts: {} nodes created, {} links created, {} categories assigned",
+                    count, report.nodes_created, report.links_created, report.categories_assigned
+                )
+            }
+            Err(e) => format!("Error: {e}"),
+        }
+    }
+
+    /// Import memories from claude-mem SQLite database.
+    #[tool(
+        description = "Import memories from claude-mem (claude-mem.db SQLite database). Reads observations and converts facts/concepts into Alaya semantic nodes."
+    )]
+    fn import_claude_mem(&self, #[tool(aggr)] params: ImportClaudeMemParams) -> String {
+        // 1. Resolve path (default to ~/.claude-mem/claude-mem.db)
+        let path = expand_tilde(&params.path.unwrap_or_else(|| {
+            "~/.claude-mem/claude-mem.db".to_string()
+        }));
+
+        // 2. Open SQLite read-only
+        let source_conn = match rusqlite::Connection::open_with_flags(
+            &path,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        ) {
+            Ok(c) => c,
+            Err(e) => return format!("Cannot open claude-mem.db at '{path}': {e}"),
+        };
+
+        // 3. Query observations
+        let mut stmt = match source_conn.prepare(
+            "SELECT title, facts, narrative, concepts, created_at FROM observations",
+        ) {
+            Ok(s) => s,
+            Err(e) => return format!("Error reading observations: {e}"),
+        };
+
+        let mut nodes = Vec::new();
+        let mut obs_count = 0u32;
+
+        let rows = match stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0).unwrap_or_default(), // title
+                row.get::<_, String>(1).unwrap_or_default(), // facts JSON
+                row.get::<_, String>(2).unwrap_or_default(), // narrative
+                row.get::<_, String>(3).unwrap_or_default(), // concepts JSON
+                row.get::<_, String>(4).unwrap_or_default(), // created_at
+            ))
+        }) {
+            Ok(r) => r,
+            Err(e) => return format!("Error querying observations: {e}"),
+        };
+
+        for row_result in rows {
+            let (title, facts_json, _narrative, concepts_json, _created_at) = match row_result {
+                Ok(r) => r,
+                Err(_) => continue,
+            };
+            obs_count += 1;
+            let _ = title; // used for counting, title context is implicit in facts
+
+            // Parse facts JSON array
+            if let Ok(facts) = serde_json::from_str::<Vec<String>>(&facts_json) {
+                for fact in facts {
+                    if fact.trim().is_empty() {
+                        continue;
+                    }
+                    nodes.push(NewSemanticNode {
+                        content: fact,
+                        node_type: SemanticType::Fact,
+                        confidence: 0.8,
+                        source_episodes: vec![],
+                        embedding: None,
+                    });
+                }
+            }
+
+            // Parse concepts JSON array
+            if let Ok(concepts) = serde_json::from_str::<Vec<String>>(&concepts_json) {
+                for concept in concepts {
+                    if concept.trim().is_empty() {
+                        continue;
+                    }
+                    nodes.push(NewSemanticNode {
+                        content: concept,
+                        node_type: SemanticType::Concept,
+                        confidence: 0.7,
+                        source_episodes: vec![],
+                        embedding: None,
+                    });
+                }
+            }
+        }
+
+        if obs_count == 0 {
+            return format!("No observations found in '{path}'.");
+        }
+
+        let node_count = nodes.len();
+        match self.with_store(|s| s.learn(nodes)) {
+            Ok(report) => format!(
+                "Imported {obs_count} observations \u{2192} {node_count} semantic nodes. {} categories assigned.",
+                report.categories_assigned
+            ),
+            Err(e) => format!("Error importing: {e}"),
+        }
+    }
+
+    /// Import conversation history from Claude Code JSONL files.
+    #[tool(
+        description = "Import conversation history from Claude Code JSONL files. Reads messages and stores them as episodes."
+    )]
+    fn import_claude_code(&self, #[tool(aggr)] params: ImportClaudeCodeParams) -> String {
+        let path = expand_tilde(&params.path);
+
+        // Read the JSONL file line-by-line (files can be hundreds of MB)
+        let file = match std::fs::File::open(&path) {
+            Ok(f) => f,
+            Err(e) => return format!("Cannot read file '{path}': {e}"),
+        };
+
+        let mut imported = 0u32;
+        let mut sessions = std::collections::HashSet::new();
+        let mut errors = 0u32;
+        let mut first_error: Option<String> = None;
+
+        let reader = std::io::BufReader::new(file);
+        use std::io::BufRead;
+        for line_result in reader.lines() {
+            let line = match line_result {
+                Ok(l) => l,
+                Err(e) => {
+                    if first_error.is_none() {
+                        first_error = Some(e.to_string());
+                    }
+                    errors += 1;
+                    continue;
+                }
+            };
+            if line.trim().is_empty() {
+                continue;
+            }
+
+            let entry: ClaudeCodeEntry = match serde_json::from_str(&line) {
+                Ok(e) => e,
+                Err(e) => {
+                    if first_error.is_none() {
+                        first_error = Some(e.to_string());
+                    }
+                    errors += 1;
+                    continue;
+                }
+            };
+
+            // Only import human and assistant messages
+            let entry_type = entry.entry_type.as_deref().unwrap_or("");
+            if entry_type != "human" && entry_type != "assistant" {
+                continue;
+            }
+
+            let message = match entry.message {
+                Some(m) => m,
+                None => continue,
+            };
+
+            let role = match entry_type {
+                "human" => Role::User,
+                "assistant" => Role::Assistant,
+                _ => continue,
+            };
+
+            let content_value = match message.content {
+                Some(c) => c,
+                None => continue,
+            };
+            let content_text = extract_content(&content_value);
+            if content_text.trim().is_empty() {
+                continue;
+            }
+
+            // Truncate very long content (Claude Code messages can be huge)
+            let content_text = if content_text.chars().count() > 2000 {
+                let truncated: String = content_text.chars().take(2000).collect();
+                format!("{truncated}...")
+            } else {
+                content_text
+            };
+
+            let session_id = entry
+                .session_id
+                .unwrap_or_else(|| "imported".to_string());
+            sessions.insert(session_id.clone());
+
+            // Parse timestamp (string of unix seconds)
+            let timestamp = entry
+                .timestamp
+                .as_deref()
+                .and_then(|ts| ts.parse::<i64>().ok())
+                .unwrap_or(0);
+
+            let episode = NewEpisode {
+                content: content_text,
+                role,
+                session_id,
+                timestamp,
+                context: EpisodeContext::default(),
+                embedding: None,
+            };
+
+            match self.with_store(|s| s.store_episode(&episode)) {
+                Ok(_) => {
+                    imported += 1;
+                    self.episode_count.fetch_add(1, Ordering::Relaxed);
+                    self.unconsolidated_count.fetch_add(1, Ordering::Relaxed);
+                }
+                Err(_) => errors += 1,
+            }
+        }
+
+        let error_detail = match (&first_error, errors) {
+            (Some(e), n) if n > 0 => format!(" ({n} errors, first: {e})"),
+            _ => String::new(),
+        };
+
+        if imported == 0 {
+            return format!("No importable messages found in '{path}'.{error_detail}");
+        }
+
+        format!(
+            "Imported {imported} messages from {} sessions as episodes.{error_detail} Call 'learn' to consolidate.",
+            sessions.len(),
+        )
+    }
+
     /// Purge memories by session, timestamp, or everything.
     #[tool(
         description = "Purge memories. Scope: 'session' (requires session_id), 'older_than' (requires before_timestamp), or 'all' (deletes everything)."
@@ -443,10 +937,13 @@ impl ServerHandler for AlayaMcp {
         ServerInfo {
             instructions: Some(
                 "Alaya is a memory engine for AI agents. Use 'remember' to store messages, \
-                 'recall' to search memory, 'status' to check stats, 'preferences' for user \
-                 preferences, 'knowledge' for semantic facts, 'categories' for emergent clusters, \
-                 'neighbors' for graph traversal, 'node_category' to check a node's category, \
-                 'maintain' for cleanup, and 'purge' to delete data."
+                 'recall' to search memory, 'learn' to teach extracted knowledge directly, \
+                 'status' to check stats, 'preferences' for user preferences, 'knowledge' for \
+                 semantic facts, 'categories' for emergent clusters, 'neighbors' for graph \
+                 traversal, 'node_category' to check a node's category, 'maintain' for cleanup, \
+                 'import_claude_mem' to import from claude-mem.db, \
+                 'import_claude_code' to import from Claude Code JSONL files, \
+                 and 'purge' to delete data."
                     .into(),
             ),
             ..Default::default()

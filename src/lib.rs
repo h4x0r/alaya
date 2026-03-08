@@ -373,6 +373,72 @@ impl AlayaStore {
         Ok(report)
     }
 
+    /// Provider-less consolidation: store pre-extracted semantic knowledge.
+    ///
+    /// Accepts a `Vec<NewSemanticNode>` directly and runs the same pipeline as
+    /// [`consolidate`](Self::consolidate) — store node, create Causal links to
+    /// source episodes, init Bjork strength, try category assignment — but
+    /// without requiring a [`ConsolidationProvider`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use alaya::{AlayaStore, NewSemanticNode, SemanticType, EpisodeId};
+    ///
+    /// let store = AlayaStore::open_in_memory().unwrap();
+    /// let report = store.learn(vec![]).unwrap();
+    /// assert_eq!(report.nodes_created, 0);
+    /// ```
+    pub fn learn(&self, nodes: Vec<NewSemanticNode>) -> Result<ConsolidationReport> {
+        let tx = schema::begin_immediate(&self.conn)?;
+        let report = lifecycle::consolidation::learn_direct(&tx, nodes)?;
+        tx.commit()?;
+        Ok(report)
+    }
+
+    /// Return all episodes belonging to the given session, ordered by timestamp.
+    ///
+    /// This is useful for resolving a session ID to episode IDs when linking
+    /// learned knowledge back to its source conversation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use alaya::{AlayaStore, NewEpisode, Role, EpisodeContext};
+    ///
+    /// let store = AlayaStore::open_in_memory().unwrap();
+    /// store.store_episode(&NewEpisode {
+    ///     content: "hello".to_string(),
+    ///     role: Role::User,
+    ///     session_id: "s1".to_string(),
+    ///     timestamp: 1000,
+    ///     context: EpisodeContext::default(),
+    ///     embedding: None,
+    /// }).unwrap();
+    /// let eps = store.episodes_by_session("s1").unwrap();
+    /// assert_eq!(eps.len(), 1);
+    /// ```
+    pub fn episodes_by_session(&self, session_id: &str) -> Result<Vec<Episode>> {
+        store::episodic::get_episodes_by_session(&self.conn, session_id)
+    }
+
+    /// Return unconsolidated episodes (those not yet linked to any semantic node).
+    ///
+    /// An episode is considered "consolidated" once a Causal link connects it
+    /// to a semantic node (created by [`consolidate`](Self::consolidate) or
+    /// [`learn`](Self::learn)).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let store = alaya::AlayaStore::open_in_memory().unwrap();
+    /// let eps = store.unconsolidated_episodes(100).unwrap();
+    /// assert!(eps.is_empty());
+    /// ```
+    pub fn unconsolidated_episodes(&self, limit: u32) -> Result<Vec<Episode>> {
+        store::episodic::get_unconsolidated_episodes(&self.conn, limit)
+    }
+
     /// Run perfuming: extract impressions, crystallize preferences (vasana).
     ///
     /// # Examples
@@ -459,6 +525,61 @@ impl AlayaStore {
         })
     }
 
+    /// Count semantic knowledge nodes grouped by type (Fact, Relationship, Event, Concept).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let store = alaya::AlayaStore::open_in_memory().unwrap();
+    /// let breakdown = store.knowledge_breakdown().unwrap();
+    /// assert!(breakdown.is_empty());
+    /// ```
+    pub fn knowledge_breakdown(&self) -> Result<std::collections::HashMap<SemanticType, u64>> {
+        store::semantic::count_nodes_by_type(&self.conn)
+    }
+
+    /// Returns the link with the highest forward weight, if any exist.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let store = alaya::AlayaStore::open_in_memory().unwrap();
+    /// assert!(store.strongest_link().unwrap().is_none());
+    /// ```
+    pub fn strongest_link(&self) -> Result<Option<(NodeRef, NodeRef, f32)>> {
+        graph::links::strongest_link(&self.conn)
+    }
+
+    /// Resolve a `NodeRef` to a human-readable content string (first 30 chars).
+    ///
+    /// Returns `None` if the referenced node no longer exists.
+    pub fn node_content(&self, node: NodeRef) -> Result<Option<String>> {
+        match node {
+            NodeRef::Episode(id) => {
+                match store::episodic::get_episode(&self.conn, id) {
+                    Ok(ep) => Ok(Some(truncate_label(&ep.content, 30))),
+                    Err(AlayaError::NotFound(_)) => Ok(None),
+                    Err(e) => Err(e),
+                }
+            }
+            NodeRef::Semantic(id) => {
+                match store::semantic::get_semantic_node(&self.conn, id) {
+                    Ok(node) => Ok(Some(truncate_label(&node.content, 30))),
+                    Err(AlayaError::NotFound(_)) => Ok(None),
+                    Err(e) => Err(e),
+                }
+            }
+            NodeRef::Category(id) => {
+                match store::categories::get_category(&self.conn, id) {
+                    Ok(cat) => Ok(Some(truncate_label(&cat.label, 30))),
+                    Err(AlayaError::NotFound(_)) => Ok(None),
+                    Err(e) => Err(e),
+                }
+            }
+            _ => Ok(Some(format!("{}#{}", node.type_str(), node.id()))),
+        }
+    }
+
     /// Purge data matching the filter.
     ///
     /// # Examples
@@ -508,6 +629,16 @@ impl AlayaStore {
         }
         tx.commit()?;
         Ok(report)
+    }
+}
+
+/// Truncate a string to at most `max_chars` characters, appending "..." if truncated.
+fn truncate_label(s: &str, max_chars: usize) -> String {
+    if s.chars().count() <= max_chars {
+        s.to_string()
+    } else {
+        let truncated: String = s.chars().take(max_chars).collect();
+        format!("{truncated}...")
     }
 }
 

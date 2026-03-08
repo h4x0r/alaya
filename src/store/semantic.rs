@@ -119,6 +119,26 @@ pub fn count_nodes(conn: &Connection) -> Result<u64> {
     Ok(count as u64)
 }
 
+/// Count semantic nodes grouped by type.
+pub fn count_nodes_by_type(conn: &Connection) -> Result<std::collections::HashMap<SemanticType, u64>> {
+    let mut stmt = conn.prepare(
+        "SELECT node_type, count(*) FROM semantic_nodes GROUP BY node_type",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        let type_str: String = row.get(0)?;
+        let count: i64 = row.get(1)?;
+        Ok((type_str, count as u64))
+    })?;
+    let mut map = std::collections::HashMap::new();
+    for row in rows {
+        let (type_str, count) = row?;
+        if let Some(st) = SemanticType::from_str(&type_str) {
+            map.insert(st, count);
+        }
+    }
+    Ok(map)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -312,5 +332,55 @@ mod tests {
             result.unwrap_err(),
             crate::error::AlayaError::NotFound(_)
         ));
+    }
+
+    #[test]
+    fn test_count_nodes_by_type() {
+        let conn = open_memory_db().unwrap();
+
+        // Empty → empty map
+        let counts = count_nodes_by_type(&conn).unwrap();
+        assert!(counts.is_empty());
+
+        // Insert nodes of different types
+        store_semantic_node(
+            &conn,
+            &NewSemanticNode {
+                content: "fact1".to_string(),
+                node_type: SemanticType::Fact,
+                confidence: 0.8,
+                source_episodes: vec![],
+                embedding: None,
+            },
+        )
+        .unwrap();
+        store_semantic_node(
+            &conn,
+            &NewSemanticNode {
+                content: "fact2".to_string(),
+                node_type: SemanticType::Fact,
+                confidence: 0.7,
+                source_episodes: vec![],
+                embedding: None,
+            },
+        )
+        .unwrap();
+        store_semantic_node(
+            &conn,
+            &NewSemanticNode {
+                content: "rel1".to_string(),
+                node_type: SemanticType::Relationship,
+                confidence: 0.6,
+                source_episodes: vec![],
+                embedding: None,
+            },
+        )
+        .unwrap();
+
+        let counts = count_nodes_by_type(&conn).unwrap();
+        assert_eq!(counts.get(&SemanticType::Fact), Some(&2));
+        assert_eq!(counts.get(&SemanticType::Relationship), Some(&1));
+        assert_eq!(counts.get(&SemanticType::Event), None);
+        assert_eq!(counts.get(&SemanticType::Concept), None);
     }
 }

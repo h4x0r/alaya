@@ -32,31 +32,64 @@ pub fn consolidate(
     let new_nodes = provider.extract_knowledge(&episodes)?;
 
     for node_data in new_nodes {
-        let node_id = semantic::store_semantic_node(conn, &node_data)?;
-        report.nodes_created += 1;
-
-        // Link the new semantic node to its source episodes
-        for ep_id in &node_data.source_episodes {
-            links::create_link(
-                conn,
-                NodeRef::Semantic(node_id),
-                NodeRef::Episode(*ep_id),
-                LinkType::Causal,
-                0.7,
-            )?;
-            report.links_created += 1;
-        }
-
-        // Initialize strength for the new node
-        crate::store::strengths::init_strength(conn, NodeRef::Semantic(node_id))?;
-
-        // Try to assign to an existing category
-        if let Some(_cat_id) = try_assign_category(conn, node_id, &node_data)? {
-            report.categories_assigned += 1;
-        }
+        process_node(conn, &node_data, &mut report)?;
     }
 
     Ok(report)
+}
+
+/// Provider-less consolidation: accepts pre-extracted semantic nodes directly.
+///
+/// Runs the same pipeline as [`consolidate`] (store node, create Causal links
+/// to source episodes, init Bjork strength, try category assignment) but skips
+/// the episode-fetching and provider-based extraction steps.
+///
+/// This enables library users and the MCP binary to perform consolidation
+/// without requiring a [`ConsolidationProvider`] (LLM).
+pub fn learn_direct(
+    conn: &Connection,
+    nodes: Vec<NewSemanticNode>,
+) -> Result<ConsolidationReport> {
+    let mut report = ConsolidationReport::default();
+
+    for node_data in nodes {
+        process_node(conn, &node_data, &mut report)?;
+    }
+
+    Ok(report)
+}
+
+/// Shared pipeline step: store a semantic node, create Causal links to its
+/// source episodes, initialize Bjork strength, and try category assignment.
+/// Used by both `consolidate()` and `learn_direct()`.
+fn process_node(
+    conn: &Connection,
+    node_data: &NewSemanticNode,
+    report: &mut ConsolidationReport,
+) -> Result<()> {
+    let node_id = semantic::store_semantic_node(conn, node_data)?;
+    report.nodes_created += 1;
+
+    // Link the new semantic node to its source episodes
+    for ep_id in &node_data.source_episodes {
+        links::create_link(
+            conn,
+            NodeRef::Semantic(node_id),
+            NodeRef::Episode(*ep_id),
+            LinkType::Causal,
+            0.7,
+        )?;
+        report.links_created += 1;
+    }
+
+    // Initialize strength for the new node
+    crate::store::strengths::init_strength(conn, NodeRef::Semantic(node_id))?;
+
+    // Try to assign to an existing category
+    if let Some(_cat_id) = try_assign_category(conn, node_id, node_data)? {
+        report.categories_assigned += 1;
+    }
+    Ok(())
 }
 
 /// Cosine similarity threshold for embedding-based category assignment.
