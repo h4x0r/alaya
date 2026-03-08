@@ -79,6 +79,9 @@ OpenClaw, Cline, etc.):
 git clone https://github.com/SecurityRonin/alaya.git
 cd alaya
 cargo build --release --features mcp
+
+# With auto-consolidation (calls an LLM to extract knowledge automatically)
+cargo build --release --features "mcp llm"
 ```
 
 Add to your agent's MCP config (e.g. `claude_desktop_config.json`):
@@ -87,11 +90,18 @@ Add to your agent's MCP config (e.g. `claude_desktop_config.json`):
 {
   "mcpServers": {
     "alaya": {
-      "command": "/path/to/alaya/target/release/alaya-mcp"
+      "command": "/path/to/alaya/target/release/alaya-mcp",
+      "env": {
+        "ALAYA_LLM_API_KEY": "sk-..."
+      }
     }
   }
 }
 ```
+
+The `env` block is optional — without it, the server works in prompt mode
+(reminds the agent to call `learn` after 10 episodes). With an API key and
+the `llm` feature, it auto-consolidates instead.
 
 That's it. Your agent now has 13 memory tools:
 
@@ -142,6 +152,9 @@ Alaya: Memory Status:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ALAYA_DB` | `~/.alaya/memory.db` | Path to SQLite database |
+| `ALAYA_LLM_API_KEY` | *(none)* | API key for auto-consolidation (enables `ExtractionProvider`). Requires `llm` feature. |
+| `ALAYA_LLM_API_URL` | `https://api.openai.com/v1/chat/completions` | OpenAI-compatible chat completions endpoint |
+| `ALAYA_LLM_MODEL` | `gpt-4o-mini` | Model name. Any small/fast model works (GPT-4o-mini, Haiku, Gemini Flash, etc.) |
 
 ### Rust Library
 
@@ -230,7 +243,10 @@ Via Rust library:                   AlayaStore struct
   neighbors()                        ──▶ graph spreading activation
   node_category()                    ──▶ category assignment lookup
   set_embedding_provider()           ──▶ auto-embed in store + query
+  set_extraction_provider()          ──▶ enable auto-consolidation
   consolidate(provider)              ──▶ episodes → semantic knowledge
+  learn(nodes)                       ──▶ provider-less knowledge injection
+  auto_consolidate()                 ──▶ extract + learn (needs ExtractionProvider)
   perfume(interaction, provider)     ──▶ impressions → preferences
   transform()                        ──▶ dedup, LTD, prune, split categories
   forget()                           ──▶ Bjork strength decay + archival
@@ -307,6 +323,43 @@ impl ConsolidationProvider for MyProvider {
 Use `NoOpProvider` without an LLM. Episodes accumulate and BM25 retrieval
 works without consolidation.
 
+### Implementing ExtractionProvider (auto-consolidation)
+
+The `ExtractionProvider` trait enables automatic knowledge extraction without
+manual `consolidate()` calls. When configured, the MCP server auto-consolidates
+after 10 unconsolidated episodes:
+
+```rust
+use alaya::*;
+
+struct MyExtractor { /* your LLM client */ }
+
+impl ExtractionProvider for MyExtractor {
+    fn extract(&self, episodes: &[Episode]) -> Result<Vec<NewSemanticNode>> {
+        // Ask your LLM: "Extract facts from these conversations"
+        todo!()
+    }
+}
+
+let mut store = AlayaStore::open("memory.db")?;
+store.set_extraction_provider(Box::new(MyExtractor { /* ... */ }));
+
+// Now auto_consolidate() works without a ConsolidationProvider
+let report = store.auto_consolidate()?;
+```
+
+The `llm` feature flag provides a ready-to-use `LlmExtractionProvider` that
+calls any OpenAI-compatible API:
+
+```rust
+use alaya::LlmExtractionProvider;
+
+let provider = LlmExtractionProvider::builder()
+    .api_key("sk-...")
+    .model("gpt-4o-mini")      // default; any small model works
+    .build()?;
+```
+
 ### Lifecycle Scheduling
 
 | Method | When to call | What it does |
@@ -328,8 +381,9 @@ impl AlayaStore {
     // Write
     pub fn store_episode(&self, episode: &NewEpisode) -> Result<EpisodeId>;
 
-    // Embedding
+    // Providers
     pub fn set_embedding_provider(&mut self, provider: Box<dyn EmbeddingProvider>);
+    pub fn set_extraction_provider(&mut self, provider: Box<dyn ExtractionProvider>);
 
     // Read
     pub fn query(&self, q: &Query) -> Result<Vec<ScoredMemory>>;
@@ -342,6 +396,8 @@ impl AlayaStore {
 
     // Lifecycle
     pub fn consolidate(&self, provider: &dyn ConsolidationProvider) -> Result<ConsolidationReport>;
+    pub fn learn(&self, nodes: Vec<NewSemanticNode>) -> Result<ConsolidationReport>;
+    pub fn auto_consolidate(&self) -> Result<ConsolidationReport>;
     pub fn perfume(&self, interaction: &Interaction, provider: &dyn ConsolidationProvider) -> Result<PerfumingReport>;
     pub fn transform(&self) -> Result<TransformationReport>;
     pub fn forget(&self) -> Result<ForgettingReport>;
@@ -466,7 +522,8 @@ lateral inhibition).
 - **8 MCP tool extensions** — `learn`, `import_claude_mem`, `import_claude_code` + `categories`, `neighbors`, `node_category` + `knowledge` category filter + `recall` category boost + enhanced `status` with knowledge breakdown, graph stats, and embedding coverage
 - **`learn` tool** — agent-driven consolidation: extract facts from episodes and teach Alaya directly, with full lifecycle wiring (strength, categories, graph links)
 - **Import tools** — `import_claude_mem` reads claude-mem.db observations; `import_claude_code` reads Claude Code JSONL conversation files
-- **Auto-lifecycle** — `remember` auto-triggers maintenance every 25 episodes and prompts consolidation after 10 unconsolidated
+- **ExtractionProvider trait** — `extract()` enables auto-consolidation without manual `consolidate()` calls; `LlmExtractionProvider` (behind `llm` feature flag) calls any OpenAI-compatible API using a small/fast model
+- **Auto-lifecycle** — `remember` auto-triggers maintenance every 25 episodes; with `ExtractionProvider` set, auto-consolidates after 10 unconsolidated episodes (otherwise prompts the agent to call `learn`)
 - **232 tests** (223 core + 9 MCP) across unit, integration, property-based (proptest), and doc tests
 
 ## Benchmark Evaluation
@@ -502,8 +559,17 @@ cargo test
 # Run MCP integration tests
 cargo test --features mcp
 
+# Run LLM extraction tests
+cargo test --features llm
+
+# Run all tests
+cargo test --features "mcp llm"
+
 # Build the MCP server
 cargo build --release --features mcp
+
+# Build with auto-consolidation support
+cargo build --release --features "mcp llm"
 
 # Run the demo (no external dependencies)
 cargo run --example demo
