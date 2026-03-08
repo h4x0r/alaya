@@ -300,4 +300,45 @@ mod tests {
         store_embedding(&conn, "episode", 1, &[1.0], "test").unwrap();
         assert_eq!(count_embeddings(&conn).unwrap(), 1);
     }
+
+    #[test]
+    fn test_search_by_vector_with_type_filter() {
+        let conn = open_memory_db().unwrap();
+        store_embedding(&conn, "episode", 1, &[1.0, 0.0, 0.0], "test").unwrap();
+        store_embedding(&conn, "semantic", 1, &[0.9, 0.1, 0.0], "test").unwrap();
+
+        // Filter by "episode" — should only return the episode embedding
+        let results = search_by_vector(&conn, &[1.0, 0.0, 0.0], Some("episode"), 10).unwrap();
+        assert_eq!(results.len(), 1);
+        assert!(matches!(results[0].0, NodeRef::Episode(_)));
+
+        // Filter by "semantic" — should only return the semantic embedding
+        let results = search_by_vector(&conn, &[1.0, 0.0, 0.0], Some("semantic"), 10).unwrap();
+        assert_eq!(results.len(), 1);
+        assert!(matches!(results[0].0, NodeRef::Semantic(_)));
+    }
+
+    #[test]
+    fn test_search_by_vector_filters_non_positive_similarity() {
+        let conn = open_memory_db().unwrap();
+        // Store an embedding orthogonal to our query
+        store_embedding(&conn, "episode", 1, &[0.0, 1.0, 0.0], "test").unwrap();
+        // Store one opposite to our query
+        store_embedding(&conn, "episode", 2, &[-1.0, 0.0, 0.0], "test").unwrap();
+
+        // Query with [1, 0, 0] — orthogonal gives sim=0, opposite gives sim<0
+        let results = search_by_vector(&conn, &[1.0, 0.0, 0.0], None, 10).unwrap();
+        // Neither should appear (sim <= 0 filtered out)
+        assert!(results.is_empty(), "non-positive similarities should be filtered out");
+    }
+
+    #[test]
+    fn test_search_by_vector_truncates_to_limit() {
+        let conn = open_memory_db().unwrap();
+        for i in 1..=5 {
+            store_embedding(&conn, "episode", i, &[1.0, 0.0, (i as f32) * 0.01], "test").unwrap();
+        }
+        let results = search_by_vector(&conn, &[1.0, 0.0, 0.0], None, 2).unwrap();
+        assert_eq!(results.len(), 2, "should truncate to limit");
+    }
 }

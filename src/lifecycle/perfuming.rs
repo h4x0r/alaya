@@ -127,4 +127,28 @@ mod tests {
         let prefs = implicit::get_preferences(&conn, Some("style")).unwrap();
         assert!(!prefs.is_empty(), "should have crystallized a preference");
     }
+
+    #[test]
+    fn test_summarize_impressions_empty() {
+        // Directly test the summarize_impressions function
+        let result = summarize_impressions(&[]);
+        assert!(result.is_none(), "empty impressions should return None");
+    }
+
+    #[test]
+    fn test_perfume_with_noop_provider() {
+        let conn = open_memory_db().unwrap();
+        let provider = MockProvider::empty();
+        let interaction = Interaction {
+            text: "no impressions expected".to_string(),
+            role: Role::User,
+            session_id: "s1".to_string(),
+            timestamp: 1000,
+            context: EpisodeContext::default(),
+        };
+        let report = perfume(&conn, &interaction, &provider).unwrap();
+        assert_eq!(report.impressions_stored, 0);
+        assert_eq!(report.preferences_crystallized, 0);
+        assert_eq!(report.preferences_reinforced, 0);
+    }
 }

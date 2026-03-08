@@ -12,6 +12,9 @@ readme = "README.md"
 keywords = ["memory", "ai", "rag", "conversational", "embedding"]
 categories = ["database", "science"]
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
+
 [features]
 mcp = ["dep:rmcp", "dep:tokio", "dep:schemars", "dep:anyhow"]
 

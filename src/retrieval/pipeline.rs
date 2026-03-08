@@ -349,4 +349,71 @@ mod tests {
         let results = execute_query(&conn, &Query::simple("")).unwrap();
         assert!(results.is_empty());
     }
+
+    #[test]
+    fn test_query_returns_preferences_via_graph() {
+        let conn = open_memory_db().unwrap();
+        use crate::graph::links;
+        use crate::store::{implicit, strengths};
+
+        // Store an episode mentioning "dark mode"
+        let ep_id = episodic::store_episode(
+            &conn,
+            &NewEpisode {
+                content: "I prefer dark mode for coding".to_string(),
+                role: Role::User,
+                session_id: "s1".to_string(),
+                timestamp: 1000,
+                context: EpisodeContext::default(),
+                embedding: None,
+            },
+        )
+        .unwrap();
+
+        // Store a preference about dark mode
+        let pref_id = implicit::store_preference(&conn, "ui", "dark mode", 0.8).unwrap();
+        strengths::init_strength(&conn, NodeRef::Preference(pref_id)).unwrap();
+
+        // Link episode to preference to enable graph spreading activation
+        links::create_link(
+            &conn,
+            NodeRef::Episode(ep_id),
+            NodeRef::Preference(pref_id),
+            LinkType::Topical,
+            0.9,
+        )
+        .unwrap();
+
+        // Query for "dark mode" - episode should be found via BM25,
+        // then graph spreading should activate the preference
+        let results = execute_query(
+            &conn,
+            &Query {
+                text: "dark mode coding".to_string(),
+                embedding: None,
+                context: QueryContext {
+                    current_timestamp: Some(2000),
+                    ..Default::default()
+                },
+                max_results: 10,
+                boost_categories: None,
+            },
+        )
+        .unwrap();
+
+        assert!(!results.is_empty(), "should have results");
+
+        // Check if any result is a preference (graph activation path)
+        let has_preference = results.iter().any(|r| matches!(r.node, NodeRef::Preference(_)));
+        if has_preference {
+            let pref_result = results
+                .iter()
+                .find(|r| matches!(r.node, NodeRef::Preference(_)))
+                .unwrap();
+            assert!(
+                pref_result.content.contains("dark mode"),
+                "preference content should contain dark mode"
+            );
+        }
+    }
 }

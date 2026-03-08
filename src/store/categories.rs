@@ -533,6 +533,29 @@ mod tests {
     }
 
     #[test]
+    fn test_get_category_not_found() {
+        let conn = open_memory_db().unwrap();
+        let result = get_category(&conn, CategoryId(999));
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            crate::error::AlayaError::NotFound(_)
+        ));
+    }
+
+    #[test]
+    fn test_get_node_category_not_found_node() {
+        let conn = open_memory_db().unwrap();
+        // Node doesn't exist at all — should return NotFound error
+        let result = get_node_category(&conn, NodeId(999));
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            crate::error::AlayaError::NotFound(_)
+        ));
+    }
+
+    #[test]
     fn test_reassign_removes_old_member_of_links() {
         let conn = open_memory_db().unwrap();
         let p1 = insert_semantic_node(&conn);

@@ -872,6 +872,75 @@ mod tests {
     }
 
     #[test]
+    fn test_dedup_merges_near_identical_nodes() {
+        let conn = open_memory_db().unwrap();
+
+        // Create two semantic nodes with nearly identical embeddings (sim > 0.95)
+        for i in 0..2 {
+            conn.execute(
+                "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated, corroboration_count)
+                 VALUES (?1, 'fact', 0.8, 1000, 1000, 1)",
+                [format!("duplicate node {i}")],
+            )
+            .unwrap();
+            let node_id: i64 = conn
+                .query_row("SELECT last_insert_rowid()", [], |r| r.get(0))
+                .unwrap();
+            // Both have nearly identical embeddings
+            embeddings::store_embedding(&conn, "semantic", node_id, &[1.0, 0.0, 0.0], "").unwrap();
+        }
+
+        let merged = dedup_semantic_nodes(&conn).unwrap();
+        assert_eq!(merged, 1, "should have merged the duplicate");
+
+        // Verify only 1 semantic node remains
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM semantic_nodes", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 1, "should have 1 node after dedup");
+
+        // Verify corroboration_count was incremented on the kept node
+        let corr: i64 = conn
+            .query_row(
+                "SELECT corroboration_count FROM semantic_nodes WHERE id = 1",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(corr, 2, "kept node should have corroboration_count = 2");
+    }
+
+    #[test]
+    fn test_dedup_skips_already_deleted() {
+        let conn = open_memory_db().unwrap();
+
+        // Create 3 semantic nodes with identical embeddings — tests the
+        // deleted_ids.contains check in the inner dedup loop
+        for i in 0..3 {
+            conn.execute(
+                "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated, corroboration_count)
+                 VALUES (?1, 'fact', 0.8, 1000, 1000, 1)",
+                [format!("triple dup {i}")],
+            )
+            .unwrap();
+            let node_id: i64 = conn
+                .query_row("SELECT last_insert_rowid()", [], |r| r.get(0))
+                .unwrap();
+            embeddings::store_embedding(&conn, "semantic", node_id, &[1.0, 0.0, 0.0], "").unwrap();
+        }
+
+        let merged = dedup_semantic_nodes(&conn).unwrap();
+        // Node 2 and 3 are both duplicates of node 1
+        // After node 2 is merged into 1, node 3 should also be merged into 1 (not skipped)
+        assert_eq!(merged, 2, "should have merged both duplicates");
+
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM semantic_nodes", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 1, "should have 1 node after dedup of 3 identical nodes");
+    }
+
+    #[test]
     fn test_maintain_categories_merges_converging() {
         let conn = open_memory_db().unwrap();
 
@@ -907,5 +976,167 @@ mod tests {
             1,
             "should have 1 category after merge"
         );
+    }
+
+    #[test]
+    fn test_discover_categories_few_embeddings() {
+        // Covers line 162: return Ok(0) when uncategorized nodes exist
+        // but fewer than MIN_CLUSTER_SIZE (3) have embeddings
+        let conn = open_memory_db().unwrap();
+
+        // Create 5 uncategorized nodes but only 2 with embeddings
+        for i in 0..5 {
+            conn.execute(
+                "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated, corroboration_count)
+                 VALUES (?1, 'fact', 0.8, 1000, 1000, 1)",
+                [format!("sparse embed node {i}")],
+            ).unwrap();
+        }
+        // Only give embeddings to 2 nodes (below MIN_CLUSTER_SIZE = 3)
+        embeddings::store_embedding(&conn, "semantic", 1, &[1.0, 0.0, 0.0], "").unwrap();
+        embeddings::store_embedding(&conn, "semantic", 2, &[0.9, 0.1, 0.0], "").unwrap();
+
+        let discovered = discover_categories(&conn).unwrap();
+        assert_eq!(discovered, 0, "should not discover categories with < 3 embedded nodes");
+    }
+
+    #[test]
+    fn test_discover_categories_small_cluster_skipped() {
+        // Covers line 207: continue when cluster has < MIN_CLUSTER_SIZE members
+        // Create nodes where some cluster together and some don't
+        let conn = open_memory_db().unwrap();
+
+        // 3 nodes in one tight cluster (will form a category)
+        for i in 0..3 {
+            conn.execute(
+                "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated, corroboration_count)
+                 VALUES (?1, 'fact', 0.8, 1000, 1000, 1)",
+                [format!("cluster node {i}")],
+            ).unwrap();
+            let nid = conn.last_insert_rowid();
+            embeddings::store_embedding(&conn, "semantic", nid, &[1.0, 0.0 + (i as f32) * 0.01, 0.0], "").unwrap();
+        }
+
+        // 2 outlier nodes far away (won't cluster with above or each other → too small)
+        conn.execute(
+            "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated, corroboration_count)
+             VALUES ('outlier a', 'fact', 0.8, 1000, 1000, 1)",
+            [],
+        ).unwrap();
+        embeddings::store_embedding(&conn, "semantic", conn.last_insert_rowid(), &[0.0, 1.0, 0.0], "").unwrap();
+
+        conn.execute(
+            "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated, corroboration_count)
+             VALUES ('outlier b', 'fact', 0.8, 1000, 1000, 1)",
+            [],
+        ).unwrap();
+        embeddings::store_embedding(&conn, "semantic", conn.last_insert_rowid(), &[0.0, 0.0, 1.0], "").unwrap();
+
+        let discovered = discover_categories(&conn).unwrap();
+        assert_eq!(discovered, 1, "should create 1 category from tight cluster, skip outliers");
+    }
+
+    #[test]
+    fn test_discover_categories_empty_label_fallback() {
+        // Covers line 254: format!("cluster-{categories_created}") when prototype content is empty
+        let conn = open_memory_db().unwrap();
+
+        // Create 3 nodes with empty content
+        for i in 0..3 {
+            conn.execute(
+                "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated, corroboration_count)
+                 VALUES ('', 'fact', 0.8, 1000, 1000, 1)",
+                [],
+            ).unwrap();
+            let nid = conn.last_insert_rowid();
+            embeddings::store_embedding(&conn, "semantic", nid, &[1.0, 0.0 + (i as f32) * 0.01, 0.0], "").unwrap();
+        }
+
+        let discovered = discover_categories(&conn).unwrap();
+        assert_eq!(discovered, 1);
+
+        // Check the label is "cluster-0" (fallback for empty content)
+        let cats = categories::list_categories(&conn, None).unwrap();
+        assert_eq!(cats.len(), 1);
+        assert!(
+            cats[0].label.starts_with("cluster-"),
+            "empty content should produce fallback label, got: {}",
+            cats[0].label
+        );
+    }
+
+    // Note: lines 402, 407-408 (dissolve unstable categories) are effectively
+    // unreachable in normal operation because step 1 of maintain_categories
+    // increments stability for all non-empty categories, which always pushes
+    // stability above the CATEGORY_DISSOLVE_THRESHOLD (0.1). Empty categories
+    // are GC'd in step 2 before the dissolve check in step 4.
+
+    #[test]
+    fn test_maintain_categories_merge_lower_stability_wins() {
+        // Covers line 322: (j, i) branch when cats[j].stability > cats[i].stability
+        let conn = open_memory_db().unwrap();
+
+        // Create two categories with near-identical centroids
+        // but j (second) has higher stability
+        for i in 0..2 {
+            conn.execute(
+                "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated)
+                 VALUES (?1, 'fact', 0.8, 1000, 1000)",
+                [format!("stability-node {i}")],
+            ).unwrap();
+        }
+
+        let c1 = categories::store_category(
+            &conn, "low-stability", NodeId(1), Some(&[1.0, 0.0, 0.0]), None,
+        ).unwrap();
+        let c2 = categories::store_category(
+            &conn, "high-stability", NodeId(2), Some(&[0.99, 0.01, 0.0]), None,
+        ).unwrap();
+
+        // Set different stabilities: c1 low, c2 high
+        conn.execute("UPDATE categories SET stability = 0.3 WHERE id = ?1", [c1.0]).unwrap();
+        conn.execute("UPDATE categories SET stability = 0.9 WHERE id = ?1", [c2.0]).unwrap();
+
+        categories::assign_node_to_category(&conn, NodeId(1), c1).unwrap();
+        categories::assign_node_to_category(&conn, NodeId(2), c2).unwrap();
+        embeddings::store_embedding(&conn, "semantic", 1, &[1.0, 0.0, 0.0], "").unwrap();
+        embeddings::store_embedding(&conn, "semantic", 2, &[0.99, 0.01, 0.0], "").unwrap();
+
+        let (merged, _dissolved) = maintain_categories(&conn).unwrap();
+        assert!(merged >= 1, "should merge converging categories");
+
+        // The surviving category should be the one with higher stability (c2)
+        let remaining = categories::list_categories(&conn, None).unwrap();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].label, "high-stability",
+            "should keep the higher-stability category");
+    }
+
+    #[test]
+    fn test_split_no_centroid_skips() {
+        // Covers line 429: None => continue when category has no centroid
+        let conn = open_memory_db().unwrap();
+
+        // Create a large category without a centroid
+        for i in 0..10 {
+            conn.execute(
+                "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated, corroboration_count)
+                 VALUES (?1, 'fact', 0.8, 1000, 1000, 1)",
+                [format!("no-centroid node {i}")],
+            ).unwrap();
+        }
+
+        // Create category WITHOUT centroid but with many members
+        let cat_id = categories::store_category(
+            &conn, "no-centroid-cat", NodeId(1), None, None,
+        ).unwrap();
+
+        for i in 1..=10 {
+            categories::assign_node_to_category(&conn, NodeId(i), cat_id).unwrap();
+            embeddings::store_embedding(&conn, "semantic", i as i64, &[1.0, 0.0, 0.0], "").unwrap();
+        }
+
+        let splits = split_large_categories(&conn).unwrap();
+        assert_eq!(splits, 0, "should skip category without centroid");
     }
 }

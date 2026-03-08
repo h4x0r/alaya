@@ -239,4 +239,30 @@ mod tests {
         let b = vec!["python".to_string()];
         assert_eq!(jaccard(&a, &b), 0.0);
     }
+
+    #[test]
+    fn test_rerank_with_nan_scores_does_not_panic() {
+        // Exercise the Ordering::Equal fallback in sort_by when partial_cmp returns None
+        let candidates = vec![
+            (
+                NodeRef::Episode(EpisodeId(1)),
+                f64::NAN,
+                "nan score".to_string(),
+                Some(Role::User),
+                1000,
+                EpisodeContext::default(),
+            ),
+            (
+                NodeRef::Episode(EpisodeId(2)),
+                0.5,
+                "normal score".to_string(),
+                Some(Role::User),
+                1000,
+                EpisodeContext::default(),
+            ),
+        ];
+        // Should not panic
+        let result = rerank(candidates, &QueryContext::default(), 1000, 5);
+        assert_eq!(result.len(), 2);
+    }
 }

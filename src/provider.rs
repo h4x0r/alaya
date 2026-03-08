@@ -156,4 +156,45 @@ mod tests {
         let emb2 = provider.embed("world").unwrap();
         assert_ne!(emb1, emb2, "different inputs should produce different embeddings");
     }
+
+    #[test]
+    fn test_noop_provider_extract_impressions() {
+        let provider = NoOpProvider;
+        let interaction = Interaction {
+            text: "I prefer dark mode".to_string(),
+            role: Role::User,
+            session_id: "s1".to_string(),
+            timestamp: 1000,
+            context: EpisodeContext::default(),
+        };
+        let result = provider.extract_impressions(&interaction).unwrap();
+        assert!(result.is_empty(), "NoOpProvider should return empty impressions");
+    }
+
+    #[test]
+    fn test_noop_provider_detect_contradiction() {
+        let provider = NoOpProvider;
+        let a = SemanticNode {
+            id: NodeId(1),
+            content: "User likes Rust".to_string(),
+            node_type: SemanticType::Fact,
+            confidence: 0.9,
+            source_episodes: vec![],
+            created_at: 1000,
+            last_corroborated: 1000,
+            corroboration_count: 1,
+        };
+        let b = SemanticNode {
+            id: NodeId(2),
+            content: "User dislikes Rust".to_string(),
+            node_type: SemanticType::Fact,
+            confidence: 0.9,
+            source_episodes: vec![],
+            created_at: 2000,
+            last_corroborated: 2000,
+            corroboration_count: 1,
+        };
+        let result = provider.detect_contradiction(&a, &b).unwrap();
+        assert!(!result, "NoOpProvider should always return false for contradictions");
+    }
 }

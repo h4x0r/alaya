@@ -356,4 +356,26 @@ mod tests {
         store_preference(&conn, "a", "b", 0.5).unwrap();
         assert_eq!(count_preferences(&conn).unwrap(), 1);
     }
+
+    #[test]
+    fn test_get_preference_by_id() {
+        let conn = open_memory_db().unwrap();
+        let id = store_preference(&conn, "ui", "dark mode", 0.85).unwrap();
+        let pref = get_preference(&conn, id).unwrap();
+        assert_eq!(pref.domain, "ui");
+        assert_eq!(pref.preference, "dark mode");
+        assert!((pref.confidence - 0.85).abs() < 0.01);
+        assert_eq!(pref.evidence_count, 1);
+    }
+
+    #[test]
+    fn test_get_preference_not_found() {
+        let conn = open_memory_db().unwrap();
+        let result = get_preference(&conn, PreferenceId(999));
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            crate::error::AlayaError::NotFound(_)
+        ));
+    }
 }

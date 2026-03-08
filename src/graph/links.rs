@@ -367,6 +367,22 @@ mod tests {
     }
 
     #[test]
+    fn test_get_links_to_ordering() {
+        let conn = open_memory_db().unwrap();
+        let a = NodeRef::Episode(EpisodeId(1));
+        let b = NodeRef::Episode(EpisodeId(2));
+        let c = NodeRef::Episode(EpisodeId(3));
+
+        create_link(&conn, a, b, LinkType::Temporal, 0.3).unwrap();
+        create_link(&conn, c, b, LinkType::Topical, 0.9).unwrap();
+
+        let to_b = get_links_to(&conn, b).unwrap();
+        assert_eq!(to_b.len(), 2);
+        // Should be ordered by backward_weight DESC
+        assert!(to_b[0].backward_weight >= to_b[1].backward_weight);
+    }
+
+    #[test]
     fn test_strongest_link_returns_highest_weight() {
         let conn = open_memory_db().unwrap();
         create_link(

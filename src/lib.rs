@@ -38,6 +38,9 @@ pub(crate) mod schema;
 pub(crate) mod store;
 pub(crate) mod types;
 
+#[cfg(feature = "mcp")]
+pub mod mcp;
+
 use rusqlite::Connection;
 use std::path::Path;
 
@@ -1533,5 +1536,171 @@ mod tests {
             report.preferences_reinforced, 1,
             "should reinforce existing preference"
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // Coverage: subcategories(), node_content variants, truncate_label
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn test_subcategories_empty() {
+        let store = AlayaStore::open_in_memory().unwrap();
+        let subs = store.subcategories(CategoryId(999)).unwrap();
+        assert!(subs.is_empty());
+    }
+
+    #[test]
+    fn test_node_content_episode() {
+        let store = AlayaStore::open_in_memory().unwrap();
+        store
+            .store_episode(&make_new_episode("hello world", "s1", 1000))
+            .unwrap();
+        let content = store
+            .node_content(NodeRef::Episode(EpisodeId(1)))
+            .unwrap();
+        assert_eq!(content, Some("hello world".to_string()));
+    }
+
+    #[test]
+    fn test_node_content_semantic() {
+        let store = AlayaStore::open_in_memory().unwrap();
+        // Create a semantic node directly
+        store
+            .conn
+            .execute(
+                "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated)
+                 VALUES ('semantic test content', 'fact', 0.8, 1000, 1000)",
+                [],
+            )
+            .unwrap();
+        let content = store
+            .node_content(NodeRef::Semantic(NodeId(1)))
+            .unwrap();
+        assert_eq!(content, Some("semantic test content".to_string()));
+    }
+
+    #[test]
+    fn test_node_content_category() {
+        let store = AlayaStore::open_in_memory().unwrap();
+        // Create a semantic node as prototype
+        store
+            .conn
+            .execute(
+                "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated)
+                 VALUES ('proto', 'fact', 0.8, 1000, 1000)",
+                [],
+            )
+            .unwrap();
+        store::categories::store_category(&store.conn, "test-category", NodeId(1), None, None)
+            .unwrap();
+        let content = store
+            .node_content(NodeRef::Category(CategoryId(1)))
+            .unwrap();
+        assert_eq!(content, Some("test-category".to_string()));
+    }
+
+    #[test]
+    fn test_node_content_preference_fallback() {
+        let store = AlayaStore::open_in_memory().unwrap();
+        // Preference fallback uses the _ arm which returns "preference#ID"
+        let content = store
+            .node_content(NodeRef::Preference(PreferenceId(42)))
+            .unwrap();
+        assert_eq!(content, Some("preference#42".to_string()));
+    }
+
+    #[test]
+    fn test_node_content_not_found() {
+        let store = AlayaStore::open_in_memory().unwrap();
+        // Episode that doesn't exist
+        let content = store
+            .node_content(NodeRef::Episode(EpisodeId(999)))
+            .unwrap();
+        assert!(content.is_none());
+
+        // Semantic node that doesn't exist
+        let content = store
+            .node_content(NodeRef::Semantic(NodeId(999)))
+            .unwrap();
+        assert!(content.is_none());
+
+        // Category that doesn't exist
+        let content = store
+            .node_content(NodeRef::Category(CategoryId(999)))
+            .unwrap();
+        assert!(content.is_none());
+    }
+
+    #[test]
+    fn test_truncate_label_long_string() {
+        let store = AlayaStore::open_in_memory().unwrap();
+        store
+            .store_episode(&make_new_episode(
+                "this is a very long content string that exceeds thirty characters easily",
+                "s1",
+                1000,
+            ))
+            .unwrap();
+        let content = store
+            .node_content(NodeRef::Episode(EpisodeId(1)))
+            .unwrap();
+        let label = content.unwrap();
+        assert!(
+            label.ends_with("..."),
+            "long content should be truncated with ..., got: {}",
+            label
+        );
+        // 30 chars + "..." = 33
+        assert!(label.len() <= 33, "truncated label should be at most 33 chars, got {}", label.len());
+    }
+
+    #[test]
+    fn test_truncate_label_short_string() {
+        // Directly test the truncate_label function with short input (covers line 640-641)
+        let result = truncate_label("short", 30);
+        assert_eq!(result, "short");
+    }
+
+    #[test]
+    fn test_truncate_label_exact_boundary() {
+        // String exactly at the boundary
+        let input = "a".repeat(30);
+        let result = truncate_label(&input, 30);
+        assert_eq!(result, input);
+    }
+
+    #[test]
+    fn test_truncate_label_over_boundary() {
+        // String just over the boundary
+        let input = "b".repeat(31);
+        let result = truncate_label(&input, 30);
+        assert!(result.ends_with("..."));
+        assert_eq!(result.len(), 33); // 30 + "..."
+    }
+
+    #[test]
+    fn test_node_content_semantic_not_found_explicit() {
+        // Explicitly test the Semantic NotFound path (covers line 572)
+        let store = AlayaStore::open_in_memory().unwrap();
+        let content = store.node_content(NodeRef::Semantic(NodeId(9999))).unwrap();
+        assert!(content.is_none());
+    }
+
+    #[test]
+    fn test_node_content_category_not_found_explicit() {
+        // Explicitly test the Category NotFound path (covers line 579)
+        let store = AlayaStore::open_in_memory().unwrap();
+        let content = store.node_content(NodeRef::Category(CategoryId(9999))).unwrap();
+        assert!(content.is_none());
+    }
+
+    #[test]
+    fn test_node_category_not_found_explicit() {
+        // Explicitly test node_category with a node that truly doesn't exist
+        // The semantic_nodes table has no row with id=99999, so get_node_category
+        // returns Err(NotFound), which gets mapped to Ok(None) (covers line 331)
+        let store = AlayaStore::open_in_memory().unwrap();
+        let result = store.node_category(NodeId(99999)).unwrap();
+        assert!(result.is_none());
     }
 }

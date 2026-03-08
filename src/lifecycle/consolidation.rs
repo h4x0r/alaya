@@ -382,6 +382,86 @@ mod tests {
     }
 
     #[test]
+    fn test_consolidation_assigns_category_via_neighbor_vote() {
+        use crate::graph::links;
+        use crate::store::strengths;
+
+        let conn = open_memory_db().unwrap();
+
+        // Create a category with a prototype node
+        let proto = insert_prototype(&conn);
+        let cat_id =
+            categories::store_category(&conn, "rust-topics", proto, Some(&[1.0, 0.0, 0.0]), None)
+                .unwrap();
+
+        // Create 5 episodes
+        let mut ep_ids = vec![];
+        for i in 0..5 {
+            let id = episodic::store_episode(
+                &conn,
+                &NewEpisode {
+                    content: format!("Rust neighbor episode {i}"),
+                    role: Role::User,
+                    session_id: "s1".to_string(),
+                    timestamp: 1000 + i * 100,
+                    context: EpisodeContext::default(),
+                    embedding: None,
+                },
+            )
+            .unwrap();
+            ep_ids.push(id);
+        }
+
+        // Create 3 existing semantic nodes assigned to that category.
+        // For each, create both directions of Causal links so that
+        // get_links_from(Episode) returns Semantic targets.
+        for i in 0..3 {
+            let node_id = semantic::store_semantic_node(
+                &conn,
+                &NewSemanticNode {
+                    content: format!("existing rust node {i}"),
+                    node_type: SemanticType::Fact,
+                    confidence: 0.8,
+                    source_episodes: vec![ep_ids[i]],
+                    embedding: None,
+                },
+            )
+            .unwrap();
+            categories::assign_node_to_category(&conn, node_id, cat_id).unwrap();
+            strengths::init_strength(&conn, NodeRef::Semantic(node_id)).unwrap();
+            // Create link FROM episode TO semantic (so get_links_from(episode) finds it)
+            links::create_link(
+                &conn,
+                NodeRef::Episode(ep_ids[i]),
+                NodeRef::Semantic(node_id),
+                LinkType::Causal,
+                0.7,
+            )
+            .unwrap();
+        }
+
+        // Use learn_direct to avoid consolidation threshold issues.
+        // New node has NO embedding but source_episodes that overlap
+        // with the categorized nodes' episodes.
+        let report = learn_direct(
+            &conn,
+            vec![NewSemanticNode {
+                content: "new rust knowledge via neighbor vote".to_string(),
+                node_type: SemanticType::Fact,
+                confidence: 0.8,
+                source_episodes: vec![ep_ids[0], ep_ids[1], ep_ids[2]],
+                embedding: None, // No embedding => neighbor vote path
+            }],
+        )
+        .unwrap();
+        assert_eq!(report.nodes_created, 1);
+        assert_eq!(
+            report.categories_assigned, 1,
+            "should assign category via neighbor majority vote"
+        );
+    }
+
+    #[test]
     fn test_consolidation_skips_when_below_threshold() {
         let conn = open_memory_db().unwrap();
 
@@ -419,6 +499,74 @@ mod tests {
         assert_eq!(
             report.categories_assigned, 0,
             "node should not be assigned to distant category"
+        );
+    }
+
+    #[test]
+    fn test_neighbor_vote_with_embedding_via_learn_direct() {
+        // Tests lines 142-144 (skip self check) and 162 (assign_and_update via
+        // neighbor vote with embedding). Uses learn_direct to bypass the
+        // unconsolidated-episode threshold.
+        let conn = open_memory_db().unwrap();
+
+        // Create a prototype and category
+        let proto = insert_prototype(&conn);
+        let cat_id = categories::store_category(
+            &conn, "rust-programming", proto, Some(&[1.0, 0.0, 0.0]), None,
+        ).unwrap();
+
+        // Create an existing semantic node that IS categorized
+        conn.execute(
+            "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated, category_id)
+             VALUES ('Rust is great', 'fact', 0.8, 1000, 1000, ?1)",
+            [cat_id.0],
+        ).unwrap();
+        let existing_node_id = NodeId(conn.last_insert_rowid());
+
+        // Create episodes
+        let mut ep_ids = vec![];
+        for i in 0..5 {
+            let id = episodic::store_episode(
+                &conn,
+                &NewEpisode {
+                    content: format!("Rust topic {i}"),
+                    role: Role::User,
+                    session_id: "s1".to_string(),
+                    timestamp: 1000 + i * 100,
+                    context: EpisodeContext::default(),
+                    embedding: None,
+                },
+            ).unwrap();
+            ep_ids.push(id);
+
+            // Link episode → existing semantic node (so neighbor vote can find it)
+            links::create_link(
+                &conn,
+                NodeRef::Episode(id),
+                NodeRef::Semantic(existing_node_id),
+                LinkType::Causal,
+                0.7,
+            ).unwrap();
+        }
+
+        // Use learn_direct (not consolidate) to add a new node:
+        // - Embedding far from centroid → Signal 1 won't fire
+        // - References the same episodes → neighbor vote triggers (Signal 2)
+        let report = learn_direct(
+            &conn,
+            vec![NewSemanticNode {
+                content: "Rust ownership model".to_string(),
+                node_type: SemanticType::Fact,
+                confidence: 0.8,
+                source_episodes: ep_ids,
+                embedding: Some(vec![0.3, 0.3, 0.85]),
+            }],
+        ).unwrap();
+        assert_eq!(report.nodes_created, 1);
+        // The neighbor vote should assign the category because all linked nodes share it
+        assert_eq!(
+            report.categories_assigned, 1,
+            "should assign category via neighbor vote with embedding (line 162)"
         );
     }
 }

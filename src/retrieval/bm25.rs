@@ -113,4 +113,38 @@ mod tests {
         let results = search_bm25(&conn, "", 10).unwrap();
         assert!(results.is_empty());
     }
+
+    #[test]
+    fn test_bm25_special_chars_only_query() {
+        let conn = open_memory_db().unwrap();
+        // A query of only special characters should sanitize to empty and return empty
+        let results = search_bm25(&conn, "!@#$%^&*()", 10).unwrap();
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_bm25_single_result_normalization() {
+        let conn = open_memory_db().unwrap();
+        episodic::store_episode(
+            &conn,
+            &NewEpisode {
+                content: "unique frobnicator keyword".to_string(),
+                role: Role::User,
+                session_id: "s1".to_string(),
+                timestamp: 1000,
+                context: EpisodeContext::default(),
+                embedding: None,
+            },
+        )
+        .unwrap();
+
+        // Single result means min_rank == max_rank, range == 0 => score = 1.0
+        let results = search_bm25(&conn, "frobnicator", 10).unwrap();
+        assert_eq!(results.len(), 1);
+        assert!(
+            (results[0].1 - 1.0).abs() < 0.01,
+            "single result should have normalized score of 1.0, got {}",
+            results[0].1
+        );
+    }
 }

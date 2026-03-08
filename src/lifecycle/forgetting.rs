@@ -97,4 +97,90 @@ mod tests {
 
         assert!(after.retrieval_strength < before.retrieval_strength);
     }
+
+    #[test]
+    fn test_archive_semantic_node() {
+        use crate::store::semantic;
+
+        let conn = open_memory_db().unwrap();
+
+        // Store a semantic node
+        let node_id = semantic::store_semantic_node(
+            &conn,
+            &crate::types::NewSemanticNode {
+                content: "archivable knowledge".to_string(),
+                node_type: crate::types::SemanticType::Fact,
+                confidence: 0.5,
+                source_episodes: vec![],
+                embedding: None,
+            },
+        )
+        .unwrap();
+
+        let node = NodeRef::Semantic(node_id);
+        strengths::init_strength(&conn, node).unwrap();
+
+        // Manually set both strengths very low (below thresholds)
+        conn.execute(
+            "UPDATE node_strengths SET storage_strength = 0.05, retrieval_strength = 0.01
+             WHERE node_type = 'semantic' AND node_id = ?1",
+            [node_id.0],
+        )
+        .unwrap();
+
+        // Verify the node exists before forget
+        let before = semantic::get_semantic_node(&conn, node_id);
+        assert!(before.is_ok(), "semantic node should exist before forget");
+
+        let report = forget(&conn).unwrap();
+        assert_eq!(report.nodes_archived, 1);
+
+        // Verify the semantic node was deleted
+        let after = semantic::get_semantic_node(&conn, node_id);
+        assert!(after.is_err(), "semantic node should be deleted after archive");
+    }
+
+    #[test]
+    fn test_forget_skips_preferences_and_categories() {
+        let conn = open_memory_db().unwrap();
+
+        // Insert a preference node_strengths record with very low strengths
+        conn.execute(
+            "INSERT INTO node_strengths (node_type, node_id, storage_strength, retrieval_strength, access_count, last_accessed)
+             VALUES ('preference', 1, 0.01, 0.001, 1, 1000)",
+            [],
+        )
+        .unwrap();
+
+        // Insert a category node_strengths record with very low strengths
+        conn.execute(
+            "INSERT INTO node_strengths (node_type, node_id, storage_strength, retrieval_strength, access_count, last_accessed)
+             VALUES ('category', 1, 0.01, 0.001, 1, 1000)",
+            [],
+        )
+        .unwrap();
+
+        let report = forget(&conn).unwrap();
+        // Preferences and categories should be skipped (continue), not archived
+        assert_eq!(report.nodes_archived, 0);
+
+        // Verify the strength records still exist (they were not cleaned up)
+        let pref_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM node_strengths WHERE node_type = 'preference'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(pref_count, 1, "preference strength record should still exist");
+
+        let cat_count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM node_strengths WHERE node_type = 'category'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(cat_count, 1, "category strength record should still exist");
+    }
 }
