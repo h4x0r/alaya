@@ -148,6 +148,13 @@ pub struct LearnParams {
     pub session_id: Option<String>,
 }
 
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct ImportClaudeMemParams {
+    /// Path to claude-mem.db (default: ~/.claude-mem/claude-mem.db)
+    #[schemars(description = "Path to claude-mem.db (default: ~/.claude-mem/claude-mem.db)")]
+    pub path: Option<String>,
+}
+
 // ---------------------------------------------------------------------------
 // MCP Server
 // ---------------------------------------------------------------------------
@@ -612,6 +619,105 @@ impl AlayaMcp {
         }
     }
 
+    /// Import memories from claude-mem SQLite database.
+    #[tool(
+        description = "Import memories from claude-mem (claude-mem.db SQLite database). Reads observations and converts facts/concepts into Alaya semantic nodes."
+    )]
+    fn import_claude_mem(&self, #[tool(aggr)] params: ImportClaudeMemParams) -> String {
+        // 1. Resolve path (default to ~/.claude-mem/claude-mem.db)
+        let path = params.path.unwrap_or_else(|| {
+            let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+            format!("{home}/.claude-mem/claude-mem.db")
+        });
+
+        // 2. Open SQLite read-only
+        let source_conn = match rusqlite::Connection::open_with_flags(
+            &path,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+        ) {
+            Ok(c) => c,
+            Err(e) => return format!("Cannot open claude-mem.db at '{path}': {e}"),
+        };
+
+        // 3. Query observations
+        let mut stmt = match source_conn.prepare(
+            "SELECT title, facts, narrative, concepts, created_at FROM observations",
+        ) {
+            Ok(s) => s,
+            Err(e) => return format!("Error reading observations: {e}"),
+        };
+
+        let mut nodes = Vec::new();
+        let mut obs_count = 0u32;
+
+        let rows = match stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0).unwrap_or_default(), // title
+                row.get::<_, String>(1).unwrap_or_default(), // facts JSON
+                row.get::<_, String>(2).unwrap_or_default(), // narrative
+                row.get::<_, String>(3).unwrap_or_default(), // concepts JSON
+                row.get::<_, String>(4).unwrap_or_default(), // created_at
+            ))
+        }) {
+            Ok(r) => r,
+            Err(e) => return format!("Error querying observations: {e}"),
+        };
+
+        for row_result in rows {
+            let (title, facts_json, _narrative, concepts_json, _created_at) = match row_result {
+                Ok(r) => r,
+                Err(_) => continue,
+            };
+            obs_count += 1;
+            let _ = title; // used for counting, title context is implicit in facts
+
+            // Parse facts JSON array
+            if let Ok(facts) = serde_json::from_str::<Vec<String>>(&facts_json) {
+                for fact in facts {
+                    if fact.trim().is_empty() {
+                        continue;
+                    }
+                    nodes.push(NewSemanticNode {
+                        content: fact,
+                        node_type: SemanticType::Fact,
+                        confidence: 0.8,
+                        source_episodes: vec![],
+                        embedding: None,
+                    });
+                }
+            }
+
+            // Parse concepts JSON array
+            if let Ok(concepts) = serde_json::from_str::<Vec<String>>(&concepts_json) {
+                for concept in concepts {
+                    if concept.trim().is_empty() {
+                        continue;
+                    }
+                    nodes.push(NewSemanticNode {
+                        content: concept,
+                        node_type: SemanticType::Concept,
+                        confidence: 0.7,
+                        source_episodes: vec![],
+                        embedding: None,
+                    });
+                }
+            }
+        }
+
+        if obs_count == 0 {
+            return format!("No observations found in '{path}'.");
+        }
+
+        let node_count = nodes.len();
+        match self.with_store(|s| s.learn(nodes)) {
+            Ok(report) => format!(
+                "Imported {obs_count} observations \u{2192} {node_count} semantic nodes. {} categories assigned.",
+                report.categories_assigned
+            ),
+            Err(e) => format!("Error importing: {e}"),
+        }
+    }
+
     /// Purge memories by session, timestamp, or everything.
     #[tool(
         description = "Purge memories. Scope: 'session' (requires session_id), 'older_than' (requires before_timestamp), or 'all' (deletes everything)."
@@ -657,7 +763,7 @@ impl ServerHandler for AlayaMcp {
                  'status' to check stats, 'preferences' for user preferences, 'knowledge' for \
                  semantic facts, 'categories' for emergent clusters, 'neighbors' for graph \
                  traversal, 'node_category' to check a node's category, 'maintain' for cleanup, \
-                 and 'purge' to delete data."
+                 'import_claude_mem' to import from claude-mem.db, and 'purge' to delete data."
                     .into(),
             ),
             ..Default::default()

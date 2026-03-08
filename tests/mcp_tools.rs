@@ -13,6 +13,8 @@ use alaya::{
     AlayaStore, EpisodeContext, EpisodeId, KnowledgeFilter, NewEpisode, NewSemanticNode, NodeRef,
     PurgeFilter, Query, Role, SemanticType,
 };
+use rusqlite;
+use serde_json;
 
 fn make_episode(content: &str, role: Role, session: &str, ts: i64) -> NewEpisode {
     NewEpisode {
@@ -403,4 +405,121 @@ fn test_mcp_rich_status_fields() {
     // node_content for missing node
     let missing = store.node_content(NodeRef::Episode(EpisodeId(999))).unwrap();
     assert!(missing.is_none());
+}
+
+#[test]
+fn test_import_claude_mem_data_flow() {
+    // Create a temp SQLite db with claude-mem schema
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("claude-mem.db");
+    let source_conn = rusqlite::Connection::open(&db_path).unwrap();
+    source_conn
+        .execute_batch(
+            "CREATE TABLE observations (
+                id INTEGER PRIMARY KEY,
+                title TEXT NOT NULL,
+                facts TEXT NOT NULL DEFAULT '[]',
+                narrative TEXT NOT NULL DEFAULT '',
+                concepts TEXT NOT NULL DEFAULT '[]',
+                created_at TEXT NOT NULL DEFAULT ''
+            );",
+        )
+        .unwrap();
+
+    // Insert test observations
+    source_conn
+        .execute(
+            "INSERT INTO observations (title, facts, concepts, created_at) VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params![
+                "Rust Programming",
+                r#"["User prefers Rust", "User likes type safety"]"#,
+                r#"["systems programming", "memory safety"]"#,
+                "2024-01-01T00:00:00Z"
+            ],
+        )
+        .unwrap();
+    source_conn
+        .execute(
+            "INSERT INTO observations (title, facts, concepts, created_at) VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params![
+                "Cooking",
+                r#"["User enjoys Italian cuisine"]"#,
+                r#"["cooking"]"#,
+                "2024-01-02T00:00:00Z"
+            ],
+        )
+        .unwrap();
+    drop(source_conn);
+
+    // Now simulate what the MCP tool does: read from source, create nodes, learn
+    let source_conn = rusqlite::Connection::open_with_flags(
+        &db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+
+    let mut stmt = source_conn
+        .prepare("SELECT title, facts, narrative, concepts, created_at FROM observations")
+        .unwrap();
+
+    let mut nodes = Vec::new();
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0).unwrap_or_default(),
+                row.get::<_, String>(1).unwrap_or_default(),
+                row.get::<_, String>(2).unwrap_or_default(),
+                row.get::<_, String>(3).unwrap_or_default(),
+            ))
+        })
+        .unwrap();
+
+    for row in rows {
+        let (_title, facts_json, _narrative, concepts_json) = row.unwrap();
+        if let Ok(facts) = serde_json::from_str::<Vec<String>>(&facts_json) {
+            for fact in facts {
+                nodes.push(NewSemanticNode {
+                    content: fact,
+                    node_type: SemanticType::Fact,
+                    confidence: 0.8,
+                    source_episodes: vec![],
+                    embedding: None,
+                });
+            }
+        }
+        if let Ok(concepts) = serde_json::from_str::<Vec<String>>(&concepts_json) {
+            for concept in concepts {
+                nodes.push(NewSemanticNode {
+                    content: concept,
+                    node_type: SemanticType::Concept,
+                    confidence: 0.7,
+                    source_episodes: vec![],
+                    embedding: None,
+                });
+            }
+        }
+    }
+    drop(stmt);
+    drop(source_conn);
+
+    assert_eq!(nodes.len(), 6); // 3 facts + 3 concepts
+
+    let store = AlayaStore::open_in_memory().unwrap();
+    let report = store.learn(nodes).unwrap();
+    assert_eq!(report.nodes_created, 6);
+
+    let knowledge = store.knowledge(None).unwrap();
+    assert_eq!(knowledge.len(), 6);
+
+    // Verify types
+    let facts: Vec<_> = knowledge
+        .iter()
+        .filter(|n| n.node_type == SemanticType::Fact)
+        .collect();
+    let concepts: Vec<_> = knowledge
+        .iter()
+        .filter(|n| n.node_type == SemanticType::Concept)
+        .collect();
+    assert_eq!(facts.len(), 3);
+    assert_eq!(concepts.len(), 3);
 }
