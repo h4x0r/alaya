@@ -61,6 +61,7 @@ pub use types::*;
 pub struct AlayaStore {
     conn: Connection,
     embedding_provider: Option<Box<dyn EmbeddingProvider>>,
+    extraction_provider: Option<Box<dyn ExtractionProvider>>,
 }
 
 impl AlayaStore {
@@ -74,7 +75,7 @@ impl AlayaStore {
     /// ```
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let conn = schema::open_db(path.as_ref().to_str().unwrap_or("alaya.db"))?;
-        Ok(Self { conn, embedding_provider: None })
+        Ok(Self { conn, embedding_provider: None, extraction_provider: None })
     }
 
     /// Open an ephemeral in-memory database (useful for tests).
@@ -86,7 +87,7 @@ impl AlayaStore {
     /// ```
     pub fn open_in_memory() -> Result<Self> {
         let conn = schema::open_memory_db()?;
-        Ok(Self { conn, embedding_provider: None })
+        Ok(Self { conn, embedding_provider: None, extraction_provider: None })
     }
 
     /// Set an embedding provider for automatic embedding generation.
@@ -95,6 +96,14 @@ impl AlayaStore {
     /// if none are provided explicitly.
     pub fn set_embedding_provider(&mut self, provider: Box<dyn EmbeddingProvider>) {
         self.embedding_provider = Some(provider);
+    }
+
+    /// Set an extraction provider for automatic knowledge extraction.
+    ///
+    /// When set, [`auto_consolidate`](Self::auto_consolidate) will use this
+    /// provider to extract semantic nodes from unconsolidated episodes.
+    pub fn set_extraction_provider(&mut self, provider: Box<dyn ExtractionProvider>) {
+        self.extraction_provider = Some(provider);
     }
 
     // -----------------------------------------------------------------------
@@ -397,6 +406,28 @@ impl AlayaStore {
         let report = lifecycle::consolidation::learn_direct(&tx, nodes)?;
         tx.commit()?;
         Ok(report)
+    }
+
+    /// Automatically extract knowledge from unconsolidated episodes using
+    /// the configured ExtractionProvider, then learn the extracted nodes.
+    ///
+    /// Requires an ExtractionProvider to be set via `set_extraction_provider()`.
+    /// Returns an error if no provider is configured.
+    ///
+    /// This is the core mechanism for sidecar LLM auto-consolidation:
+    /// the MCP server calls this when the unconsolidated episode threshold
+    /// is reached, and the provider calls a lightweight LLM to extract facts.
+    pub fn auto_consolidate(&self) -> Result<ConsolidationReport> {
+        let provider = self.extraction_provider.as_ref()
+            .ok_or_else(|| AlayaError::InvalidInput(
+                "no extraction provider configured; call set_extraction_provider() first".into()
+            ))?;
+        let episodes = self.unconsolidated_episodes(20)?;
+        if episodes.is_empty() {
+            return Ok(ConsolidationReport::default());
+        }
+        let nodes = provider.extract(&episodes)?;
+        self.learn(nodes)
     }
 
     /// Return all episodes belonging to the given session, ordered by timestamp.
@@ -1702,5 +1733,93 @@ mod tests {
         let store = AlayaStore::open_in_memory().unwrap();
         let result = store.node_category(NodeId(99999)).unwrap();
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_set_extraction_provider_enables_auto_consolidate() {
+        let mut store = AlayaStore::open_in_memory().unwrap();
+        // Without provider, auto_consolidate should fail
+        assert!(store.auto_consolidate().is_err());
+
+        // Set provider and store some episodes
+        store.set_extraction_provider(Box::new(MockExtractionProvider::new(vec![
+            NewSemanticNode {
+                content: "User prefers Rust".into(),
+                node_type: SemanticType::Fact,
+                confidence: 0.9,
+                source_episodes: vec![],
+                embedding: None,
+            },
+        ])));
+
+        store.store_episode(&NewEpisode {
+            content: "I really like Rust".into(),
+            role: Role::User,
+            session_id: "s1".into(),
+            timestamp: 1000,
+            context: EpisodeContext::default(),
+            embedding: None,
+        }).unwrap();
+
+        let report = store.auto_consolidate().unwrap();
+        assert_eq!(report.nodes_created, 1);
+    }
+
+    #[test]
+    fn test_auto_consolidate_without_provider_errors() {
+        let store = AlayaStore::open_in_memory().unwrap();
+        let result = store.auto_consolidate();
+        assert!(result.is_err());
+        let err_msg = format!("{}", result.unwrap_err());
+        assert!(err_msg.contains("extraction provider"), "Error should mention extraction provider: {err_msg}");
+    }
+
+    #[test]
+    fn test_auto_consolidate_no_unconsolidated_episodes() {
+        let mut store = AlayaStore::open_in_memory().unwrap();
+        store.set_extraction_provider(Box::new(MockExtractionProvider::empty()));
+        // No episodes stored, so nothing to consolidate
+        let report = store.auto_consolidate().unwrap();
+        assert_eq!(report.nodes_created, 0);
+    }
+
+    #[test]
+    fn test_auto_consolidate_learns_extracted_nodes() {
+        let mut store = AlayaStore::open_in_memory().unwrap();
+        store.set_extraction_provider(Box::new(MockExtractionProvider::new(vec![
+            NewSemanticNode {
+                content: "Fact one".into(),
+                node_type: SemanticType::Fact,
+                confidence: 0.85,
+                source_episodes: vec![],
+                embedding: None,
+            },
+            NewSemanticNode {
+                content: "Relationship two".into(),
+                node_type: SemanticType::Relationship,
+                confidence: 0.7,
+                source_episodes: vec![],
+                embedding: None,
+            },
+        ])));
+
+        // Store episodes so there's something to consolidate
+        for i in 0..3 {
+            store.store_episode(&NewEpisode {
+                content: format!("Episode {i}"),
+                role: Role::User,
+                session_id: "s1".into(),
+                timestamp: 1000 + i as i64,
+                context: EpisodeContext::default(),
+                embedding: None,
+            }).unwrap();
+        }
+
+        let report = store.auto_consolidate().unwrap();
+        assert_eq!(report.nodes_created, 2);
+
+        // Verify knowledge is queryable
+        let knowledge = store.knowledge(None).unwrap();
+        assert_eq!(knowledge.len(), 2);
     }
 }
