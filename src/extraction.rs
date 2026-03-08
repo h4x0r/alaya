@@ -26,7 +26,12 @@ Respond with ONLY a JSON array. No markdown, no explanation.";
 pub(crate) fn build_user_prompt(episodes: &[Episode]) -> String {
     let mut prompt = String::from("Extract knowledge from these conversation episodes:\n\n");
     for ep in episodes {
-        prompt.push_str(&format!("[{}] {}: {}\n", ep.id.0, ep.role.as_str(), ep.content));
+        prompt.push_str(&format!(
+            "[{}] {}: {}\n",
+            ep.id.0,
+            ep.role.as_str(),
+            ep.content
+        ));
     }
     prompt
 }
@@ -385,7 +390,10 @@ mod tests {
             .api_key("test-key")
             .build()
             .unwrap();
-        assert_eq!(provider.api_url, "https://api.openai.com/v1/chat/completions");
+        assert_eq!(
+            provider.api_url,
+            "https://api.openai.com/v1/chat/completions"
+        );
         assert_eq!(provider.model, "gpt-4o-mini");
     }
 
@@ -397,7 +405,10 @@ mod tests {
             .model("llama3.2")
             .build()
             .unwrap();
-        assert_eq!(provider.api_url, "http://localhost:11434/v1/chat/completions");
+        assert_eq!(
+            provider.api_url,
+            "http://localhost:11434/v1/chat/completions"
+        );
         assert_eq!(provider.model, "llama3.2");
         assert_eq!(provider.api_key, "sk-test");
     }

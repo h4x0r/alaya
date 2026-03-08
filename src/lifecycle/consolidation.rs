@@ -46,10 +46,7 @@ pub fn consolidate(
 ///
 /// This enables library users and the MCP binary to perform consolidation
 /// without requiring a [`ConsolidationProvider`] (LLM).
-pub fn learn_direct(
-    conn: &Connection,
-    nodes: Vec<NewSemanticNode>,
-) -> Result<ConsolidationReport> {
+pub fn learn_direct(conn: &Connection, nodes: Vec<NewSemanticNode>) -> Result<ConsolidationReport> {
     let mut report = ConsolidationReport::default();
 
     for node_data in nodes {
@@ -512,8 +509,13 @@ mod tests {
         // Create a prototype and category
         let proto = insert_prototype(&conn);
         let cat_id = categories::store_category(
-            &conn, "rust-programming", proto, Some(&[1.0, 0.0, 0.0]), None,
-        ).unwrap();
+            &conn,
+            "rust-programming",
+            proto,
+            Some(&[1.0, 0.0, 0.0]),
+            None,
+        )
+        .unwrap();
 
         // Create an existing semantic node that IS categorized
         conn.execute(
@@ -536,7 +538,8 @@ mod tests {
                     context: EpisodeContext::default(),
                     embedding: None,
                 },
-            ).unwrap();
+            )
+            .unwrap();
             ep_ids.push(id);
 
             // Link episode → existing semantic node (so neighbor vote can find it)
@@ -546,7 +549,8 @@ mod tests {
                 NodeRef::Semantic(existing_node_id),
                 LinkType::Causal,
                 0.7,
-            ).unwrap();
+            )
+            .unwrap();
         }
 
         // Use learn_direct (not consolidate) to add a new node:
@@ -561,7 +565,8 @@ mod tests {
                 source_episodes: ep_ids,
                 embedding: Some(vec![0.3, 0.3, 0.85]),
             }],
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(report.nodes_created, 1);
         // The neighbor vote should assign the category because all linked nodes share it
         assert_eq!(

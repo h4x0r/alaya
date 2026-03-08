@@ -323,7 +323,10 @@ mod tests {
         let version: i64 = conn
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .unwrap();
-        assert_eq!(version, 4, "schema version should be 4 after parent_id migration");
+        assert_eq!(
+            version, 4,
+            "schema version should be 4 after parent_id migration"
+        );
     }
 
     #[test]
@@ -332,15 +335,16 @@ mod tests {
         let version: i64 = conn
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .unwrap();
-        assert_eq!(version, 4, "schema version should be 4 after parent_id migration");
+        assert_eq!(
+            version, 4,
+            "schema version should be 4 after parent_id migration"
+        );
     }
 
     #[test]
     fn test_tombstones_table_exists() {
         let conn = open_memory_db().unwrap();
-        let exists: bool = conn
-            .prepare("SELECT 1 FROM tombstones LIMIT 0")
-            .is_ok();
+        let exists: bool = conn.prepare("SELECT 1 FROM tombstones LIMIT 0").is_ok();
         assert!(exists, "tombstones table should exist");
     }
 
@@ -455,7 +459,9 @@ mod tests {
         )
         .unwrap();
         let parent_id: Option<i64> = conn
-            .query_row("SELECT parent_id FROM categories WHERE id = 1", [], |row| row.get(0))
+            .query_row("SELECT parent_id FROM categories WHERE id = 1", [], |row| {
+                row.get(0)
+            })
             .unwrap();
         assert!(parent_id.is_none());
     }

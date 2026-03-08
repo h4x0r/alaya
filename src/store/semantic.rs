@@ -120,10 +120,11 @@ pub fn count_nodes(conn: &Connection) -> Result<u64> {
 }
 
 /// Count semantic nodes grouped by type.
-pub fn count_nodes_by_type(conn: &Connection) -> Result<std::collections::HashMap<SemanticType, u64>> {
-    let mut stmt = conn.prepare(
-        "SELECT node_type, count(*) FROM semantic_nodes GROUP BY node_type",
-    )?;
+pub fn count_nodes_by_type(
+    conn: &Connection,
+) -> Result<std::collections::HashMap<SemanticType, u64>> {
+    let mut stmt =
+        conn.prepare("SELECT node_type, count(*) FROM semantic_nodes GROUP BY node_type")?;
     let rows = stmt.query_map([], |row| {
         let type_str: String = row.get(0)?;
         let count: i64 = row.get(1)?;

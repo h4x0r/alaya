@@ -1062,7 +1062,9 @@ fn test_cross_domain_bridging_via_categories() {
 
     // At depth 2, neighbors should include the category AND other semantic nodes
     // that share the category through MemberOf links
-    let has_category = neighbors.iter().any(|(nr, _)| matches!(nr, NodeRef::Category(_)));
+    let has_category = neighbors
+        .iter()
+        .any(|(nr, _)| matches!(nr, NodeRef::Category(_)));
     assert!(
         has_category,
         "neighbors at depth 2 should include the category node via MemberOf"

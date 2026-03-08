@@ -322,7 +322,12 @@ fn test_unconsolidated_episodes_count() {
     // Store 10 episodes
     for i in 0..10 {
         store
-            .store_episode(&make_episode(&format!("msg {i}"), Role::User, "s1", 1000 + i))
+            .store_episode(&make_episode(
+                &format!("msg {i}"),
+                Role::User,
+                "s1",
+                1000 + i,
+            ))
             .unwrap();
     }
     // All 10 should be unconsolidated
@@ -405,7 +410,9 @@ fn test_mcp_rich_status_fields() {
     assert_eq!(label, Some("test content".to_string()));
 
     // node_content for missing node
-    let missing = store.node_content(NodeRef::Episode(EpisodeId(999))).unwrap();
+    let missing = store
+        .node_content(NodeRef::Episode(EpisodeId(999)))
+        .unwrap();
     assert!(missing.is_none());
 }
 
@@ -454,11 +461,9 @@ fn test_import_claude_mem_data_flow() {
     drop(source_conn);
 
     // Now simulate what the MCP tool does: read from source, create nodes, learn
-    let source_conn = rusqlite::Connection::open_with_flags(
-        &db_path,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .unwrap();
+    let source_conn =
+        rusqlite::Connection::open_with_flags(&db_path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .unwrap();
 
     let mut stmt = source_conn
         .prepare("SELECT title, facts, narrative, concepts, created_at FROM observations")
@@ -551,10 +556,7 @@ fn test_import_claude_code_data_flow() {
         }
         let value: serde_json::Value = serde_json::from_str(line).unwrap();
 
-        let entry_type = value
-            .get("type")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let entry_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
         if entry_type != "human" && entry_type != "assistant" {
             continue;
         }

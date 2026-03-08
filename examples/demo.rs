@@ -17,8 +17,8 @@
 
 use alaya::{
     AlayaStore, ConsolidationProvider, Episode, EpisodeContext, EpisodeId, Interaction,
-    MockEmbeddingProvider, NewEpisode, NewImpression, NewSemanticNode, NodeRef, PurgeFilter,
-    Query, QueryContext, Role, SemanticNode, SemanticType,
+    MockEmbeddingProvider, NewEpisode, NewImpression, NewSemanticNode, NodeRef, PurgeFilter, Query,
+    QueryContext, Role, SemanticNode, SemanticType,
 };
 
 // ============================================================================
@@ -524,11 +524,17 @@ fn chapter_5_transformation(store: &AlayaStore) {
         report.categories_discovered
     );
     println!("    categories_merged:      {}", report.categories_merged);
-    println!("    categories_dissolved:   {}", report.categories_dissolved);
+    println!(
+        "    categories_dissolved:   {}",
+        report.categories_dissolved
+    );
     println!();
 
     if report.links_decayed > 0 {
-        println!("  LTD (Long-Term Depression): {} links decayed by factor 0.95", report.links_decayed);
+        println!(
+            "  LTD (Long-Term Depression): {} links decayed by factor 0.95",
+            report.links_decayed
+        );
         println!("  Unused associations weaken -- only active pathways persist.");
         println!();
     }
@@ -562,7 +568,10 @@ fn chapter_6_emergent_ontology(store: &AlayaStore) {
         println!("  (No categories formed yet -- need 3+ semantic nodes with");
         println!("   similar embeddings. Run more consolidation cycles.)");
     } else {
-        println!("  {} categories emerged from semantic node clustering:", categories.len());
+        println!(
+            "  {} categories emerged from semantic node clustering:",
+            categories.len()
+        );
         println!();
         for cat in &categories {
             println!(
@@ -613,11 +622,7 @@ fn chapter_6_emergent_ontology(store: &AlayaStore) {
 }
 
 fn chapter_7_enriched_retrieval(store: &AlayaStore) {
-    print_chapter(
-        7,
-        "Enriched Retrieval",
-        "Semantic Nodes in Query Results",
-    );
+    print_chapter(7, "Enriched Retrieval", "Semantic Nodes in Query Results");
 
     println!("  Standard BM25 query returns only episodes:");
     let bm25_results = store
@@ -699,10 +704,7 @@ fn chapter_8_rif(store: &AlayaStore) {
     let results = store
         .query(&Query::simple("Rust borrow checker"))
         .expect("query failed");
-    let retrieved: Vec<String> = results
-        .iter()
-        .map(|r| truncate(&r.content, 50))
-        .collect();
+    let retrieved: Vec<String> = results.iter().map(|r| truncate(&r.content, 50)).collect();
     for (i, content) in retrieved.iter().enumerate() {
         println!("    Retrieved: {}. \"{}\"", i + 1, content);
     }
@@ -833,7 +835,11 @@ fn chapter_11_v020_features(store: &AlayaStore) {
     if !cats.is_empty() {
         println!("  Category Hierarchy:");
         for cat in &cats {
-            let prefix = if cat.parent_id.is_some() { "  └─" } else { "  ●" };
+            let prefix = if cat.parent_id.is_some() {
+                "  └─"
+            } else {
+                "  ●"
+            };
             println!(
                 "  {} [cat#{}] \"{}\" — {} members, stability: {:.2}",
                 prefix, cat.id.0, cat.label, cat.member_count, cat.stability
@@ -851,7 +857,10 @@ fn chapter_11_v020_features(store: &AlayaStore) {
         if !subs.is_empty() {
             println!("  Subcategories of \"{}\": {}", root.label, subs.len());
             for sub in &subs {
-                println!("    └─ [cat#{}] \"{}\" ({} members)", sub.id.0, sub.label, sub.member_count);
+                println!(
+                    "    └─ [cat#{}] \"{}\" ({} members)",
+                    sub.id.0, sub.label, sub.member_count
+                );
             }
         }
     }

@@ -730,7 +730,10 @@ mod tests {
                 |r| r.get(0),
             )
             .unwrap();
-        assert_eq!(link_count, 6, "should have 6 bidirectional MemberOf links (2 per node)");
+        assert_eq!(
+            link_count, 6,
+            "should have 6 bidirectional MemberOf links (2 per node)"
+        );
     }
 
     #[test]
@@ -743,16 +746,38 @@ mod tests {
         // Within each cluster: cosine sim ~0.8 (above 0.7 cluster threshold, below 0.95 dedup)
         // Cross-cluster: cosine sim = 0 (orthogonal subspaces)
         let test_embs: Vec<Vec<f32>> = vec![
-            vec![0.45, 0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            vec![0.45, 0.45, 0.45, 0.45, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            vec![0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            vec![0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            vec![0.45, 0.45, 0.45, 0.45, 0.31, 0.31, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.0],
-            vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.0, 0.45, 0.0, 0.0],
-            vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.45, 0.0],
-            vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.0, 0.45],
-            vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.31, 0.31, 0.0, 0.0],
+            vec![
+                0.45, 0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            ],
+            vec![
+                0.45, 0.45, 0.45, 0.45, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            ],
+            vec![
+                0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            ],
+            vec![
+                0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            ],
+            vec![
+                0.45, 0.45, 0.45, 0.45, 0.31, 0.31, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0,
+            ],
+            vec![
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.0,
+            ],
+            vec![
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.0, 0.45, 0.0, 0.0,
+            ],
+            vec![
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.45, 0.0,
+            ],
+            vec![
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.0, 0.45,
+            ],
+            vec![
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.31, 0.31, 0.0,
+                0.0,
+            ],
         ];
         let mut node_ids = Vec::new();
         for i in 0..10 {
@@ -770,7 +795,9 @@ mod tests {
         // Create a parent category containing all 10
         let cat_id = categories::store_category(&conn, "broad", node_ids[0], None, None).unwrap();
         // Set centroid orthogonal to both clusters — forces low coherence
-        let centroid = vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.7, 0.7];
+        let centroid = vec![
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.7, 0.7,
+        ];
         categories::update_centroid(&conn, cat_id, &centroid).unwrap();
         for &nid in &node_ids {
             categories::assign_node_to_category(&conn, nid, cat_id).unwrap();
@@ -937,7 +964,10 @@ mod tests {
         let count: i64 = conn
             .query_row("SELECT COUNT(*) FROM semantic_nodes", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(count, 1, "should have 1 node after dedup of 3 identical nodes");
+        assert_eq!(
+            count, 1,
+            "should have 1 node after dedup of 3 identical nodes"
+        );
     }
 
     #[test]
@@ -954,9 +984,11 @@ mod tests {
         }
 
         let c1 =
-            categories::store_category(&conn, "cat-a", NodeId(1), Some(&[1.0, 0.0, 0.0]), None).unwrap();
-        let c2 = categories::store_category(&conn, "cat-b", NodeId(2), Some(&[0.99, 0.01, 0.0]), None)
-            .unwrap();
+            categories::store_category(&conn, "cat-a", NodeId(1), Some(&[1.0, 0.0, 0.0]), None)
+                .unwrap();
+        let c2 =
+            categories::store_category(&conn, "cat-b", NodeId(2), Some(&[0.99, 0.01, 0.0]), None)
+                .unwrap();
 
         // Assign one member to each so they're non-empty and don't get GC'd
         categories::assign_node_to_category(&conn, NodeId(1), c1).unwrap();
@@ -997,7 +1029,10 @@ mod tests {
         embeddings::store_embedding(&conn, "semantic", 2, &[0.9, 0.1, 0.0], "").unwrap();
 
         let discovered = discover_categories(&conn).unwrap();
-        assert_eq!(discovered, 0, "should not discover categories with < 3 embedded nodes");
+        assert_eq!(
+            discovered, 0,
+            "should not discover categories with < 3 embedded nodes"
+        );
     }
 
     #[test]
@@ -1014,7 +1049,14 @@ mod tests {
                 [format!("cluster node {i}")],
             ).unwrap();
             let nid = conn.last_insert_rowid();
-            embeddings::store_embedding(&conn, "semantic", nid, &[1.0, 0.0 + (i as f32) * 0.01, 0.0], "").unwrap();
+            embeddings::store_embedding(
+                &conn,
+                "semantic",
+                nid,
+                &[1.0, 0.0 + (i as f32) * 0.01, 0.0],
+                "",
+            )
+            .unwrap();
         }
 
         // 2 outlier nodes far away (won't cluster with above or each other → too small)
@@ -1023,17 +1065,34 @@ mod tests {
              VALUES ('outlier a', 'fact', 0.8, 1000, 1000, 1)",
             [],
         ).unwrap();
-        embeddings::store_embedding(&conn, "semantic", conn.last_insert_rowid(), &[0.0, 1.0, 0.0], "").unwrap();
+        embeddings::store_embedding(
+            &conn,
+            "semantic",
+            conn.last_insert_rowid(),
+            &[0.0, 1.0, 0.0],
+            "",
+        )
+        .unwrap();
 
         conn.execute(
             "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated, corroboration_count)
              VALUES ('outlier b', 'fact', 0.8, 1000, 1000, 1)",
             [],
         ).unwrap();
-        embeddings::store_embedding(&conn, "semantic", conn.last_insert_rowid(), &[0.0, 0.0, 1.0], "").unwrap();
+        embeddings::store_embedding(
+            &conn,
+            "semantic",
+            conn.last_insert_rowid(),
+            &[0.0, 0.0, 1.0],
+            "",
+        )
+        .unwrap();
 
         let discovered = discover_categories(&conn).unwrap();
-        assert_eq!(discovered, 1, "should create 1 category from tight cluster, skip outliers");
+        assert_eq!(
+            discovered, 1,
+            "should create 1 category from tight cluster, skip outliers"
+        );
     }
 
     #[test]
@@ -1049,7 +1108,14 @@ mod tests {
                 [],
             ).unwrap();
             let nid = conn.last_insert_rowid();
-            embeddings::store_embedding(&conn, "semantic", nid, &[1.0, 0.0 + (i as f32) * 0.01, 0.0], "").unwrap();
+            embeddings::store_embedding(
+                &conn,
+                "semantic",
+                nid,
+                &[1.0, 0.0 + (i as f32) * 0.01, 0.0],
+                "",
+            )
+            .unwrap();
         }
 
         let discovered = discover_categories(&conn).unwrap();
@@ -1087,15 +1153,33 @@ mod tests {
         }
 
         let c1 = categories::store_category(
-            &conn, "low-stability", NodeId(1), Some(&[1.0, 0.0, 0.0]), None,
-        ).unwrap();
+            &conn,
+            "low-stability",
+            NodeId(1),
+            Some(&[1.0, 0.0, 0.0]),
+            None,
+        )
+        .unwrap();
         let c2 = categories::store_category(
-            &conn, "high-stability", NodeId(2), Some(&[0.99, 0.01, 0.0]), None,
-        ).unwrap();
+            &conn,
+            "high-stability",
+            NodeId(2),
+            Some(&[0.99, 0.01, 0.0]),
+            None,
+        )
+        .unwrap();
 
         // Set different stabilities: c1 low, c2 high
-        conn.execute("UPDATE categories SET stability = 0.3 WHERE id = ?1", [c1.0]).unwrap();
-        conn.execute("UPDATE categories SET stability = 0.9 WHERE id = ?1", [c2.0]).unwrap();
+        conn.execute(
+            "UPDATE categories SET stability = 0.3 WHERE id = ?1",
+            [c1.0],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE categories SET stability = 0.9 WHERE id = ?1",
+            [c2.0],
+        )
+        .unwrap();
 
         categories::assign_node_to_category(&conn, NodeId(1), c1).unwrap();
         categories::assign_node_to_category(&conn, NodeId(2), c2).unwrap();
@@ -1108,8 +1192,10 @@ mod tests {
         // The surviving category should be the one with higher stability (c2)
         let remaining = categories::list_categories(&conn, None).unwrap();
         assert_eq!(remaining.len(), 1);
-        assert_eq!(remaining[0].label, "high-stability",
-            "should keep the higher-stability category");
+        assert_eq!(
+            remaining[0].label, "high-stability",
+            "should keep the higher-stability category"
+        );
     }
 
     #[test]
@@ -1127,9 +1213,8 @@ mod tests {
         }
 
         // Create category WITHOUT centroid but with many members
-        let cat_id = categories::store_category(
-            &conn, "no-centroid-cat", NodeId(1), None, None,
-        ).unwrap();
+        let cat_id =
+            categories::store_category(&conn, "no-centroid-cat", NodeId(1), None, None).unwrap();
 
         for i in 1..=10 {
             categories::assign_node_to_category(&conn, NodeId(i), cat_id).unwrap();

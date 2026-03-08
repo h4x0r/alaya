@@ -9,8 +9,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Mutex;
 
 use crate::{
-    AlayaStore, CategoryId, EpisodeContext, EpisodeId, KnowledgeFilter, NewEpisode, NewSemanticNode,
-    NodeId, NodeRef, PreferenceId, PurgeFilter, Query, Role, SemanticType,
+    AlayaStore, CategoryId, EpisodeContext, EpisodeId, KnowledgeFilter, NewEpisode,
+    NewSemanticNode, NodeId, NodeRef, PreferenceId, PurgeFilter, Query, Role, SemanticType,
 };
 use rmcp::{model::ServerInfo, schemars, tool, ServerHandler};
 
@@ -44,7 +44,9 @@ pub struct RecallParams {
     pub max_results: Option<usize>,
 
     /// Category ID to boost in results
-    #[schemars(description = "Category ID to boost in ranking (memories in this category score higher)")]
+    #[schemars(
+        description = "Category ID to boost in ranking (memories in this category score higher)"
+    )]
     pub boost_category: Option<i64>,
 }
 
@@ -92,7 +94,9 @@ pub struct PurgeParams {
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct CategoriesParams {
     /// Minimum stability threshold (0.0 to 1.0)
-    #[schemars(description = "Minimum stability threshold (0.0 to 1.0). Categories below this are filtered out.")]
+    #[schemars(
+        description = "Minimum stability threshold (0.0 to 1.0). Categories below this are filtered out."
+    )]
     pub min_stability: Option<f32>,
 }
 
@@ -140,7 +144,9 @@ pub struct LearnParams {
     pub facts: Vec<LearnFactEntry>,
 
     /// Session ID to link facts to (episodes in this session become source episodes)
-    #[schemars(description = "Session ID to link facts to (episodes in this session become source episodes)")]
+    #[schemars(
+        description = "Session ID to link facts to (episodes in this session become source episodes)"
+    )]
     pub session_id: Option<String>,
 }
 
@@ -154,7 +160,9 @@ pub struct ImportClaudeMemParams {
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct ImportClaudeCodeParams {
     /// Path to Claude Code JSONL conversation file
-    #[schemars(description = "Path to Claude Code JSONL conversation file (e.g., ~/.claude/projects/-Users-me-myproject/{uuid}.jsonl)")]
+    #[schemars(
+        description = "Path to Claude Code JSONL conversation file (e.g., ~/.claude/projects/-Users-me-myproject/{uuid}.jsonl)"
+    )]
     pub path: String,
 }
 
@@ -192,14 +200,11 @@ fn expand_tilde(path: &str) -> String {
 fn extract_content(value: &serde_json::Value) -> String {
     match value {
         serde_json::Value::String(s) => s.clone(),
-        serde_json::Value::Array(arr) => {
-            arr.iter()
-                .filter_map(|item| {
-                    item.get("text").and_then(|t| t.as_str()).map(String::from)
-                })
-                .collect::<Vec<_>>()
-                .join("\n")
-        }
+        serde_json::Value::Array(arr) => arr
+            .iter()
+            .filter_map(|item| item.get("text").and_then(|t| t.as_str()).map(String::from))
+            .collect::<Vec<_>>()
+            .join("\n"),
         _ => String::new(),
     }
 }
@@ -248,7 +253,7 @@ impl AlayaMcp {
 // coverage through proc-macro-generated wrappers.
 // ---------------------------------------------------------------------------
 
-use crate::types::{Category, Preference, MemoryStatus};
+use crate::types::{Category, MemoryStatus, Preference};
 
 fn format_preferences(prefs: &[Preference]) -> String {
     let mut out = format!("Found {} preferences:\n\n", prefs.len());
@@ -301,9 +306,7 @@ fn format_node_category(node_id: i64, cat: &Category) -> String {
     )
 }
 
-fn format_knowledge_breakdown(
-    breakdown: &std::collections::HashMap<SemanticType, u64>,
-) -> String {
+fn format_knowledge_breakdown(breakdown: &std::collections::HashMap<SemanticType, u64>) -> String {
     let mut parts = Vec::new();
     for (st, label) in [
         (SemanticType::Fact, "facts"),
@@ -353,14 +356,10 @@ fn format_status(
 }
 
 /// Parse a Claude-mem SQLite DB and return (obs_count, nodes).
-fn parse_claude_mem_db(
-    path: &str,
-) -> Result<(u32, Vec<crate::NewSemanticNode>), String> {
-    let source_conn = rusqlite::Connection::open_with_flags(
-        path,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )
-    .map_err(|e| format!("Cannot open claude-mem.db at '{path}': {e}"))?;
+fn parse_claude_mem_db(path: &str) -> Result<(u32, Vec<crate::NewSemanticNode>), String> {
+    let source_conn =
+        rusqlite::Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+            .map_err(|e| format!("Cannot open claude-mem.db at '{path}': {e}"))?;
 
     let mut stmt = source_conn
         .prepare("SELECT title, facts, narrative, concepts, created_at FROM observations")
@@ -426,9 +425,16 @@ fn parse_claude_mem_db(
 /// Parse a Claude Code JSONL file and return (episodes, sessions, errors, first_error).
 fn parse_claude_code_jsonl(
     path: &str,
-) -> Result<(Vec<NewEpisode>, std::collections::HashSet<String>, u32, Option<String>), String> {
-    let file = std::fs::File::open(path)
-        .map_err(|e| format!("Cannot read file '{path}': {e}"))?;
+) -> Result<
+    (
+        Vec<NewEpisode>,
+        std::collections::HashSet<String>,
+        u32,
+        Option<String>,
+    ),
+    String,
+> {
+    let file = std::fs::File::open(path).map_err(|e| format!("Cannot read file '{path}': {e}"))?;
 
     let mut episodes = Vec::new();
     let mut sessions = std::collections::HashSet::new();
@@ -496,9 +502,7 @@ fn parse_claude_code_jsonl(
             content_text
         };
 
-        let session_id = entry
-            .session_id
-            .unwrap_or_else(|| "imported".to_string());
+        let session_id = entry.session_id.unwrap_or_else(|| "imported".to_string());
         sessions.insert(session_id.clone());
 
         let timestamp = entry
@@ -558,8 +562,10 @@ impl AlayaMcp {
                 let ep_total = self.episode_count.fetch_add(1, Ordering::Relaxed) + 1;
                 let uncons = self.unconsolidated_count.fetch_add(1, Ordering::Relaxed) + 1;
 
-                let mut response =
-                    format!("Stored episode {} in session '{}'.", id.0, params.session_id);
+                let mut response = format!(
+                    "Stored episode {} in session '{}'.",
+                    id.0, params.session_id
+                );
 
                 // Auto-consolidation at 10 unconsolidated episodes
                 if uncons >= 10 {
@@ -570,13 +576,13 @@ impl AlayaMcp {
                             response.push_str(&format!(
                                 "\n\n--- Auto-consolidated ---\n\
                                  Extracted {} knowledge nodes from {} episodes.",
-                                report.nodes_created,
-                                uncons
+                                report.nodes_created, uncons
                             ));
                         }
                         Ok(_) => {
                             // Provider returned zero nodes — fall back to prompt
-                            if let Ok(episodes) = self.with_store(|s| s.unconsolidated_episodes(20)) {
+                            if let Ok(episodes) = self.with_store(|s| s.unconsolidated_episodes(20))
+                            {
                                 response.push_str(&format!(
                                     "\n\n--- Consolidation suggested ---\n\
                                      You have {} unconsolidated episodes. \
@@ -598,11 +604,11 @@ impl AlayaMcp {
                             // Provider error or no provider — fall back to prompt with note
                             let err_msg = format!("{e}");
                             let is_no_provider = err_msg.contains("extraction provider");
-                            if let Ok(episodes) = self.with_store(|s| s.unconsolidated_episodes(20)) {
+                            if let Ok(episodes) = self.with_store(|s| s.unconsolidated_episodes(20))
+                            {
                                 if !is_no_provider {
-                                    response.push_str(&format!(
-                                        "\n\n(Auto-consolidation failed: {e})"
-                                    ));
+                                    response
+                                        .push_str(&format!("\n\n(Auto-consolidation failed: {e})"));
                                 }
                                 response.push_str(&format!(
                                     "\n\n--- Consolidation suggested ---\n\
@@ -716,9 +722,11 @@ impl AlayaMcp {
             let link = s.strongest_link()?;
             match link {
                 Some((src, tgt, w)) => {
-                    let src_label = s.node_content(src)?
+                    let src_label = s
+                        .node_content(src)?
                         .unwrap_or_else(|| format!("{}#{}", src.type_str(), src.id()));
-                    let tgt_label = s.node_content(tgt)?
+                    let tgt_label = s
+                        .node_content(tgt)?
                         .unwrap_or_else(|| format!("{}#{}", tgt.type_str(), tgt.id()));
                     Ok(Some(format!(
                         " (strongest: \"{src_label}\" <-> \"{tgt_label}\" weight {w:.2})"
@@ -743,7 +751,15 @@ impl AlayaMcp {
             "0/0 nodes".to_string()
         };
 
-        format_status(&st, session_eps, unconsolidated, &knowledge_line, &cat_line, &strongest_desc, &coverage)
+        format_status(
+            &st,
+            session_eps,
+            unconsolidated,
+            &knowledge_line,
+            &cat_line,
+            &strongest_desc,
+            &coverage,
+        )
     }
 
     /// Get user preferences.
@@ -878,7 +894,8 @@ impl AlayaMcp {
             .facts
             .iter()
             .map(|fact| {
-                let node_type = SemanticType::from_str(&fact.node_type).unwrap_or(SemanticType::Fact);
+                let node_type =
+                    SemanticType::from_str(&fact.node_type).unwrap_or(SemanticType::Fact);
                 let confidence = fact.confidence.unwrap_or(0.8).clamp(0.0, 1.0);
                 NewSemanticNode {
                     content: fact.content.clone(),
@@ -908,9 +925,11 @@ impl AlayaMcp {
         description = "Import memories from claude-mem (claude-mem.db SQLite database). Reads observations and converts facts/concepts into Alaya semantic nodes."
     )]
     fn import_claude_mem(&self, #[tool(aggr)] params: ImportClaudeMemParams) -> String {
-        let path = expand_tilde(&params.path.unwrap_or_else(|| {
-            "~/.claude-mem/claude-mem.db".to_string()
-        }));
+        let path = expand_tilde(
+            &params
+                .path
+                .unwrap_or_else(|| "~/.claude-mem/claude-mem.db".to_string()),
+        );
 
         let (obs_count, nodes) = match parse_claude_mem_db(&path) {
             Ok(result) => result,
@@ -1214,7 +1233,8 @@ mod tests {
                 // Episodes 1-9: no consolidation prompt
                 assert!(
                     !result.contains("Consolidation suggested"),
-                    "Should not suggest consolidation at episode {}", i + 1
+                    "Should not suggest consolidation at episode {}",
+                    i + 1
                 );
             } else {
                 // Episode 10: consolidation prompt appears
@@ -1419,7 +1439,9 @@ mod tests {
             .lines()
             .filter(|l| {
                 let trimmed = l.trim();
-                trimmed.starts_with("1.") || trimmed.starts_with("2.") || trimmed.starts_with("3.")
+                trimmed.starts_with("1.")
+                    || trimmed.starts_with("2.")
+                    || trimmed.starts_with("3.")
                     || trimmed.starts_with("4.")
             })
             .count();
@@ -1981,7 +2003,9 @@ mod tests {
         let result = srv.import_claude_mem(ImportClaudeMemParams { path: None });
         // Either "Cannot open" or it happens to exist; don't crash either way
         assert!(
-            result.contains("Cannot open") || result.contains("Imported") || result.contains("No observations"),
+            result.contains("Cannot open")
+                || result.contains("Imported")
+                || result.contains("No observations"),
             "Unexpected result: {result}"
         );
     }
@@ -2099,7 +2123,10 @@ mod tests {
         });
         assert!(result.contains("Cannot read file"));
         // Crucially, the path in the error should be expanded (not contain ~/)
-        assert!(!result.contains("~/"), "Tilde should be expanded in error message");
+        assert!(
+            !result.contains("~/"),
+            "Tilde should be expanded in error message"
+        );
     }
 
     #[test]
@@ -2200,7 +2227,10 @@ mod tests {
         // PurgeFilter::All uses execute_batch so episodes_deleted stays 0;
         // verify the data is actually gone via status.
         let status = srv.status();
-        assert!(status.contains("Episodes: 0"), "All episodes should be gone after purge all: {status}");
+        assert!(
+            status.contains("Episodes: 0"),
+            "All episodes should be gone after purge all: {status}"
+        );
     }
 
     #[test]
@@ -2381,10 +2411,26 @@ mod tests {
         let srv = make_server();
         srv.learn(LearnParams {
             facts: vec![
-                LearnFactEntry { content: "F1".into(), node_type: "fact".into(), confidence: None },
-                LearnFactEntry { content: "F2".into(), node_type: "fact".into(), confidence: None },
-                LearnFactEntry { content: "R1".into(), node_type: "relationship".into(), confidence: None },
-                LearnFactEntry { content: "E1".into(), node_type: "event".into(), confidence: None },
+                LearnFactEntry {
+                    content: "F1".into(),
+                    node_type: "fact".into(),
+                    confidence: None,
+                },
+                LearnFactEntry {
+                    content: "F2".into(),
+                    node_type: "fact".into(),
+                    confidence: None,
+                },
+                LearnFactEntry {
+                    content: "R1".into(),
+                    node_type: "relationship".into(),
+                    confidence: None,
+                },
+                LearnFactEntry {
+                    content: "E1".into(),
+                    node_type: "event".into(),
+                    confidence: None,
+                },
             ],
             session_id: None,
         });
@@ -2432,13 +2478,15 @@ mod tests {
         let store = crate::AlayaStore::open_in_memory().unwrap();
 
         // Create semantic nodes with embeddings (for clustering)
-        let nodes: Vec<crate::NewSemanticNode> = (0..5).map(|i| crate::NewSemanticNode {
-            content: format!("machine learning concept {i}"),
-            node_type: crate::SemanticType::Fact,
-            confidence: 0.8,
-            source_episodes: vec![],
-            embedding: Some(vec![1.0, 0.0 + (i as f32) * 0.01, 0.0]),
-        }).collect();
+        let nodes: Vec<crate::NewSemanticNode> = (0..5)
+            .map(|i| crate::NewSemanticNode {
+                content: format!("machine learning concept {i}"),
+                node_type: crate::SemanticType::Fact,
+                confidence: 0.8,
+                source_episodes: vec![],
+                embedding: Some(vec![1.0, 0.0 + (i as f32) * 0.01, 0.0]),
+            })
+            .collect();
         let _ = store.learn(nodes);
         // Transform discovers categories from clustered embeddings
         let _ = store.transform();
@@ -2452,10 +2500,19 @@ mod tests {
 
         let status = srv.status();
         // Status should contain knowledge breakdown
-        assert!(status.contains("Knowledge:"), "Status should show knowledge: {status}");
-        assert!(status.contains("facts"), "Status should mention facts: {status}");
+        assert!(
+            status.contains("Knowledge:"),
+            "Status should show knowledge: {status}"
+        );
+        assert!(
+            status.contains("facts"),
+            "Status should mention facts: {status}"
+        );
         // Should show categories (may be 0 if clustering threshold not met)
-        assert!(status.contains("Categories:"), "Status should show categories: {status}");
+        assert!(
+            status.contains("Categories:"),
+            "Status should show categories: {status}"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -2470,14 +2527,16 @@ mod tests {
 
         // Store some episodes for context
         for i in 0..5 {
-            store.store_episode(&crate::NewEpisode {
-                content: format!("User prefers concise code comments {i}"),
-                role: crate::Role::User,
-                session_id: "pref-test".to_string(),
-                timestamp: 1000 + i * 100,
-                context: crate::EpisodeContext::default(),
-                embedding: None,
-            }).unwrap();
+            store
+                .store_episode(&crate::NewEpisode {
+                    content: format!("User prefers concise code comments {i}"),
+                    role: crate::Role::User,
+                    session_id: "pref-test".to_string(),
+                    timestamp: 1000 + i * 100,
+                    context: crate::EpisodeContext::default(),
+                    embedding: None,
+                })
+                .unwrap();
         }
 
         // Create an interaction and use MockProvider with impressions
@@ -2488,13 +2547,12 @@ mod tests {
             timestamp: 2000,
             context: crate::EpisodeContext::default(),
         };
-        let provider = crate::provider::MockProvider::with_impressions(vec![
-            crate::NewImpression {
+        let provider =
+            crate::provider::MockProvider::with_impressions(vec![crate::NewImpression {
                 domain: "style".to_string(),
                 observation: "prefers concise code".to_string(),
                 valence: 0.9,
-            },
-        ]);
+            }]);
         // Run perfume to crystallize impressions into preferences
         let _ = store.perfume(&interaction, &provider);
         // Run perfume again so impressions crystallize into preferences
@@ -2517,7 +2575,9 @@ mod tests {
     #[test]
     fn categories_with_data_after_transform() {
         let srv = server_with_categories();
-        let result = srv.categories(CategoriesParams { min_stability: None });
+        let result = srv.categories(CategoriesParams {
+            min_stability: None,
+        });
         // Either categories were discovered or not (depends on clustering threshold)
         assert!(
             result.contains("Found") || result.contains("No categories"),
@@ -2531,13 +2591,23 @@ mod tests {
         // Learn some facts
         srv.learn(LearnParams {
             facts: vec![
-                LearnFactEntry { content: "Fact A".into(), node_type: "fact".into(), confidence: None },
-                LearnFactEntry { content: "Fact B".into(), node_type: "fact".into(), confidence: None },
+                LearnFactEntry {
+                    content: "Fact A".into(),
+                    node_type: "fact".into(),
+                    confidence: None,
+                },
+                LearnFactEntry {
+                    content: "Fact B".into(),
+                    node_type: "fact".into(),
+                    confidence: None,
+                },
             ],
             session_id: None,
         });
         srv.maintain();
-        let result = srv.categories(CategoriesParams { min_stability: Some(0.0) });
+        let result = srv.categories(CategoriesParams {
+            min_stability: Some(0.0),
+        });
         // Should not crash regardless of whether categories exist
         assert!(
             result.contains("Found") || result.contains("No categories"),
@@ -2564,8 +2634,16 @@ mod tests {
         // Learn facts linked to the session
         srv.learn(LearnParams {
             facts: vec![
-                LearnFactEntry { content: "Topic is important".into(), node_type: "fact".into(), confidence: None },
-                LearnFactEntry { content: "Topic has sub-topics".into(), node_type: "relationship".into(), confidence: None },
+                LearnFactEntry {
+                    content: "Topic is important".into(),
+                    node_type: "fact".into(),
+                    confidence: None,
+                },
+                LearnFactEntry {
+                    content: "Topic has sub-topics".into(),
+                    node_type: "relationship".into(),
+                    confidence: None,
+                },
             ],
             session_id: Some("neighbor-sess".into()),
         });
@@ -2611,7 +2689,8 @@ mod tests {
         let path = tmp.path().to_str().unwrap().to_string();
         {
             let conn = rusqlite::Connection::open(&path).unwrap();
-            conn.execute_batch("
+            conn.execute_batch(
+                "
                 CREATE TABLE observations (
                     title TEXT, facts TEXT, narrative TEXT, concepts TEXT, created_at TEXT
                 );
@@ -2622,12 +2701,20 @@ mod tests {
                     '[\"systems programming\"]',
                     '2025-01-01'
                 );
-            ").unwrap();
+            ",
+            )
+            .unwrap();
         }
         let srv = make_server();
         let result = srv.import_claude_mem(ImportClaudeMemParams { path: Some(path) });
-        assert!(result.contains("Imported 1 observations"), "Result: {result}");
-        assert!(result.contains("3 semantic nodes"), "Should have 2 facts + 1 concept: {result}");
+        assert!(
+            result.contains("Imported 1 observations"),
+            "Result: {result}"
+        );
+        assert!(
+            result.contains("3 semantic nodes"),
+            "Should have 2 facts + 1 concept: {result}"
+        );
     }
 
     #[test]
@@ -2636,7 +2723,8 @@ mod tests {
         let path = tmp.path().to_str().unwrap().to_string();
         {
             let conn = rusqlite::Connection::open(&path).unwrap();
-            conn.execute_batch("
+            conn.execute_batch(
+                "
                 CREATE TABLE observations (
                     title TEXT, facts TEXT, narrative TEXT, concepts TEXT, created_at TEXT
                 );
@@ -2647,13 +2735,21 @@ mod tests {
                     '[\"\", \"\"]',
                     '2025-01-01'
                 );
-            ").unwrap();
+            ",
+            )
+            .unwrap();
         }
         let srv = make_server();
         let result = srv.import_claude_mem(ImportClaudeMemParams { path: Some(path) });
-        assert!(result.contains("Imported 1 observations"), "Result: {result}");
+        assert!(
+            result.contains("Imported 1 observations"),
+            "Result: {result}"
+        );
         // Only "valid fact" should be imported (empty strings skipped)
-        assert!(result.contains("1 semantic nodes"), "Should skip empty facts: {result}");
+        assert!(
+            result.contains("1 semantic nodes"),
+            "Should skip empty facts: {result}"
+        );
     }
 
     #[test]
@@ -2662,11 +2758,14 @@ mod tests {
         let path = tmp.path().to_str().unwrap().to_string();
         {
             let conn = rusqlite::Connection::open(&path).unwrap();
-            conn.execute_batch("
+            conn.execute_batch(
+                "
                 CREATE TABLE observations (
                     title TEXT, facts TEXT, narrative TEXT, concepts TEXT, created_at TEXT
                 );
-            ").unwrap();
+            ",
+            )
+            .unwrap();
         }
         let srv = make_server();
         let result = srv.import_claude_mem(ImportClaudeMemParams { path: Some(path) });
@@ -2693,7 +2792,9 @@ mod tests {
             // Skipped type (not human/assistant)
             r#"{"type":"system_prompt","message":{"content":"skip me"},"timestamp":"1002","sessionId":"s1"}"#,
             // Very long content that gets truncated
-            format!(r#"{{"type":"human","message":{{"role":"user","content":"{long_content}"}},"timestamp":"1003","sessionId":"s1"}}"#),
+            format!(
+                r#"{{"type":"human","message":{{"role":"user","content":"{long_content}"}},"timestamp":"1003","sessionId":"s1"}}"#
+            ),
             // Message without content field
             r#"{"type":"human","message":{"role":"user"},"timestamp":"1004","sessionId":"s1"}"#,
             // Invalid JSON line
@@ -2705,10 +2806,19 @@ mod tests {
         let result = srv.import_claude_code(ImportClaudeCodeParams {
             path: path.to_str().unwrap().into(),
         });
-        assert!(result.contains("Imported"), "Should import valid messages: {result}");
-        assert!(result.contains("sessions"), "Should mention sessions: {result}");
+        assert!(
+            result.contains("Imported"),
+            "Should import valid messages: {result}"
+        );
+        assert!(
+            result.contains("sessions"),
+            "Should mention sessions: {result}"
+        );
         // Should report errors for bad JSON
-        assert!(result.contains("error"), "Should report parse errors: {result}");
+        assert!(
+            result.contains("error"),
+            "Should report parse errors: {result}"
+        );
     }
 
     #[test]
@@ -2957,7 +3067,15 @@ mod tests {
             embedding_count: 30,
             category_count: 2,
         };
-        let result = format_status(&st, 5, 3, "10 facts, 5 relationships", "2 (rust, python)", " (strongest: \"a\" <-> \"b\" weight 0.95)", "30/70 nodes (42%)");
+        let result = format_status(
+            &st,
+            5,
+            3,
+            "10 facts, 5 relationships",
+            "2 (rust, python)",
+            " (strongest: \"a\" <-> \"b\" weight 0.95)",
+            "30/70 nodes (42%)",
+        );
         assert!(result.contains("Memory Status:"));
         assert!(result.contains("Episodes: 50"));
         assert!(result.contains("5 this session, 3 unconsolidated"));
@@ -3011,12 +3129,15 @@ mod tests {
         let (count, nodes) = parse_claude_mem_db(&path).unwrap();
         assert_eq!(count, 2);
         assert_eq!(nodes.len(), 6); // 3 facts + 3 concepts
-        // Obs1: facts first, then concepts; Obs2: facts then concepts
+                                    // Obs1: facts first, then concepts; Obs2: facts then concepts
         assert_eq!(nodes[0].content, "fact one");
         assert_eq!(nodes[0].node_type, SemanticType::Fact);
         assert_eq!(nodes[0].confidence, 0.8);
         // Concepts come after facts within each observation
-        let concept_nodes: Vec<_> = nodes.iter().filter(|n| n.node_type == SemanticType::Concept).collect();
+        let concept_nodes: Vec<_> = nodes
+            .iter()
+            .filter(|n| n.node_type == SemanticType::Concept)
+            .collect();
         assert_eq!(concept_nodes.len(), 3);
         assert_eq!(concept_nodes[0].confidence, 0.7);
     }
@@ -3034,7 +3155,8 @@ mod tests {
                 INSERT INTO observations VALUES (
                     'Obs', '[\"\", \"real fact\", \"  \"]', '', '[\"\"]', '2025-01-01'
                 );",
-            ).unwrap();
+            )
+            .unwrap();
         }
         let (count, nodes) = parse_claude_mem_db(&path).unwrap();
         assert_eq!(count, 1);
@@ -3055,7 +3177,8 @@ mod tests {
                 INSERT INTO observations VALUES (
                     'Obs', 'not json', '', 'also not json', '2025-01-01'
                 );",
-            ).unwrap();
+            )
+            .unwrap();
         }
         let (count, nodes) = parse_claude_mem_db(&path).unwrap();
         assert_eq!(count, 1);
@@ -3185,7 +3308,8 @@ mod tests {
     fn parse_claude_code_jsonl_missing_content_in_message() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("nocontent.jsonl");
-        let line = r#"{"type":"human","message":{"role":"user"},"timestamp":"1000","sessionId":"s1"}"#;
+        let line =
+            r#"{"type":"human","message":{"role":"user"},"timestamp":"1000","sessionId":"s1"}"#;
         std::fs::write(&path, line).unwrap();
 
         let (episodes, _, _, _) = parse_claude_code_jsonl(path.to_str().unwrap()).unwrap();
@@ -3211,7 +3335,8 @@ mod tests {
     fn parse_claude_code_jsonl_no_session_id_defaults() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("nosess.jsonl");
-        let line = r#"{"type":"human","message":{"role":"user","content":"hello"},"timestamp":"1000"}"#;
+        let line =
+            r#"{"type":"human","message":{"role":"user","content":"hello"},"timestamp":"1000"}"#;
         std::fs::write(&path, line).unwrap();
 
         let (episodes, sessions, _, _) = parse_claude_code_jsonl(path.to_str().unwrap()).unwrap();
@@ -3224,7 +3349,8 @@ mod tests {
     fn parse_claude_code_jsonl_no_timestamp_defaults_zero() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("nots.jsonl");
-        let line = r#"{"type":"human","message":{"role":"user","content":"hello"},"sessionId":"s1"}"#;
+        let line =
+            r#"{"type":"human","message":{"role":"user","content":"hello"},"sessionId":"s1"}"#;
         std::fs::write(&path, line).unwrap();
 
         let (episodes, _, _, _) = parse_claude_code_jsonl(path.to_str().unwrap()).unwrap();
@@ -3263,15 +3389,29 @@ mod tests {
     fn maintain_returns_complete_info() {
         let srv = server_with_episodes(3);
         srv.learn(LearnParams {
-            facts: vec![
-                LearnFactEntry { content: "Maintain test fact".into(), node_type: "fact".into(), confidence: None },
-            ],
+            facts: vec![LearnFactEntry {
+                content: "Maintain test fact".into(),
+                node_type: "fact".into(),
+                confidence: None,
+            }],
             session_id: None,
         });
         let result = srv.maintain();
-        assert!(result.contains("Maintenance complete"), "Maintain result: {result}");
-        assert!(result.contains("Duplicates merged:"), "Should show duplicates: {result}");
-        assert!(result.contains("Links pruned:"), "Should show links pruned: {result}");
-        assert!(result.contains("Preferences decayed:"), "Should show prefs decayed: {result}");
+        assert!(
+            result.contains("Maintenance complete"),
+            "Maintain result: {result}"
+        );
+        assert!(
+            result.contains("Duplicates merged:"),
+            "Should show duplicates: {result}"
+        );
+        assert!(
+            result.contains("Links pruned:"),
+            "Should show links pruned: {result}"
+        );
+        assert!(
+            result.contains("Preferences decayed:"),
+            "Should show prefs decayed: {result}"
+        );
     }
 }

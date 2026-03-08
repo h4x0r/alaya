@@ -493,13 +493,15 @@ mod tests {
 
         // Check bidirectional MemberOf links exist
         let fwd = crate::graph::links::get_links_from(&conn, NodeRef::Semantic(node)).unwrap();
-        let has_fwd = fwd.iter().any(|l| l.target == NodeRef::Category(cat_id)
-            && l.link_type == LinkType::MemberOf);
+        let has_fwd = fwd
+            .iter()
+            .any(|l| l.target == NodeRef::Category(cat_id) && l.link_type == LinkType::MemberOf);
         assert!(has_fwd, "should have Semantic→Category MemberOf link");
 
         let rev = crate::graph::links::get_links_from(&conn, NodeRef::Category(cat_id)).unwrap();
-        let has_rev = rev.iter().any(|l| l.target == NodeRef::Semantic(node)
-            && l.link_type == LinkType::MemberOf);
+        let has_rev = rev
+            .iter()
+            .any(|l| l.target == NodeRef::Semantic(node) && l.link_type == LinkType::MemberOf);
         assert!(has_rev, "should have Category→Semantic MemberOf link");
     }
 
@@ -513,8 +515,14 @@ mod tests {
         assign_node_to_category(&conn, node, cat_id).unwrap();
 
         let fwd = crate::graph::links::get_links_from(&conn, NodeRef::Semantic(node)).unwrap();
-        let member_of = fwd.iter().find(|l| l.link_type == LinkType::MemberOf).unwrap();
-        assert!((member_of.forward_weight - 0.3).abs() < 0.01, "MemberOf weight should be 0.3");
+        let member_of = fwd
+            .iter()
+            .find(|l| l.link_type == LinkType::MemberOf)
+            .unwrap();
+        assert!(
+            (member_of.forward_weight - 0.3).abs() < 0.01,
+            "MemberOf weight should be 0.3"
+        );
     }
 
     #[test]
@@ -529,7 +537,10 @@ mod tests {
 
         let fwd = crate::graph::links::get_links_from(&conn, NodeRef::Semantic(node)).unwrap();
         let has_member_of = fwd.iter().any(|l| l.link_type == LinkType::MemberOf);
-        assert!(!has_member_of, "MemberOf links should be deleted after category deletion");
+        assert!(
+            !has_member_of,
+            "MemberOf links should be deleted after category deletion"
+        );
     }
 
     #[test]
@@ -570,13 +581,20 @@ mod tests {
         assign_node_to_category(&conn, node, cat2).unwrap();
 
         let fwd = crate::graph::links::get_links_from(&conn, NodeRef::Semantic(node)).unwrap();
-        let member_of_targets: Vec<NodeRef> = fwd.iter()
+        let member_of_targets: Vec<NodeRef> = fwd
+            .iter()
             .filter(|l| l.link_type == LinkType::MemberOf)
             .map(|l| l.target)
             .collect();
 
         // Should only have link to cat2, not cat1
-        assert!(member_of_targets.contains(&NodeRef::Category(cat2)), "should have link to new category");
-        assert!(!member_of_targets.contains(&NodeRef::Category(cat1)), "should NOT have link to old category");
+        assert!(
+            member_of_targets.contains(&NodeRef::Category(cat2)),
+            "should have link to new category"
+        );
+        assert!(
+            !member_of_targets.contains(&NodeRef::Category(cat1)),
+            "should NOT have link to old category"
+        );
     }
 }

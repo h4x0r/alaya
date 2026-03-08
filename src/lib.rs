@@ -48,7 +48,10 @@ use rusqlite::Connection;
 use std::path::Path;
 
 pub use error::{AlayaError, Result};
-pub use provider::{ConsolidationProvider, EmbeddingProvider, ExtractionProvider, MockEmbeddingProvider, MockExtractionProvider, NoOpProvider};
+pub use provider::{
+    ConsolidationProvider, EmbeddingProvider, ExtractionProvider, MockEmbeddingProvider,
+    MockExtractionProvider, NoOpProvider,
+};
 pub use types::*;
 
 #[cfg(feature = "llm")]
@@ -81,7 +84,11 @@ impl AlayaStore {
     /// ```
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let conn = schema::open_db(path.as_ref().to_str().unwrap_or("alaya.db"))?;
-        Ok(Self { conn, embedding_provider: None, extraction_provider: None })
+        Ok(Self {
+            conn,
+            embedding_provider: None,
+            extraction_provider: None,
+        })
     }
 
     /// Open an ephemeral in-memory database (useful for tests).
@@ -93,7 +100,11 @@ impl AlayaStore {
     /// ```
     pub fn open_in_memory() -> Result<Self> {
         let conn = schema::open_memory_db()?;
-        Ok(Self { conn, embedding_provider: None, extraction_provider: None })
+        Ok(Self {
+            conn,
+            embedding_provider: None,
+            extraction_provider: None,
+        })
     }
 
     /// Set an embedding provider for automatic embedding generation.
@@ -157,7 +168,9 @@ impl AlayaStore {
         // Use explicit embedding if provided, otherwise auto-embed via provider
         let effective_embedding = match &episode.embedding {
             Some(emb) => Some(emb.clone()),
-            None => self.embedding_provider.as_ref()
+            None => self
+                .embedding_provider
+                .as_ref()
                 .and_then(|p| p.embed(&episode.content).ok()),
         };
         if let Some(ref emb) = effective_embedding {
@@ -429,10 +442,11 @@ impl AlayaStore {
         /// that arrived between threshold checks.
         const AUTO_CONSOLIDATE_BATCH: u32 = 20;
 
-        let provider = self.extraction_provider.as_ref()
-            .ok_or_else(|| AlayaError::InvalidInput(
-                "no extraction provider configured; call set_extraction_provider() first".into()
-            ))?;
+        let provider = self.extraction_provider.as_ref().ok_or_else(|| {
+            AlayaError::InvalidInput(
+                "no extraction provider configured; call set_extraction_provider() first".into(),
+            )
+        })?;
         let episodes = self.unconsolidated_episodes(AUTO_CONSOLIDATE_BATCH)?;
         if episodes.is_empty() {
             return Ok(ConsolidationReport::default());
@@ -600,27 +614,21 @@ impl AlayaStore {
     /// Returns `None` if the referenced node no longer exists.
     pub fn node_content(&self, node: NodeRef) -> Result<Option<String>> {
         match node {
-            NodeRef::Episode(id) => {
-                match store::episodic::get_episode(&self.conn, id) {
-                    Ok(ep) => Ok(Some(truncate_label(&ep.content, 30))),
-                    Err(AlayaError::NotFound(_)) => Ok(None),
-                    Err(e) => Err(e),
-                }
-            }
-            NodeRef::Semantic(id) => {
-                match store::semantic::get_semantic_node(&self.conn, id) {
-                    Ok(node) => Ok(Some(truncate_label(&node.content, 30))),
-                    Err(AlayaError::NotFound(_)) => Ok(None),
-                    Err(e) => Err(e),
-                }
-            }
-            NodeRef::Category(id) => {
-                match store::categories::get_category(&self.conn, id) {
-                    Ok(cat) => Ok(Some(truncate_label(&cat.label, 30))),
-                    Err(AlayaError::NotFound(_)) => Ok(None),
-                    Err(e) => Err(e),
-                }
-            }
+            NodeRef::Episode(id) => match store::episodic::get_episode(&self.conn, id) {
+                Ok(ep) => Ok(Some(truncate_label(&ep.content, 30))),
+                Err(AlayaError::NotFound(_)) => Ok(None),
+                Err(e) => Err(e),
+            },
+            NodeRef::Semantic(id) => match store::semantic::get_semantic_node(&self.conn, id) {
+                Ok(node) => Ok(Some(truncate_label(&node.content, 30))),
+                Err(AlayaError::NotFound(_)) => Ok(None),
+                Err(e) => Err(e),
+            },
+            NodeRef::Category(id) => match store::categories::get_category(&self.conn, id) {
+                Ok(cat) => Ok(Some(truncate_label(&cat.label, 30))),
+                Err(AlayaError::NotFound(_)) => Ok(None),
+                Err(e) => Err(e),
+            },
             _ => Ok(Some(format!("{}#{}", node.type_str(), node.id()))),
         }
     }
@@ -1467,17 +1475,22 @@ mod tests {
         let mut store = AlayaStore::open_in_memory().unwrap();
         store.set_embedding_provider(Box::new(MockEmbeddingProvider::new(4)));
 
-        store.store_episode(&NewEpisode {
-            content: "auto-embedded episode".into(),
-            role: Role::User,
-            session_id: "s1".into(),
-            timestamp: 1000,
-            context: EpisodeContext::default(),
-            embedding: None, // should auto-embed
-        }).unwrap();
+        store
+            .store_episode(&NewEpisode {
+                content: "auto-embedded episode".into(),
+                role: Role::User,
+                session_id: "s1".into(),
+                timestamp: 1000,
+                context: EpisodeContext::default(),
+                embedding: None, // should auto-embed
+            })
+            .unwrap();
 
         let status = store.status().unwrap();
-        assert_eq!(status.embedding_count, 1, "should have auto-embedded the episode");
+        assert_eq!(
+            status.embedding_count, 1,
+            "should have auto-embedded the episode"
+        );
     }
 
     #[test]
@@ -1486,14 +1499,16 @@ mod tests {
         store.set_embedding_provider(Box::new(MockEmbeddingProvider::new(4)));
 
         let explicit_emb = vec![1.0, 2.0, 3.0, 4.0];
-        store.store_episode(&NewEpisode {
-            content: "explicit embedding".into(),
-            role: Role::User,
-            session_id: "s1".into(),
-            timestamp: 1000,
-            context: EpisodeContext::default(),
-            embedding: Some(explicit_emb.clone()),
-        }).unwrap();
+        store
+            .store_episode(&NewEpisode {
+                content: "explicit embedding".into(),
+                role: Role::User,
+                session_id: "s1".into(),
+                timestamp: 1000,
+                context: EpisodeContext::default(),
+                embedding: Some(explicit_emb.clone()),
+            })
+            .unwrap();
 
         // Should use explicit embedding, not provider's
         let status = store.status().unwrap();
@@ -1504,14 +1519,16 @@ mod tests {
     fn test_no_provider_preserves_v1_behavior() {
         let store = AlayaStore::open_in_memory().unwrap();
 
-        store.store_episode(&NewEpisode {
-            content: "no provider episode".into(),
-            role: Role::User,
-            session_id: "s1".into(),
-            timestamp: 1000,
-            context: EpisodeContext::default(),
-            embedding: None,
-        }).unwrap();
+        store
+            .store_episode(&NewEpisode {
+                content: "no provider episode".into(),
+                role: Role::User,
+                session_id: "s1".into(),
+                timestamp: 1000,
+                context: EpisodeContext::default(),
+                embedding: None,
+            })
+            .unwrap();
 
         let status = store.status().unwrap();
         assert_eq!(status.embedding_count, 0, "no auto-embed without provider");
@@ -1523,18 +1540,23 @@ mod tests {
         store.set_embedding_provider(Box::new(MockEmbeddingProvider::new(4)));
 
         // Store an episode with auto-embed
-        store.store_episode(&NewEpisode {
-            content: "Rust programming language".into(),
-            role: Role::User,
-            session_id: "s1".into(),
-            timestamp: 1000,
-            context: EpisodeContext::default(),
-            embedding: None,
-        }).unwrap();
+        store
+            .store_episode(&NewEpisode {
+                content: "Rust programming language".into(),
+                role: Role::User,
+                session_id: "s1".into(),
+                timestamp: 1000,
+                context: EpisodeContext::default(),
+                embedding: None,
+            })
+            .unwrap();
 
         // Query without embedding — provider should auto-embed the query text
         let results = store.query(&Query::simple("Rust programming")).unwrap();
-        assert!(!results.is_empty(), "query with auto-embedded text should return results");
+        assert!(
+            !results.is_empty(),
+            "query with auto-embedded text should return results"
+        );
     }
 
     #[test]
@@ -1597,9 +1619,7 @@ mod tests {
         store
             .store_episode(&make_new_episode("hello world", "s1", 1000))
             .unwrap();
-        let content = store
-            .node_content(NodeRef::Episode(EpisodeId(1)))
-            .unwrap();
+        let content = store.node_content(NodeRef::Episode(EpisodeId(1))).unwrap();
         assert_eq!(content, Some("hello world".to_string()));
     }
 
@@ -1615,9 +1635,7 @@ mod tests {
                 [],
             )
             .unwrap();
-        let content = store
-            .node_content(NodeRef::Semantic(NodeId(1)))
-            .unwrap();
+        let content = store.node_content(NodeRef::Semantic(NodeId(1))).unwrap();
         assert_eq!(content, Some("semantic test content".to_string()));
     }
 
@@ -1661,9 +1679,7 @@ mod tests {
         assert!(content.is_none());
 
         // Semantic node that doesn't exist
-        let content = store
-            .node_content(NodeRef::Semantic(NodeId(999)))
-            .unwrap();
+        let content = store.node_content(NodeRef::Semantic(NodeId(999))).unwrap();
         assert!(content.is_none());
 
         // Category that doesn't exist
@@ -1683,9 +1699,7 @@ mod tests {
                 1000,
             ))
             .unwrap();
-        let content = store
-            .node_content(NodeRef::Episode(EpisodeId(1)))
-            .unwrap();
+        let content = store.node_content(NodeRef::Episode(EpisodeId(1))).unwrap();
         let label = content.unwrap();
         assert!(
             label.ends_with("..."),
@@ -1693,7 +1707,11 @@ mod tests {
             label
         );
         // 30 chars + "..." = 33
-        assert!(label.len() <= 33, "truncated label should be at most 33 chars, got {}", label.len());
+        assert!(
+            label.len() <= 33,
+            "truncated label should be at most 33 chars, got {}",
+            label.len()
+        );
     }
 
     #[test]
@@ -1732,7 +1750,9 @@ mod tests {
     fn test_node_content_category_not_found_explicit() {
         // Explicitly test the Category NotFound path (covers line 579)
         let store = AlayaStore::open_in_memory().unwrap();
-        let content = store.node_content(NodeRef::Category(CategoryId(9999))).unwrap();
+        let content = store
+            .node_content(NodeRef::Category(CategoryId(9999)))
+            .unwrap();
         assert!(content.is_none());
     }
 
@@ -1763,14 +1783,16 @@ mod tests {
             },
         ])));
 
-        store.store_episode(&NewEpisode {
-            content: "I really like Rust".into(),
-            role: Role::User,
-            session_id: "s1".into(),
-            timestamp: 1000,
-            context: EpisodeContext::default(),
-            embedding: None,
-        }).unwrap();
+        store
+            .store_episode(&NewEpisode {
+                content: "I really like Rust".into(),
+                role: Role::User,
+                session_id: "s1".into(),
+                timestamp: 1000,
+                context: EpisodeContext::default(),
+                embedding: None,
+            })
+            .unwrap();
 
         let report = store.auto_consolidate().unwrap();
         assert_eq!(report.nodes_created, 1);
@@ -1782,7 +1804,10 @@ mod tests {
         let result = store.auto_consolidate();
         assert!(result.is_err());
         let err_msg = format!("{}", result.unwrap_err());
-        assert!(err_msg.contains("extraction provider"), "Error should mention extraction provider: {err_msg}");
+        assert!(
+            err_msg.contains("extraction provider"),
+            "Error should mention extraction provider: {err_msg}"
+        );
     }
 
     #[test]
@@ -1816,14 +1841,16 @@ mod tests {
 
         // Store episodes so there's something to consolidate
         for i in 0..3 {
-            store.store_episode(&NewEpisode {
-                content: format!("Episode {i}"),
-                role: Role::User,
-                session_id: "s1".into(),
-                timestamp: 1000 + i as i64,
-                context: EpisodeContext::default(),
-                embedding: None,
-            }).unwrap();
+            store
+                .store_episode(&NewEpisode {
+                    content: format!("Episode {i}"),
+                    role: Role::User,
+                    session_id: "s1".into(),
+                    timestamp: 1000 + i as i64,
+                    context: EpisodeContext::default(),
+                    embedding: None,
+                })
+                .unwrap();
         }
 
         let report = store.auto_consolidate().unwrap();

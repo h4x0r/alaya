@@ -329,7 +329,10 @@ mod tests {
         // Query with [1, 0, 0] — orthogonal gives sim=0, opposite gives sim<0
         let results = search_by_vector(&conn, &[1.0, 0.0, 0.0], None, 10).unwrap();
         // Neither should appear (sim <= 0 filtered out)
-        assert!(results.is_empty(), "non-positive similarities should be filtered out");
+        assert!(
+            results.is_empty(),
+            "non-positive similarities should be filtered out"
+        );
     }
 
     #[test]

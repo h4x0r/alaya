@@ -130,10 +130,8 @@ pub fn strongest_link(conn: &Connection) -> Result<Option<(NodeRef, NodeRef, f32
     })?;
     match rows.next() {
         Some(Ok((st, si, tt, ti, w))) => {
-            let source = NodeRef::from_parts(&st, si)
-                .unwrap_or(NodeRef::Episode(EpisodeId(0)));
-            let target = NodeRef::from_parts(&tt, ti)
-                .unwrap_or(NodeRef::Episode(EpisodeId(0)));
+            let source = NodeRef::from_parts(&st, si).unwrap_or(NodeRef::Episode(EpisodeId(0)));
+            let target = NodeRef::from_parts(&tt, ti).unwrap_or(NodeRef::Episode(EpisodeId(0)));
             Ok(Some((source, target, w)))
         }
         Some(Err(e)) => Err(e.into()),

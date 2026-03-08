@@ -137,7 +137,10 @@ mod tests {
 
         // Verify the semantic node was deleted
         let after = semantic::get_semantic_node(&conn, node_id);
-        assert!(after.is_err(), "semantic node should be deleted after archive");
+        assert!(
+            after.is_err(),
+            "semantic node should be deleted after archive"
+        );
     }
 
     #[test]
@@ -172,7 +175,10 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        assert_eq!(pref_count, 1, "preference strength record should still exist");
+        assert_eq!(
+            pref_count, 1,
+            "preference strength record should still exist"
+        );
 
         let cat_count: i64 = conn
             .query_row(

@@ -104,8 +104,7 @@ impl EmbeddingProvider for MockEmbeddingProvider {
             .fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
         let emb: Vec<f32> = (0..self.dim)
             .map(|i| {
-                let val =
-                    ((hash.wrapping_mul((i as u64).wrapping_add(1))) % 1000) as f32 / 1000.0;
+                let val = ((hash.wrapping_mul((i as u64).wrapping_add(1))) % 1000) as f32 / 1000.0;
                 val * 2.0 - 1.0 // normalize to [-1, 1]
             })
             .collect();
@@ -191,7 +190,10 @@ mod tests {
         let provider = MockEmbeddingProvider::new(4);
         let emb1 = provider.embed("hello").unwrap();
         let emb2 = provider.embed("world").unwrap();
-        assert_ne!(emb1, emb2, "different inputs should produce different embeddings");
+        assert_ne!(
+            emb1, emb2,
+            "different inputs should produce different embeddings"
+        );
     }
 
     #[test]
@@ -205,7 +207,10 @@ mod tests {
             context: EpisodeContext::default(),
         };
         let result = provider.extract_impressions(&interaction).unwrap();
-        assert!(result.is_empty(), "NoOpProvider should return empty impressions");
+        assert!(
+            result.is_empty(),
+            "NoOpProvider should return empty impressions"
+        );
     }
 
     #[test]
@@ -232,7 +237,10 @@ mod tests {
             corroboration_count: 1,
         };
         let result = provider.detect_contradiction(&a, &b).unwrap();
-        assert!(!result, "NoOpProvider should always return false for contradictions");
+        assert!(
+            !result,
+            "NoOpProvider should always return false for contradictions"
+        );
     }
 
     #[test]

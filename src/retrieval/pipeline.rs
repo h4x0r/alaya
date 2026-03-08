@@ -58,11 +58,11 @@ pub fn execute_query(conn: &Connection, query: &Query) -> Result<Vec<ScoredMemor
     let fused = fusion::rrf_merge(&sets, 60);
 
     // Stage 3: Enrich candidates with content and context for reranking
-    let candidates: Vec<(NodeRef, f64, String, Option<Role>, i64, EpisodeContext)> = fused
-        .into_iter()
-        .take(fetch_limit)
-        .filter_map(|(node_ref, score)| {
-            match node_ref {
+    let candidates: Vec<(NodeRef, f64, String, Option<Role>, i64, EpisodeContext)> =
+        fused
+            .into_iter()
+            .take(fetch_limit)
+            .filter_map(|(node_ref, score)| match node_ref {
                 NodeRef::Episode(eid) => episodic::get_episode(conn, eid).ok().map(|ep| {
                     (
                         node_ref,
@@ -73,38 +73,33 @@ pub fn execute_query(conn: &Connection, query: &Query) -> Result<Vec<ScoredMemor
                         ep.context,
                     )
                 }),
-                NodeRef::Semantic(nid) => {
-                    crate::store::semantic::get_semantic_node(conn, nid)
-                        .ok()
-                        .map(|node| {
-                            (
-                                node_ref,
-                                score,
-                                node.content,
-                                None,
-                                node.created_at,
-                                EpisodeContext::default(),
-                            )
-                        })
-                }
-                NodeRef::Preference(pid) => {
-                    crate::store::implicit::get_preference(conn, pid)
-                        .ok()
-                        .map(|pref| {
-                            (
-                                node_ref,
-                                score,
-                                format!("preference: {}: {}", pref.domain, pref.preference),
-                                None,
-                                pref.first_observed,
-                                EpisodeContext::default(),
-                            )
-                        })
-                }
+                NodeRef::Semantic(nid) => crate::store::semantic::get_semantic_node(conn, nid)
+                    .ok()
+                    .map(|node| {
+                        (
+                            node_ref,
+                            score,
+                            node.content,
+                            None,
+                            node.created_at,
+                            EpisodeContext::default(),
+                        )
+                    }),
+                NodeRef::Preference(pid) => crate::store::implicit::get_preference(conn, pid)
+                    .ok()
+                    .map(|pref| {
+                        (
+                            node_ref,
+                            score,
+                            format!("preference: {}: {}", pref.domain, pref.preference),
+                            None,
+                            pref.first_observed,
+                            EpisodeContext::default(),
+                        )
+                    }),
                 NodeRef::Category(_) => None,
-            }
-        })
-        .collect();
+            })
+            .collect();
 
     let results = rerank::rerank(candidates, &query.context, now, query.max_results);
 
@@ -265,7 +260,9 @@ mod tests {
         assert!(!results.is_empty(), "should have results");
 
         // Check if any result is a semantic node
-        let has_semantic = results.iter().any(|r| matches!(r.node, NodeRef::Semantic(_)));
+        let has_semantic = results
+            .iter()
+            .any(|r| matches!(r.node, NodeRef::Semantic(_)));
         assert!(
             has_semantic,
             "should include semantic node in results, got: {:?}",
@@ -404,7 +401,9 @@ mod tests {
         assert!(!results.is_empty(), "should have results");
 
         // Check if any result is a preference (graph activation path)
-        let has_preference = results.iter().any(|r| matches!(r.node, NodeRef::Preference(_)));
+        let has_preference = results
+            .iter()
+            .any(|r| matches!(r.node, NodeRef::Preference(_)));
         if has_preference {
             let pref_result = results
                 .iter()

@@ -136,7 +136,11 @@ mod tests {
         // Create a link with weight 0.0 — total_weight will be 0.0
         create_link(&conn, a, b, LinkType::Topical, 0.0).unwrap();
         // Manually set forward_weight to 0.0 since create_link may enforce minimum
-        conn.execute("UPDATE links SET forward_weight = 0.0, backward_weight = 0.0", []).unwrap();
+        conn.execute(
+            "UPDATE links SET forward_weight = 0.0, backward_weight = 0.0",
+            [],
+        )
+        .unwrap();
 
         let result = spread_activation(&conn, &[a], 1, 0.05, 0.6).unwrap();
         // b should NOT receive activation because total_weight is 0
@@ -153,7 +157,10 @@ mod tests {
 
         // No links from a — the outgoing.is_empty() branch
         let result = spread_activation(&conn, &[a], 1, 0.05, 0.6).unwrap();
-        assert!(result.contains_key(&a), "seed should still be in activation");
+        assert!(
+            result.contains_key(&a),
+            "seed should still be in activation"
+        );
         assert_eq!(result.len(), 1, "should only contain the seed");
     }
 }
