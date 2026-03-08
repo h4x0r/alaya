@@ -194,7 +194,7 @@ impl AlayaMcp {
 
     /// Search memory for relevant information.
     #[tool(
-        description = "Search Alaya's memory using hybrid retrieval (BM25 + graph activation). Returns the most relevant memories matching the query."
+        description = "Search Alaya's memory using hybrid retrieval (BM25 + vector + graph + RRF fusion). Returns the most relevant memories matching the query."
     )]
     fn recall(&self, #[tool(aggr)] params: RecallParams) -> String {
         let query = Query {
@@ -232,13 +232,14 @@ impl AlayaMcp {
     fn status(&self) -> String {
         match self.with_store(|s| s.status()) {
             Ok(st) => format!(
-                "Memory Status:\n  Episodes: {}\n  Semantic nodes: {}\n  Preferences: {}\n  Impressions: {}\n  Links: {}\n  Embeddings: {}",
+                "Memory Status:\n  Episodes: {}\n  Semantic nodes: {}\n  Preferences: {}\n  Impressions: {}\n  Links: {}\n  Embeddings: {}\n  Categories: {}",
                 st.episode_count,
                 st.semantic_node_count,
                 st.preference_count,
                 st.impression_count,
                 st.link_count,
                 st.embedding_count,
+                st.category_count,
             ),
             Err(e) => format!("Error: {e}"),
         }

@@ -44,9 +44,10 @@ memory far longer than computer science:
 \end{enumerate}
 
 \noindent \alaya{} translates these principles into a concrete system with
-five lifecycle operations beyond storage and retrieval: consolidation,
-transformation, forgetting, preference emergence, and emergent ontology
-(unsupervised category formation). The system is implemented as a
+seven lifecycle operations beyond storage and retrieval: consolidation,
+transformation, forgetting, preference emergence, emergent ontology
+(unsupervised category formation), retrieval-induced forgetting, and
+cascade purge with tombstone tracking. The system is implemented as a
 zero-dependency Rust library with SQLite, requiring no external databases or
 network services.
 
@@ -55,12 +56,13 @@ Our contributions are:
     \item A three-store architecture (episodic, semantic, implicit) with a
     Hebbian graph overlay that reshapes through use, implementing the
     CLS/Yogac\=ara dual-system model.
-    \item Five lifecycle operations that manage memory health over time:
-    consolidation, transformation, forgetting, preference emergence, and
-    emergent ontology.
-    \item An emergent category formation mechanism that discovers semantic
-    clusters through dual-signal analysis (embedding similarity + graph
-    topology) without supervision.
+    \item Seven lifecycle operations that manage memory health over time:
+    consolidation, transformation, forgetting, preference emergence,
+    emergent ontology, retrieval-induced forgetting, and cascade purge.
+    \item An emergent ontology mechanism that discovers hierarchical
+    categories through dual-signal analysis (embedding similarity + graph
+    topology) without supervision, with automatic splitting when categories
+    grow too broad.
     \item A zero-dependency, embeddable implementation in Rust with SQLite
     WAL and FTS5, available as an open-source crate.
     \item Baseline evaluation on LoCoMo and LongMemEval demonstrating a

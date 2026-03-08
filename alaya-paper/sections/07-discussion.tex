@@ -136,19 +136,21 @@ The distinctive characteristics relative to comparable systems are:
 
 \subsection{Limitations}
 
-\alaya{} v0.1.0 has several limitations:
+\alaya{} has several limitations:
 \begin{itemize}[nosep]
     \item \textbf{No end-to-end benchmark results:} We report baseline
     crossover analysis but have not yet evaluated \alaya{}'s full pipeline
     against LoCoMo/LongMemEval. This is ongoing work.
-    \item \textbf{Flat categories only:} The emergent ontology discovers
-    flat categories without hierarchy. Category hierarchy, prototype theory,
-    and category seeds are planned for v0.2.0.
+    \item \textbf{No prototype theory:} Categories use centroid-based
+    membership but lack graded typicality (how ``typical'' a member is of
+    its category). Prototype theory and category seeds that retain dormant
+    state are planned for future work.
     \item \textbf{Single-agent only:} No multi-agent memory sharing,
     ownership semantics, or federated memory.
     \item \textbf{Thresholds are hand-tuned:} Cosine similarity thresholds
-    for category assignment (0.6), discovery (0.7), and merge (0.85) are
-    based on reasonable defaults, not learned from data.
+    for category assignment (0.6), discovery (0.7), merge (0.85), and
+    splitting coherence (0.6) are based on reasonable defaults, not learned
+    from data.
     \item \textbf{SQLite scalability:} While SQLite handles millions of
     records efficiently, the in-process architecture limits concurrent write
     access to a single process.

@@ -5,15 +5,21 @@ We have presented \alaya{}, a memory engine for conversational AI agents
 that treats memory as a dynamic process rather than a static store. Drawing
 on complementary learning systems theory, Bjork dual-strength forgetting,
 Hebbian learning, and Yogac\=ara Buddhist psychology, \alaya{} implements
-five lifecycle operations---consolidation, transformation, forgetting,
-preference emergence, and emergent ontology---that manage memory health
-over extended interaction horizons.
+seven lifecycle operations---consolidation, transformation, forgetting,
+preference emergence, emergent ontology, retrieval-induced forgetting, and
+cascade purge---that manage memory health over extended interaction
+horizons.
 
 The emergent ontology contribution is particularly novel: categories arise
 from dual-signal clustering (embedding similarity + graph topology) during
 the transformation lifecycle, without supervision or manual curation.
-Categories participate in the Hebbian graph, enabling spreading activation
-to surface categorically related memories during retrieval.
+In v0.2.0, categories support hierarchical nesting: when a category grows
+too large and internally incoherent, it automatically splits into
+sub-categories, producing an is-a taxonomy that refines as knowledge
+grows. Categories participate in the Hebbian graph via \texttt{MemberOf}
+links, enabling cross-domain bridging where spreading activation flows
+through category nodes to surface categorically related memories during
+retrieval.
 
 Our baseline evaluation reveals a statistically significant retrieval
 crossover between full-context injection and na\"ive RAG---neither extreme
@@ -24,23 +30,21 @@ an open-source crate at \url{https://crates.io/crates/alaya}.
 
 \subsection*{Future Work}
 
-\textbf{v0.2.0} will extend the emergent ontology with Yogac\=ara-grounded
-enhancements: category hierarchy (\emph{vikalpa}---conceptual
-construction), prototype-based membership with graded typicality
-(\emph{n\=ama-r\=upa}---name and form), category seeds that retain dormant
-state and can re-emerge (\emph{b\=ija}---seeds), and conceptual
-transformation where categories themselves evolve through centroid drift
-(\emph{\=a\'sraya-par\=av\d{r}tti}). Cross-domain bridging through
-category nodes will enable analogical reasoning---``cooking techniques''
-surfacing chemistry-related memories through shared category links.
+\textbf{Prototype theory and category seeds.} The current centroid-based
+category membership treats all members equally. Future work will add
+graded typicality (\emph{n\=ama-r\=upa}---name and form), where each
+member has a typicality score reflecting how representative it is of its
+category. Category seeds (\emph{b\=ija}) will retain dormant state,
+allowing dissolved categories to re-emerge when new evidence arrives
+rather than being discovered from scratch.
 
 \textbf{End-to-end evaluation} of \alaya{}'s full retrieval pipeline
 (BM25 + vector + graph + Hebbian reranking) with lifecycle operations
 (consolidation, forgetting, category-boosted retrieval) against LoCoMo
 and LongMemEval baselines is the immediate empirical priority.
 
-\textbf{Learned thresholds} for category assignment, discovery, merge, and
-dissolution---replacing the current hand-tuned defaults with values
-optimized from task performance---represent a natural extension of the
-RL-trained memory management trend identified in the companion
-survey~\cite{hui2026taxonomy}.
+\textbf{Learned thresholds} for category assignment, discovery, merge,
+splitting, and dissolution---replacing the current hand-tuned defaults
+with values optimized from task performance---represent a natural
+extension of the RL-trained memory management trend identified in the
+companion survey~\cite{hui2026taxonomy}.

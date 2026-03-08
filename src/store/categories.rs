@@ -250,7 +250,6 @@ pub fn get_uncategorized_node_ids(conn: &Connection) -> Result<Vec<NodeId>> {
     Ok(rows.filter_map(|r| r.ok()).collect())
 }
 
-#[allow(dead_code)]
 pub fn count_categories(conn: &Connection) -> Result<u64> {
     let count: i64 = conn.query_row("SELECT count(*) FROM categories", [], |row| row.get(0))?;
     Ok(count as u64)

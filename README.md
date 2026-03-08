@@ -140,7 +140,7 @@ For embedding Alaya directly into a Rust application:
 
 ```toml
 [dependencies]
-alaya = "0.1.0"
+alaya = "0.2.0"
 ```
 
 ### Quick Start (Rust)

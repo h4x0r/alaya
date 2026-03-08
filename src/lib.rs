@@ -455,6 +455,7 @@ impl AlayaStore {
             impression_count: store::implicit::count_impressions(&self.conn)?,
             link_count: graph::links::count_links(&self.conn)?,
             embedding_count: store::embeddings::count_embeddings(&self.conn)?,
+            category_count: store::categories::count_categories(&self.conn)?,
         })
     }
 

@@ -436,6 +436,7 @@ pub struct MemoryStatus {
     pub impression_count: u64,
     pub link_count: u64,
     pub embedding_count: u64,
+    pub category_count: u64,
 }
 
 // ---------------------------------------------------------------------------
