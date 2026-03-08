@@ -10,8 +10,8 @@
 // This validates the data flow that the MCP tools rely on.
 
 use alaya::{
-    AlayaStore, EpisodeContext, KnowledgeFilter, NewEpisode, NewSemanticNode, PurgeFilter, Query,
-    Role, SemanticType,
+    AlayaStore, EpisodeContext, EpisodeId, KnowledgeFilter, NewEpisode, NewSemanticNode,
+    PurgeFilter, Query, Role, SemanticType,
 };
 
 fn make_episode(content: &str, role: Role, session: &str, ts: i64) -> NewEpisode {
@@ -310,4 +310,42 @@ fn test_mcp_episodes_by_session() {
     // Query non-existent session
     let eps = store.episodes_by_session("s999").unwrap();
     assert!(eps.is_empty());
+}
+
+#[test]
+fn test_unconsolidated_episodes_count() {
+    let store = AlayaStore::open_in_memory().unwrap();
+    // Store 10 episodes
+    for i in 0..10 {
+        store
+            .store_episode(&make_episode(&format!("msg {i}"), Role::User, "s1", 1000 + i))
+            .unwrap();
+    }
+    // All 10 should be unconsolidated
+    let uncons = store.unconsolidated_episodes(20).unwrap();
+    assert_eq!(uncons.len(), 10);
+
+    // Learn a fact linking to first 3 episodes
+    let nodes = vec![NewSemanticNode {
+        content: "test fact".to_string(),
+        node_type: SemanticType::Fact,
+        confidence: 0.8,
+        source_episodes: vec![EpisodeId(1), EpisodeId(2), EpisodeId(3)],
+        embedding: None,
+    }];
+    store.learn(nodes).unwrap();
+
+    // Now only 7 should be unconsolidated
+    let uncons = store.unconsolidated_episodes(20).unwrap();
+    assert_eq!(uncons.len(), 7);
+}
+
+#[test]
+fn test_transform_and_forget_on_empty() {
+    // Verify transform+forget work without panicking (used by auto-maintenance)
+    let store = AlayaStore::open_in_memory().unwrap();
+    let tr = store.transform().unwrap();
+    let fr = store.forget().unwrap();
+    assert_eq!(tr.duplicates_merged, 0);
+    assert_eq!(fr.nodes_decayed, 0);
 }

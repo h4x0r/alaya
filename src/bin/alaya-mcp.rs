@@ -8,6 +8,7 @@
 //!   ALAYA_DB — path to SQLite database (default: ~/.alaya/memory.db)
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Mutex;
 
 use alaya::{
@@ -153,13 +154,17 @@ pub struct LearnParams {
 
 pub struct AlayaMcp {
     store: Mutex<AlayaStore>,
+    /// Total episodes stored this session.
+    episode_count: AtomicU32,
+    /// Episodes stored since last `learn` call.
+    unconsolidated_count: AtomicU32,
 }
 
 impl Clone for AlayaMcp {
     fn clone(&self) -> Self {
         // MCP servers are single-instance; clone should not be called in practice.
         // This satisfies the derive requirement from rmcp.
-        panic!("AlayaMcp should not be cloned — single-instance server")
+        panic!("AlayaMcp should not be cloned \u{2014} single-instance server")
     }
 }
 
@@ -167,6 +172,8 @@ impl AlayaMcp {
     pub fn new(store: AlayaStore) -> Self {
         Self {
             store: Mutex::new(store),
+            episode_count: AtomicU32::new(0),
+            unconsolidated_count: AtomicU32::new(0),
         }
     }
 
@@ -213,7 +220,60 @@ impl AlayaMcp {
         };
 
         match self.with_store(|s| s.store_episode(&episode)) {
-            Ok(id) => format!("Stored episode {} in session '{}'", id.0, params.session_id),
+            Ok(id) => {
+                let ep_total = self.episode_count.fetch_add(1, Ordering::Relaxed) + 1;
+                let uncons = self.unconsolidated_count.fetch_add(1, Ordering::Relaxed) + 1;
+
+                let mut response =
+                    format!("Stored episode {} in session '{}'.", id.0, params.session_id);
+
+                // Consolidation prompt at 10 unconsolidated episodes
+                if uncons >= 10 {
+                    if let Ok(episodes) = self.with_store(|s| s.unconsolidated_episodes(20)) {
+                        response.push_str(&format!(
+                            "\n\n--- Consolidation suggested ---\n\
+                             You have {} unconsolidated episodes. \
+                             Please extract key facts and call the 'learn' tool.\n\
+                             Recent unconsolidated episodes:",
+                            episodes.len()
+                        ));
+                        for ep in &episodes {
+                            response.push_str(&format!(
+                                "\n[{}] {}: {}",
+                                ep.id.0,
+                                ep.role.as_str(),
+                                ep.content
+                            ));
+                        }
+                    }
+                }
+
+                // Auto-maintenance every 25 episodes
+                if ep_total % 25 == 0 {
+                    let tr = self.with_store(|s| s.transform());
+                    let fr = self.with_store(|s| s.forget());
+                    match (tr, fr) {
+                        (Ok(tr), Ok(fr)) => {
+                            response.push_str(&format!(
+                                "\n\n--- Auto-maintenance ---\n\
+                                 Transform: {} merged, {} links pruned, {} categories discovered\n\
+                                 Forget: {} decayed, {} archived",
+                                tr.duplicates_merged,
+                                tr.links_pruned,
+                                tr.categories_discovered,
+                                fr.nodes_decayed,
+                                fr.nodes_archived,
+                            ));
+                        }
+                        (Err(e), _) | (_, Err(e)) => {
+                            response
+                                .push_str(&format!("\n\n--- Auto-maintenance error: {} ---", e));
+                        }
+                    }
+                }
+
+                response
+            }
             Err(e) => format!("Error: {e}"),
         }
     }
@@ -461,10 +521,13 @@ impl AlayaMcp {
 
         let count = nodes.len();
         match self.with_store(|s| s.learn(nodes)) {
-            Ok(report) => format!(
-                "Learned {} facts: {} nodes created, {} links created, {} categories assigned",
-                count, report.nodes_created, report.links_created, report.categories_assigned
-            ),
+            Ok(report) => {
+                self.unconsolidated_count.store(0, Ordering::Relaxed);
+                format!(
+                    "Learned {} facts: {} nodes created, {} links created, {} categories assigned",
+                    count, report.nodes_created, report.links_created, report.categories_assigned
+                )
+            }
             Err(e) => format!("Error: {e}"),
         }
     }
