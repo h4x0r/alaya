@@ -500,7 +500,7 @@ lateral inhibition).
 - [Theoretical foundations](docs/theoretical-foundations.md) (neuroscience and Buddhist psychology)
 - [The MEMORY.md problem](docs/related-work.md#the-memorymd-problem-why-file-based-memory-breaks-at-scale) (community workarounds and how Alaya addresses each)
 
-## v0.1.0 — What's In This Release
+## What's In v0.2.0
 
 - **Three-store architecture** (episodic/semantic/implicit) + Hebbian graph overlay
 - **7 lifecycle operations:** consolidate, transform, forget, perfume, emergent ontology, RIF, purge
@@ -508,24 +508,15 @@ lateral inhibition).
 - **Bjork dual-strength forgetting** with retrieval-induced suppression (RIF)
 - **LTD (Long-Term Depression):** Hebbian link decay weakens unused associations each transform cycle
 - **Enriched retrieval:** query results include semantic knowledge and preferences alongside episodes
-- **Emergent flat categories** via dual-signal clustering (embedding + graph)
 - **Tombstone tracking:** cascade deletion records audit trail for every purged node
 - **Zero-dependency Rust library** with SQLite WAL + FTS5
-- **210 tests** (201 core + 9 MCP) + property-based tests via proptest
-- **MCP server** (optional `mcp` feature flag)
-
-## v0.2.0 (current)
-
-- **Category hierarchy** with `parent_id` — categories form tree structures via `store_category` and `categories()`
-- **Category evolution** — categories with 8+ members and coherence < 0.6 automatically split into sub-categories during `transform()`
+- **Category hierarchy** with `parent_id` — categories form tree structures; auto-split when too broad
 - **Cross-domain bridging** via `MemberOf` links — spreading activation traverses category boundaries
-- **EmbeddingProvider trait** — `embed()` + `embed_batch()` with default implementation; wired into `store_episode()` and `query()` for automatic embedding generation
-- **8 MCP tool extensions** — `learn`, `import_claude_mem`, `import_claude_code` + `categories`, `neighbors`, `node_category` + `knowledge` category filter + `recall` category boost + enhanced `status` with knowledge breakdown, graph stats, and embedding coverage
-- **`learn` tool** — agent-driven consolidation: extract facts from episodes and teach Alaya directly, with full lifecycle wiring (strength, categories, graph links)
-- **Import tools** — `import_claude_mem` reads claude-mem.db observations; `import_claude_code` reads Claude Code JSONL conversation files
-- **ExtractionProvider trait** — `extract()` enables auto-consolidation without manual `consolidate()` calls; `LlmExtractionProvider` (behind `llm` feature flag) calls any OpenAI-compatible API using a small/fast model
-- **Auto-lifecycle** — `remember` auto-triggers maintenance every 25 episodes; with `ExtractionProvider` set, auto-consolidates after 10 unconsolidated episodes (otherwise prompts the agent to call `learn`)
-- **232 tests** (223 core + 9 MCP) across unit, integration, property-based (proptest), and doc tests
+- **EmbeddingProvider trait** — `embed()` + `embed_batch()` wired into `store_episode()` and `query()`
+- **ExtractionProvider trait** — `extract()` enables auto-consolidation; `LlmExtractionProvider` (behind `llm` feature flag) calls any OpenAI-compatible API
+- **13 MCP tools** — `remember`, `recall`, `learn`, `status`, `preferences`, `knowledge`, `maintain`, `purge`, `categories`, `neighbors`, `node_category`, `import_claude_mem`, `import_claude_code`
+- **Auto-lifecycle** — auto-maintenance every 25 episodes; auto-consolidation (or prompt) after 10 unconsolidated
+- **442 tests** across unit, integration, property-based (proptest), and doc tests
 
 ## Benchmark Evaluation
 
