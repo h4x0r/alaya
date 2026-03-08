@@ -259,7 +259,7 @@ flowchart LR
 | **Transformation** | Asraya-paravrtti | Deduplicates, LTD link decay, prunes, discovers categories |
 | **Forgetting** | Bjork & Bjork (1992) | Decays retrieval strength, archives weak nodes |
 | **RIF** | Anderson et al. (1994) | Retrieval-induced forgetting suppresses competing memories |
-| **Emergent Ontology** | Vikalpa (conceptual construction) | Categories emerge from semantic node clustering |
+| **Emergent Ontology** | Vikalpa (conceptual construction) | Hierarchical categories emerge from clustering; auto-split when too broad |
 
 ## Integration Guide
 

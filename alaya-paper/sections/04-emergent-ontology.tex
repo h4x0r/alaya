@@ -44,16 +44,25 @@ Each category is a first-class graph node with the following structure:
     \item \textbf{Centroid embedding:} Running average of member embeddings,
     updated incrementally as members are assigned.
     \item \textbf{Member count:} Number of assigned semantic nodes.
+    \item \textbf{Parent ID (v0.2.0):} Optional reference to a parent
+    category, enabling hierarchical nesting. Sub-categories inherit their
+    parent's domain while representing finer-grained distinctions---forming
+    an emergent is-a taxonomy (e.g., ``programming'' $\rightarrow$
+    ``rust-async'', ``python-ml'').
     \item \textbf{Stability:} A score in $[0, 1]$ tracking how consistently
     the category survives transformation cycles. Stability increases
     asymptotically: $s' = s + 0.1 \cdot (1 - s)$.
 \end{itemize}
 
-Categories participate in the Hebbian graph via \texttt{MemberOf} links,
-enabling spreading activation to flow through category nodes. A query about
-``cooking'' activates the cooking category, which in turn activates all
-member semantic nodes---including those that might not match the query
-embedding directly but are categorically related.
+Categories participate in the Hebbian graph via bidirectional
+\texttt{MemberOf} links (weight~0.3), enabling spreading activation to
+flow through category nodes. This produces \emph{cross-domain bridging}:
+a query about ``cooking'' activates the cooking category, which in turn
+activates all member semantic nodes---including those that might not match
+the query embedding directly but are categorically related. When categories
+form hierarchies, activation can propagate from a sub-category through its
+parent to sibling sub-categories, bridging knowledge domains that share a
+common ancestor but have no direct Hebbian links between their members.
 
 \subsection{Incremental Assignment (Consolidation Phase)}
 
@@ -122,3 +131,34 @@ Transformation also maintains existing categories through four operations:
 
 This maintenance cycle ensures that the ontology remains a living reflection
 of the current knowledge state rather than accumulating stale categories.
+
+\subsection{Hierarchical Splitting (v0.2.0)}
+
+As knowledge accumulates, categories may grow to encompass increasingly
+diverse members. When a category reaches 8 or more members and its internal
+coherence drops below~0.6 (measured as the average cosine similarity of
+member embeddings to the centroid), \texttt{transform()} triggers automatic
+splitting:
+
+\begin{enumerate}[nosep]
+    \item Compute pairwise cosine similarity among all member embeddings.
+    \item Apply union-find clustering with the same merge threshold used for
+    discovery (0.7 cosine similarity).
+    \item For each resulting cluster with $\geq$2 members, create a
+    sub-category with \texttt{parent\_id} pointing to the original category.
+    \item Reassign members to their sub-categories, updating
+    \texttt{MemberOf} links.
+    \item The original category remains as the parent node in the hierarchy.
+\end{enumerate}
+
+This produces a tree that refines as knowledge grows. A ``programming''
+category may split into ``rust-systems'' and ``python-data-science''
+sub-categories, each with its own centroid and stability trajectory.
+The hierarchy is unbounded in depth---a sub-category that later grows
+large and incoherent will itself split, producing increasingly granular
+taxonomic structure without manual intervention.
+
+The splitting mechanism complements the existing merge operation: merging
+collapses over-fragmented categories while splitting decomposes
+over-generalized ones. Together, they maintain an ontology that tracks
+the natural granularity of the agent's knowledge.

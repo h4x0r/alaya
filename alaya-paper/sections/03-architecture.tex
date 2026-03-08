@@ -129,7 +129,7 @@ are decontextualized, typed, and reusable.
 
 \paragraph{Transformation (\texttt{transform()})}
 Periodic reorganization of the memory system, implementing
-\emph{\=a\'sraya-par\=av\d{r}tti} (transformation of the basis). Five
+\emph{\=a\'sraya-par\=av\d{r}tti} (transformation of the basis). Six
 sub-operations run in sequence:
 \begin{enumerate}[nosep]
     \item \textbf{LTD link decay:} All Hebbian link weights are decayed by
@@ -143,6 +143,9 @@ sub-operations run in sequence:
     30-day half-life; weak preferences and old impressions are pruned.
     \item \textbf{Category discovery:} Uncategorized semantic nodes are
     clustered to discover emergent categories (\Cref{sec:ontology}).
+    \item \textbf{Category splitting:} Categories with 8+ members and
+    coherence below~0.6 are split into hierarchical sub-categories
+    (\Cref{sec:ontology}).
 \end{enumerate}
 The \texttt{TransformationReport} returns counts for each sub-operation,
 enabling monitoring of memory system health over time.
@@ -222,6 +225,18 @@ nodes surface as behavioral patterns (e.g., \emph{``preference:
 communication\_style: prefers concise answers''}). This enrichment
 allows the agent to retrieve both raw memories and distilled knowledge in
 a single query, without separate API calls.
+
+\paragraph{Cross-domain bridging.}
+\texttt{MemberOf} links connect semantic nodes to their categories in the
+Hebbian graph. During spreading activation, this enables \emph{cross-domain
+bridging}: activation flows from a seed node through its category to
+sibling members that share the same categorical label but have no direct
+Hebbian links. When categories form hierarchies, activation can propagate
+through parent categories to reach nodes in sibling sub-categories. For
+example, a query about ``Rust async'' may activate a ``rust-systems''
+sub-category, propagate through its ``programming'' parent, and surface
+nodes from a ``python-data-science'' sibling---bridging domains that pure
+similarity or co-retrieval links would never connect.
 
 \paragraph{Retrieval-induced forgetting.}
 After retrieval, competing memories from the same session as retrieved
