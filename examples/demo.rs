@@ -1,6 +1,6 @@
 //! # Alaya Demo: A Scripted Walkthrough
 //!
-//! This demo walks through Alaya's ten core capabilities:
+//! This demo walks through Alaya's eleven core capabilities:
 //! 1. Episodic Memory (store + query)
 //! 2. Hebbian Graph (temporal links + co-retrieval + spreading activation)
 //! 3. Consolidation (episodic -> semantic knowledge)
@@ -11,13 +11,14 @@
 //! 8. Retrieval-Induced Forgetting (competitor suppression)
 //! 9. Forgetting (Bjork dual-strength model)
 //! 10. Purge (cascade deletion with tombstone tracking)
+//! 11. v0.2.0 Features (hierarchy + EmbeddingProvider)
 //!
 //! Run: `cargo run --example demo`
 
 use alaya::{
-    AlayaStore, ConsolidationProvider, Episode, EpisodeContext, EpisodeId, Interaction, NewEpisode,
-    NewImpression, NewSemanticNode, NodeRef, PurgeFilter, Query, QueryContext, Role, SemanticNode,
-    SemanticType,
+    AlayaStore, ConsolidationProvider, Episode, EpisodeContext, EpisodeId, Interaction,
+    MockEmbeddingProvider, NewEpisode, NewImpression, NewSemanticNode, NodeRef, PurgeFilter,
+    Query, QueryContext, Role, SemanticNode, SemanticType,
 };
 
 // ============================================================================
@@ -819,6 +820,64 @@ fn chapter_10_purge(store: &AlayaStore) {
     );
 }
 
+fn chapter_11_v020_features(store: &AlayaStore) {
+    print_chapter(11, "v0.2.0 Features", "Hierarchy + EmbeddingProvider");
+
+    // Demonstrate EmbeddingProvider
+    println!("  EmbeddingProvider: automatic embedding generation");
+    println!("  (In this demo, we use MockEmbeddingProvider for deterministic embeddings)");
+    println!();
+
+    // Show category hierarchy (if categories exist)
+    let cats = store.categories(None).expect("failed to get categories");
+    if !cats.is_empty() {
+        println!("  Category Hierarchy:");
+        for cat in &cats {
+            let prefix = if cat.parent_id.is_some() { "  └─" } else { "  ●" };
+            println!(
+                "  {} [cat#{}] \"{}\" — {} members, stability: {:.2}",
+                prefix, cat.id.0, cat.label, cat.member_count, cat.stability
+            );
+        }
+    } else {
+        println!("  (Categories were cleared during purge — hierarchy visible in chapters 5-6)");
+    }
+    println!();
+
+    // Show subcategories using the public API
+    let root_cats: Vec<_> = cats.iter().filter(|c| c.parent_id.is_none()).collect();
+    for root in &root_cats {
+        let subs = store.subcategories(root.id).unwrap_or_default();
+        if !subs.is_empty() {
+            println!("  Subcategories of \"{}\": {}", root.label, subs.len());
+            for sub in &subs {
+                println!("    └─ [cat#{}] \"{}\" ({} members)", sub.id.0, sub.label, sub.member_count);
+            }
+        }
+    }
+    println!();
+
+    println!("  New MCP tools in v0.2.0:");
+    println!("    • categories — list emergent categories with stability filter");
+    println!("    • neighbors — graph neighbors via spreading activation");
+    println!("    • node_category — which category a node belongs to");
+    println!("    • knowledge (extended) — filter by category label");
+    println!("    • recall (extended) — boost results by category");
+    println!();
+
+    println!("  Category splitting: categories with 8+ members and coherence < 0.6");
+    println!("  automatically split into sub-categories during transform().");
+    println!();
+
+    print_insight(
+        "v0.2.0 adds three pillars: (1) hierarchical categories that\n\
+         \x20 emerge and split through use, (2) EmbeddingProvider trait\n\
+         \x20 for auto-embedding without manual vector management, and\n\
+         \x20 (3) cross-domain bridging via MemberOf links that let\n\
+         \x20 spreading activation traverse category boundaries.",
+    );
+}
+
 // ============================================================================
 // Main
 // ============================================================================
@@ -831,7 +890,8 @@ fn main() {
     println!("  +---------------------------------------------------+");
     println!();
 
-    let store = AlayaStore::open_in_memory().expect("failed to open in-memory database");
+    let mut store = AlayaStore::open_in_memory().expect("failed to open in-memory database");
+    store.set_embedding_provider(Box::new(MockEmbeddingProvider::new(4)));
 
     let episode_ids = chapter_1_episodic(&store);
     chapter_2_hebbian(&store, &episode_ids);
@@ -843,9 +903,10 @@ fn main() {
     chapter_8_rif(&store);
     chapter_9_forgetting(&store);
     chapter_10_purge(&store);
+    chapter_11_v020_features(&store);
 
     println!("  ═══════════════════════════════════════════════════");
-    println!("   Demo Complete — 10 Chapters");
+    println!("   Demo Complete — 11 Chapters");
     println!("  ═══════════════════════════════════════════════════");
     println!();
     println!("  To learn more:");

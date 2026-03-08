@@ -293,6 +293,7 @@ pub struct Category {
     pub created_at: i64,
     pub last_updated: i64,
     pub stability: f32,
+    pub parent_id: Option<CategoryId>,
 }
 
 // ---------------------------------------------------------------------------
@@ -410,6 +411,7 @@ pub struct TransformationReport {
     pub categories_discovered: u32,
     pub categories_merged: u32,
     pub categories_dissolved: u32,
+    pub categories_split: u32,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

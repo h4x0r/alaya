@@ -32,6 +32,12 @@ const CATEGORY_MERGE_THRESHOLD: f32 = 0.85;
 /// Categories with stability below this are dissolved
 const CATEGORY_DISSOLVE_THRESHOLD: f32 = 0.1;
 
+/// Minimum member count before considering a split
+const SPLIT_MIN_MEMBERS: usize = 8;
+
+/// Average cosine similarity to centroid below which a category should split
+const SPLIT_COHERENCE_THRESHOLD: f32 = 0.6;
+
 /// Run a transformation cycle (asraya-paravrtti).
 ///
 /// Periodic refinement toward clarity: dedup, contradiction resolution,
@@ -69,6 +75,9 @@ pub fn transform(conn: &Connection) -> Result<TransformationReport> {
     report.categories_merged = merged;
     report.categories_dissolved = dissolved;
 
+    // 8. Split large incoherent categories
+    report.categories_split = split_large_categories(conn)?;
+
     Ok(report)
 }
 
@@ -100,14 +109,23 @@ fn dedup_semantic_nodes(conn: &Connection) -> Result<u32> {
             let sim = embeddings::cosine_similarity(&nodes[i].1, &nodes[j].1);
             if sim >= DEDUP_SIMILARITY_THRESHOLD {
                 // Keep the first (older), delete the second
-                // Transfer any unique links from j to i
+                // Transfer any unique links from j to i (ignore duplicates)
                 conn.execute(
-                    "UPDATE links SET source_id = ?1 WHERE source_type = 'semantic' AND source_id = ?2",
+                    "UPDATE OR IGNORE links SET source_id = ?1 WHERE source_type = 'semantic' AND source_id = ?2",
                     [nodes[i].0, nodes[j].0],
                 )?;
                 conn.execute(
-                    "UPDATE links SET target_id = ?1 WHERE target_type = 'semantic' AND target_id = ?2",
+                    "UPDATE OR IGNORE links SET target_id = ?1 WHERE target_type = 'semantic' AND target_id = ?2",
                     [nodes[i].0, nodes[j].0],
+                )?;
+                // Clean up any orphaned links that couldn't be transferred due to duplicates
+                conn.execute(
+                    "DELETE FROM links WHERE source_type = 'semantic' AND source_id = ?1",
+                    [nodes[j].0],
+                )?;
+                conn.execute(
+                    "DELETE FROM links WHERE target_type = 'semantic' AND target_id = ?1",
+                    [nodes[j].0],
                 )?;
                 // Increment corroboration of the kept node
                 conn.execute(
@@ -239,19 +257,12 @@ fn discover_categories(conn: &Connection) -> Result<u32> {
         };
 
         // Store category
-        let cat_id = categories::store_category(conn, &label, prototype_id, Some(&centroid))?;
+        let cat_id = categories::store_category(conn, &label, prototype_id, Some(&centroid), None)?;
 
         // Assign each member and create MemberOf link
         for &idx in members {
             let member_id = nodes_with_emb[idx].0;
             categories::assign_node_to_category(conn, member_id, cat_id)?;
-            links::create_link(
-                conn,
-                NodeRef::Semantic(member_id),
-                NodeRef::Category(cat_id),
-                LinkType::MemberOf,
-                0.8,
-            )?;
         }
 
         categories_created += 1;
@@ -359,10 +370,19 @@ fn maintain_categories(conn: &Connection) -> Result<(u32, u32)> {
                         categories::update_centroid(conn, keep_id, &new_centroid)?;
                     }
 
-                    // Update MemberOf links from loser to winner
+                    // Update MemberOf links from loser to winner (ignore duplicates)
                     conn.execute(
-                        "UPDATE links SET target_id = ?1 WHERE target_type = 'category' AND target_id = ?2 AND link_type = 'member_of'",
+                        "UPDATE OR IGNORE links SET target_id = ?1 WHERE target_type = 'category' AND target_id = ?2 AND link_type = 'member_of'",
                         [keep_id.0, lose_id.0],
+                    )?;
+                    conn.execute(
+                        "UPDATE OR IGNORE links SET source_id = ?1 WHERE source_type = 'category' AND source_id = ?2 AND link_type = 'member_of'",
+                        [keep_id.0, lose_id.0],
+                    )?;
+                    // Clean up any orphaned links that couldn't be transferred
+                    conn.execute(
+                        "DELETE FROM links WHERE link_type = 'member_of' AND ((target_type = 'category' AND target_id = ?1) OR (source_type = 'category' AND source_id = ?1))",
+                        [lose_id.0],
                     )?;
 
                     // Delete the loser category
@@ -390,6 +410,149 @@ fn maintain_categories(conn: &Connection) -> Result<(u32, u32)> {
     }
 
     Ok((merged_count, dissolved_count))
+}
+
+/// Split categories that are too large and have low internal coherence.
+/// Creates sub-categories under the original parent.
+fn split_large_categories(conn: &Connection) -> Result<u32> {
+    let all_cats = categories::list_categories(conn, None)?;
+    let mut splits = 0u32;
+
+    for cat in &all_cats {
+        if (cat.member_count as usize) < SPLIT_MIN_MEMBERS {
+            continue;
+        }
+
+        // Need centroid to compute coherence
+        let centroid = match &cat.centroid_embedding {
+            Some(c) => c,
+            None => continue,
+        };
+
+        // Get member node IDs
+        let member_ids: Vec<NodeId> = conn
+            .prepare("SELECT id FROM semantic_nodes WHERE category_id = ?1")?
+            .query_map([cat.id.0], |row| Ok(NodeId(row.get(0)?)))?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        // Get embeddings for members
+        let mut members_with_emb: Vec<(NodeId, Vec<f32>)> = Vec::new();
+        for nid in &member_ids {
+            if let Some(emb) = embeddings::get_embedding(conn, "semantic", nid.0)? {
+                members_with_emb.push((*nid, emb));
+            }
+        }
+
+        if members_with_emb.len() < SPLIT_MIN_MEMBERS {
+            continue;
+        }
+
+        // Compute average cosine similarity to centroid
+        let total_sim: f32 = members_with_emb
+            .iter()
+            .map(|(_, emb)| embeddings::cosine_similarity(emb, centroid))
+            .sum();
+        let coherence = total_sim / members_with_emb.len() as f32;
+
+        if coherence >= SPLIT_COHERENCE_THRESHOLD {
+            continue; // Still coherent, don't split
+        }
+
+        // Re-cluster members using same union-find algorithm as discover_categories
+        let n = members_with_emb.len();
+        let mut parent_uf: Vec<usize> = (0..n).collect();
+
+        fn find(parent: &mut Vec<usize>, i: usize) -> usize {
+            if parent[i] != i {
+                parent[i] = find(parent, parent[i]);
+            }
+            parent[i]
+        }
+        fn union(parent: &mut Vec<usize>, a: usize, b: usize) {
+            let ra = find(parent, a);
+            let rb = find(parent, b);
+            if ra != rb {
+                parent[rb] = ra;
+            }
+        }
+
+        for i in 0..n {
+            for j in (i + 1)..n {
+                let sim =
+                    embeddings::cosine_similarity(&members_with_emb[i].1, &members_with_emb[j].1);
+                if sim >= CATEGORY_CLUSTER_THRESHOLD {
+                    union(&mut parent_uf, i, j);
+                }
+            }
+        }
+
+        let mut clusters: HashMap<usize, Vec<usize>> = HashMap::new();
+        for i in 0..n {
+            let root = find(&mut parent_uf, i);
+            clusters.entry(root).or_default().push(i);
+        }
+
+        // Only split if we get 2+ clusters of MIN_CLUSTER_SIZE
+        let valid_clusters: Vec<&Vec<usize>> = clusters
+            .values()
+            .filter(|c| c.len() >= MIN_CLUSTER_SIZE)
+            .collect();
+
+        if valid_clusters.len() < 2 {
+            continue; // No meaningful sub-clusters found
+        }
+
+        // Create sub-categories under this parent
+        for cluster in valid_clusters {
+            let proto_idx = cluster[0];
+            let proto_node = members_with_emb[proto_idx].0;
+
+            // Label from prototype content (first 40 chars)
+            let label_content: String = conn
+                .query_row(
+                    "SELECT content FROM semantic_nodes WHERE id = ?1",
+                    [proto_node.0],
+                    |row| row.get(0),
+                )
+                .unwrap_or_else(|_| "sub-category".to_string());
+            let sub_label = if label_content.len() > 40 {
+                &label_content[..40]
+            } else {
+                &label_content
+            };
+
+            // Compute sub-cluster centroid
+            let dim = members_with_emb[0].1.len();
+            let mut sub_centroid = vec![0.0f32; dim];
+            for &idx in cluster {
+                for (d, val) in members_with_emb[idx].1.iter().enumerate() {
+                    sub_centroid[d] += val;
+                }
+            }
+            for d in 0..dim {
+                sub_centroid[d] /= cluster.len() as f32;
+            }
+
+            let sub_id = categories::store_category(
+                conn,
+                sub_label,
+                proto_node,
+                Some(&sub_centroid),
+                Some(cat.id),
+            )?;
+
+            // Reassign members to sub-category
+            for &idx in cluster {
+                let nid = members_with_emb[idx].0;
+                categories::assign_node_to_category(conn, nid, sub_id)?;
+            }
+        }
+
+        splits += 1;
+    }
+
+    Ok(splits)
 }
 
 #[cfg(test)]
@@ -523,7 +686,7 @@ mod tests {
         ).unwrap();
 
         // Create a category with 0 members
-        categories::store_category(&conn, "empty-cat", NodeId(1), None).unwrap();
+        categories::store_category(&conn, "empty-cat", NodeId(1), None, None).unwrap();
         assert_eq!(categories::count_categories(&conn).unwrap(), 1);
 
         let report = transform(&conn).unwrap();
@@ -567,7 +730,145 @@ mod tests {
                 |r| r.get(0),
             )
             .unwrap();
-        assert_eq!(link_count, 3, "should have 3 MemberOf links");
+        assert_eq!(link_count, 6, "should have 6 bidirectional MemberOf links (2 per node)");
+    }
+
+    #[test]
+    fn test_split_triggers_when_large_and_incoherent() {
+        let conn = open_memory_db().unwrap();
+
+        // Create 10 semantic nodes in 2 distinct sub-clusters using 16D embeddings.
+        // Sub-cluster A (indices 0-4): live in dims 0-7
+        // Sub-cluster B (indices 5-9): live in dims 8-15 (orthogonal to A)
+        // Within each cluster: cosine sim ~0.8 (above 0.7 cluster threshold, below 0.95 dedup)
+        // Cross-cluster: cosine sim = 0 (orthogonal subspaces)
+        let test_embs: Vec<Vec<f32>> = vec![
+            vec![0.45, 0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            vec![0.45, 0.45, 0.45, 0.45, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            vec![0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            vec![0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            vec![0.45, 0.45, 0.45, 0.45, 0.31, 0.31, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.0],
+            vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.0, 0.45, 0.0, 0.0],
+            vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.45, 0.0],
+            vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.0, 0.0, 0.0, 0.45],
+            vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.45, 0.45, 0.45, 0.45, 0.31, 0.31, 0.0, 0.0],
+        ];
+        let mut node_ids = Vec::new();
+        for i in 0..10 {
+            conn.execute(
+                "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated, corroboration_count)
+                 VALUES (?1, 'fact', 0.8, 1000, 1000, 1)",
+                rusqlite::params![format!("split node {}", i)],
+            )
+            .unwrap();
+            let nid = NodeId(conn.last_insert_rowid());
+            embeddings::store_embedding(&conn, "semantic", nid.0, &test_embs[i], "").unwrap();
+            node_ids.push(nid);
+        }
+
+        // Create a parent category containing all 10
+        let cat_id = categories::store_category(&conn, "broad", node_ids[0], None, None).unwrap();
+        // Set centroid orthogonal to both clusters — forces low coherence
+        let centroid = vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.7, 0.7];
+        categories::update_centroid(&conn, cat_id, &centroid).unwrap();
+        for &nid in &node_ids {
+            categories::assign_node_to_category(&conn, nid, cat_id).unwrap();
+        }
+
+        let report = transform(&conn).unwrap();
+        assert!(
+            report.categories_split > 0,
+            "should have split the broad category"
+        );
+
+        // Should have sub-categories with parent_id = cat_id
+        let subs = categories::get_subcategories(&conn, cat_id).unwrap();
+        assert!(
+            subs.len() >= 2,
+            "should have at least 2 sub-categories, got {}",
+            subs.len()
+        );
+    }
+
+    #[test]
+    fn test_no_split_when_coherent() {
+        let conn = open_memory_db().unwrap();
+
+        // 8 nodes with similar embeddings — coherent cluster (varied enough to avoid dedup)
+        // All point roughly in the same direction but with enough variation
+        let coherent_embs: Vec<Vec<f32>> = vec![
+            vec![0.9, 0.3, 0.1, 0.0],
+            vec![0.85, 0.35, 0.15, 0.0],
+            vec![0.88, 0.28, 0.12, 0.05],
+            vec![0.92, 0.25, 0.08, 0.0],
+            vec![0.87, 0.32, 0.14, 0.02],
+            vec![0.91, 0.27, 0.11, 0.03],
+            vec![0.86, 0.34, 0.13, 0.01],
+            vec![0.89, 0.30, 0.10, 0.04],
+        ];
+        let mut node_ids = Vec::new();
+        for i in 0..8 {
+            conn.execute(
+                "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated, corroboration_count)
+                 VALUES (?1, 'fact', 0.8, 1000, 1000, 1)",
+                rusqlite::params![format!("coherent node {}", i)],
+            )
+            .unwrap();
+            let nid = NodeId(conn.last_insert_rowid());
+            embeddings::store_embedding(&conn, "semantic", nid.0, &coherent_embs[i], "").unwrap();
+            node_ids.push(nid);
+        }
+
+        let cat_id = categories::store_category(&conn, "tight", node_ids[0], None, None).unwrap();
+        let centroid = vec![0.885, 0.305, 0.116, 0.019]; // mean of the 8 embeddings
+        categories::update_centroid(&conn, cat_id, &centroid).unwrap();
+        for &nid in &node_ids {
+            categories::assign_node_to_category(&conn, nid, cat_id).unwrap();
+        }
+
+        let report = transform(&conn).unwrap();
+        assert_eq!(
+            report.categories_split, 0,
+            "should NOT split coherent category"
+        );
+    }
+
+    #[test]
+    fn test_no_split_when_small() {
+        let conn = open_memory_db().unwrap();
+
+        // Only 5 nodes — below SPLIT_MIN_MEMBERS of 8
+        let mut node_ids = Vec::new();
+        for i in 0..5 {
+            conn.execute(
+                "INSERT INTO semantic_nodes (content, node_type, confidence, created_at, last_corroborated, corroboration_count)
+                 VALUES (?1, 'fact', 0.8, 1000, 1000, 1)",
+                rusqlite::params![format!("small node {}", i)],
+            )
+            .unwrap();
+            let nid = NodeId(conn.last_insert_rowid());
+            let emb = if i < 3 {
+                vec![1.0, 0.0, 0.0, 0.0]
+            } else {
+                vec![0.0, 0.0, 1.0, 0.0]
+            };
+            embeddings::store_embedding(&conn, "semantic", nid.0, &emb, "").unwrap();
+            node_ids.push(nid);
+        }
+
+        let cat_id = categories::store_category(&conn, "small", node_ids[0], None, None).unwrap();
+        let centroid = vec![0.5, 0.0, 0.5, 0.0];
+        categories::update_centroid(&conn, cat_id, &centroid).unwrap();
+        for &nid in &node_ids {
+            categories::assign_node_to_category(&conn, nid, cat_id).unwrap();
+        }
+
+        let report = transform(&conn).unwrap();
+        assert_eq!(
+            report.categories_split, 0,
+            "should NOT split small category"
+        );
     }
 
     #[test]
@@ -584,8 +885,8 @@ mod tests {
         }
 
         let c1 =
-            categories::store_category(&conn, "cat-a", NodeId(1), Some(&[1.0, 0.0, 0.0])).unwrap();
-        let c2 = categories::store_category(&conn, "cat-b", NodeId(2), Some(&[0.99, 0.01, 0.0]))
+            categories::store_category(&conn, "cat-a", NodeId(1), Some(&[1.0, 0.0, 0.0]), None).unwrap();
+        let c2 = categories::store_category(&conn, "cat-b", NodeId(2), Some(&[0.99, 0.01, 0.0]), None)
             .unwrap();
 
         // Assign one member to each so they're non-empty and don't get GC'd

@@ -11,7 +11,8 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use alaya::{
-    AlayaStore, EpisodeContext, KnowledgeFilter, NewEpisode, PurgeFilter, Query, Role, SemanticType,
+    AlayaStore, CategoryId, EpisodeContext, EpisodeId, KnowledgeFilter, NewEpisode, NodeId, NodeRef,
+    PreferenceId, PurgeFilter, Query, Role, SemanticType,
 };
 use rmcp::{model::ServerInfo, schemars, tool, ServerHandler, ServiceExt};
 use tokio::io::{stdin, stdout};
@@ -44,6 +45,10 @@ pub struct RecallParams {
     /// Maximum number of results (default: 5)
     #[schemars(description = "Maximum results to return (default: 5)")]
     pub max_results: Option<usize>,
+
+    /// Category ID to boost in results
+    #[schemars(description = "Category ID to boost in ranking (memories in this category score higher)")]
+    pub boost_category: Option<i64>,
 }
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
@@ -66,6 +71,10 @@ pub struct KnowledgeParams {
     /// Maximum number of results
     #[schemars(description = "Maximum results to return (default: 20)")]
     pub limit: Option<usize>,
+
+    /// Filter by category label
+    #[schemars(description = "Filter by category label (exact match)")]
+    pub category: Option<String>,
 }
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
@@ -81,6 +90,35 @@ pub struct PurgeParams {
     /// Unix timestamp (required when scope is "older_than")
     #[schemars(description = "Unix timestamp (required when scope is older_than)")]
     pub before_timestamp: Option<i64>,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct CategoriesParams {
+    /// Minimum stability threshold (0.0 to 1.0)
+    #[schemars(description = "Minimum stability threshold (0.0 to 1.0). Categories below this are filtered out.")]
+    pub min_stability: Option<f32>,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct NeighborsParams {
+    /// Node type: "episode", "semantic", "preference", "category"
+    #[schemars(description = "Node type: episode, semantic, preference, or category")]
+    pub node_type: String,
+
+    /// Node ID
+    #[schemars(description = "The numeric ID of the node")]
+    pub node_id: i64,
+
+    /// Traversal depth (default: 1)
+    #[schemars(description = "How many hops to traverse (default: 1)")]
+    pub depth: Option<u32>,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct NodeCategoryParams {
+    /// Semantic node ID
+    #[schemars(description = "The numeric ID of the semantic node")]
+    pub node_id: i64,
 }
 
 // ---------------------------------------------------------------------------
@@ -164,7 +202,7 @@ impl AlayaMcp {
             embedding: None,
             context: alaya::QueryContext::default(),
             max_results: params.max_results.unwrap_or(5),
-            boost_categories: None,
+            boost_categories: params.boost_category.map(|c| vec![c.to_string()]),
         };
 
         match self.with_store(|s| s.query(&query)) {
@@ -236,7 +274,7 @@ impl AlayaMcp {
             node_type: params.node_type.as_deref().and_then(SemanticType::from_str),
             min_confidence: params.min_confidence,
             limit: params.limit.or(Some(20)),
-            category: None,
+            category: params.category,
         };
 
         match self.with_store(|s| s.knowledge(Some(filter))) {
@@ -275,6 +313,91 @@ impl AlayaMcp {
                 fr.nodes_archived,
             ),
             (Err(e), _) | (_, Err(e)) => format!("Error: {e}"),
+        }
+    }
+
+    /// List emergent categories.
+    #[tool(
+        description = "List emergent categories discovered from semantic knowledge clusters. Categories form automatically and evolve through use."
+    )]
+    fn categories(&self, #[tool(aggr)] params: CategoriesParams) -> String {
+        match self.with_store(|s| s.categories(params.min_stability)) {
+            Ok(cats) if cats.is_empty() => "No categories found.".to_string(),
+            Ok(cats) => {
+                let mut out = format!("Found {} categories:\n\n", cats.len());
+                for c in &cats {
+                    let parent = c
+                        .parent_id
+                        .map(|p| format!(" (parent: {})", p.0))
+                        .unwrap_or_default();
+                    out.push_str(&format!(
+                        "- [{}] {} — {} members, stability: {:.2}{}\n",
+                        c.id.0, c.label, c.member_count, c.stability, parent
+                    ));
+                }
+                out
+            }
+            Err(e) => format!("Error: {e}"),
+        }
+    }
+
+    /// Get graph neighbors of a node.
+    #[tool(
+        description = "Get graph neighbors of a memory node via spreading activation. Shows connected memories with link weights."
+    )]
+    fn neighbors(&self, #[tool(aggr)] params: NeighborsParams) -> String {
+        let node_ref = match params.node_type.to_lowercase().as_str() {
+            "episode" => NodeRef::Episode(EpisodeId(params.node_id)),
+            "semantic" => NodeRef::Semantic(NodeId(params.node_id)),
+            "preference" => NodeRef::Preference(PreferenceId(params.node_id)),
+            "category" => NodeRef::Category(CategoryId(params.node_id)),
+            _ => {
+                return format!(
+                    "Error: invalid node_type '{}'. Use: episode, semantic, preference, category",
+                    params.node_type
+                )
+            }
+        };
+        let depth = params.depth.unwrap_or(1);
+
+        match self.with_store(|s| s.neighbors(node_ref, depth)) {
+            Ok(neighbors) if neighbors.is_empty() => "No neighbors found.".to_string(),
+            Ok(neighbors) => {
+                let mut out = format!("Found {} neighbors:\n\n", neighbors.len());
+                for (nr, weight) in &neighbors {
+                    let (ntype, nid) = match nr {
+                        NodeRef::Episode(id) => ("episode", id.0),
+                        NodeRef::Semantic(id) => ("semantic", id.0),
+                        NodeRef::Preference(id) => ("preference", id.0),
+                        NodeRef::Category(id) => ("category", id.0),
+                        _ => ("unknown", 0),
+                    };
+                    out.push_str(&format!("- {} #{} (weight: {:.3})\n", ntype, nid, weight));
+                }
+                out
+            }
+            Err(e) => format!("Error: {e}"),
+        }
+    }
+
+    /// Get the category of a semantic node.
+    #[tool(
+        description = "Get which category a semantic knowledge node belongs to. Returns the category or 'uncategorized'."
+    )]
+    fn node_category(&self, #[tool(aggr)] params: NodeCategoryParams) -> String {
+        match self.with_store(|s| s.node_category(NodeId(params.node_id))) {
+            Ok(Some(cat)) => {
+                let parent = cat
+                    .parent_id
+                    .map(|p| format!(" (parent: {})", p.0))
+                    .unwrap_or_default();
+                format!(
+                    "Node {} belongs to category [{}] '{}' — {} members, stability: {:.2}{}",
+                    params.node_id, cat.id.0, cat.label, cat.member_count, cat.stability, parent
+                )
+            }
+            Ok(None) => format!("Node {} is uncategorized.", params.node_id),
+            Err(e) => format!("Error: {e}"),
         }
     }
 
@@ -320,8 +443,9 @@ impl ServerHandler for AlayaMcp {
             instructions: Some(
                 "Alaya is a memory engine for AI agents. Use 'remember' to store messages, \
                  'recall' to search memory, 'status' to check stats, 'preferences' for user \
-                 preferences, 'knowledge' for semantic facts, 'maintain' for cleanup, and \
-                 'purge' to delete data."
+                 preferences, 'knowledge' for semantic facts, 'categories' for emergent clusters, \
+                 'neighbors' for graph traversal, 'node_category' to check a node's category, \
+                 'maintain' for cleanup, and 'purge' to delete data."
                     .into(),
             ),
             ..Default::default()
