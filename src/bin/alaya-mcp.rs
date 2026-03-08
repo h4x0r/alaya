@@ -11,8 +11,8 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use alaya::{
-    AlayaStore, CategoryId, EpisodeContext, EpisodeId, KnowledgeFilter, NewEpisode, NodeId, NodeRef,
-    PreferenceId, PurgeFilter, Query, Role, SemanticType,
+    AlayaStore, CategoryId, EpisodeContext, EpisodeId, KnowledgeFilter, NewEpisode, NewSemanticNode,
+    NodeId, NodeRef, PreferenceId, PurgeFilter, Query, Role, SemanticType,
 };
 use rmcp::{model::ServerInfo, schemars, tool, ServerHandler, ServiceExt};
 use tokio::io::{stdin, stdout};
@@ -119,6 +119,32 @@ pub struct NodeCategoryParams {
     /// Semantic node ID
     #[schemars(description = "The numeric ID of the semantic node")]
     pub node_id: i64,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct LearnFactEntry {
+    /// The knowledge content
+    #[schemars(description = "The knowledge content")]
+    pub content: String,
+
+    /// Type: fact, relationship, event, or concept
+    #[schemars(description = "Type: fact, relationship, event, or concept")]
+    pub node_type: String,
+
+    /// Confidence level 0.0-1.0 (default: 0.8)
+    #[schemars(description = "Confidence level 0.0-1.0 (default: 0.8)")]
+    pub confidence: Option<f32>,
+}
+
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct LearnParams {
+    /// Facts to learn
+    #[schemars(description = "Facts to learn: [{content, node_type, confidence?}]")]
+    pub facts: Vec<LearnFactEntry>,
+
+    /// Session ID to link facts to (episodes in this session become source episodes)
+    #[schemars(description = "Session ID to link facts to (episodes in this session become source episodes)")]
+    pub session_id: Option<String>,
 }
 
 // ---------------------------------------------------------------------------
@@ -402,6 +428,47 @@ impl AlayaMcp {
         }
     }
 
+    /// Teach Alaya extracted knowledge directly.
+    #[tool(
+        description = "Teach Alaya extracted knowledge directly. The agent extracts facts from conversation and calls this tool. Each fact becomes a semantic node with full lifecycle wiring (strength, categories, graph links)."
+    )]
+    fn learn(&self, #[tool(aggr)] params: LearnParams) -> String {
+        // Resolve session_id → source episode IDs
+        let source_episodes = match &params.session_id {
+            Some(sid) => match self.with_store(|s| s.episodes_by_session(sid)) {
+                Ok(eps) => eps.iter().map(|e| e.id).collect::<Vec<_>>(),
+                Err(e) => return format!("Error resolving session '{}': {}", sid, e),
+            },
+            None => vec![],
+        };
+
+        // Convert LearnFactEntry → NewSemanticNode
+        let nodes: Vec<NewSemanticNode> = params
+            .facts
+            .iter()
+            .map(|fact| {
+                let node_type = SemanticType::from_str(&fact.node_type).unwrap_or(SemanticType::Fact);
+                let confidence = fact.confidence.unwrap_or(0.8);
+                NewSemanticNode {
+                    content: fact.content.clone(),
+                    node_type,
+                    confidence,
+                    source_episodes: source_episodes.clone(),
+                    embedding: None,
+                }
+            })
+            .collect();
+
+        let count = nodes.len();
+        match self.with_store(|s| s.learn(nodes)) {
+            Ok(report) => format!(
+                "Learned {} facts: {} nodes created, {} links created, {} categories assigned",
+                count, report.nodes_created, report.links_created, report.categories_assigned
+            ),
+            Err(e) => format!("Error: {e}"),
+        }
+    }
+
     /// Purge memories by session, timestamp, or everything.
     #[tool(
         description = "Purge memories. Scope: 'session' (requires session_id), 'older_than' (requires before_timestamp), or 'all' (deletes everything)."
@@ -443,10 +510,11 @@ impl ServerHandler for AlayaMcp {
         ServerInfo {
             instructions: Some(
                 "Alaya is a memory engine for AI agents. Use 'remember' to store messages, \
-                 'recall' to search memory, 'status' to check stats, 'preferences' for user \
-                 preferences, 'knowledge' for semantic facts, 'categories' for emergent clusters, \
-                 'neighbors' for graph traversal, 'node_category' to check a node's category, \
-                 'maintain' for cleanup, and 'purge' to delete data."
+                 'recall' to search memory, 'learn' to teach extracted knowledge directly, \
+                 'status' to check stats, 'preferences' for user preferences, 'knowledge' for \
+                 semantic facts, 'categories' for emergent clusters, 'neighbors' for graph \
+                 traversal, 'node_category' to check a node's category, 'maintain' for cleanup, \
+                 and 'purge' to delete data."
                     .into(),
             ),
             ..Default::default()

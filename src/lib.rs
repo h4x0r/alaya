@@ -396,6 +396,32 @@ impl AlayaStore {
         Ok(report)
     }
 
+    /// Return all episodes belonging to the given session, ordered by timestamp.
+    ///
+    /// This is useful for resolving a session ID to episode IDs when linking
+    /// learned knowledge back to its source conversation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use alaya::{AlayaStore, NewEpisode, Role, EpisodeContext};
+    ///
+    /// let store = AlayaStore::open_in_memory().unwrap();
+    /// store.store_episode(&NewEpisode {
+    ///     content: "hello".to_string(),
+    ///     role: Role::User,
+    ///     session_id: "s1".to_string(),
+    ///     timestamp: 1000,
+    ///     context: EpisodeContext::default(),
+    ///     embedding: None,
+    /// }).unwrap();
+    /// let eps = store.episodes_by_session("s1").unwrap();
+    /// assert_eq!(eps.len(), 1);
+    /// ```
+    pub fn episodes_by_session(&self, session_id: &str) -> Result<Vec<Episode>> {
+        store::episodic::get_episodes_by_session(&self.conn, session_id)
+    }
+
     /// Return unconsolidated episodes (those not yet linked to any semantic node).
     ///
     /// An episode is considered "consolidated" once a Causal link connects it

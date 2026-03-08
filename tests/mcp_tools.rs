@@ -10,7 +10,8 @@
 // This validates the data flow that the MCP tools rely on.
 
 use alaya::{
-    AlayaStore, EpisodeContext, KnowledgeFilter, NewEpisode, PurgeFilter, Query, Role, SemanticType,
+    AlayaStore, EpisodeContext, KnowledgeFilter, NewEpisode, NewSemanticNode, PurgeFilter, Query,
+    Role, SemanticType,
 };
 
 fn make_episode(content: &str, role: Role, session: &str, ts: i64) -> NewEpisode {
@@ -215,4 +216,98 @@ fn test_mcp_role_parsing() {
             .unwrap();
         assert!(id.0 > 0, "role '{}' should be accepted", role_str);
     }
+}
+
+#[test]
+fn test_mcp_learn_creates_knowledge() {
+    let store = AlayaStore::open_in_memory().unwrap();
+
+    // Store 3 facts via learn()
+    let nodes = vec![
+        NewSemanticNode {
+            content: "User prefers Rust".to_string(),
+            node_type: SemanticType::Fact,
+            confidence: 0.9,
+            source_episodes: vec![],
+            embedding: None,
+        },
+        NewSemanticNode {
+            content: "User knows async programming".to_string(),
+            node_type: SemanticType::Fact,
+            confidence: 0.8,
+            source_episodes: vec![],
+            embedding: None,
+        },
+        NewSemanticNode {
+            content: "Rust and async are related".to_string(),
+            node_type: SemanticType::Relationship,
+            confidence: 0.7,
+            source_episodes: vec![],
+            embedding: None,
+        },
+    ];
+    let report = store.learn(nodes).unwrap();
+    assert_eq!(report.nodes_created, 3);
+
+    let knowledge = store.knowledge(None).unwrap();
+    assert_eq!(knowledge.len(), 3);
+}
+
+#[test]
+fn test_mcp_learn_with_session_links() {
+    let store = AlayaStore::open_in_memory().unwrap();
+
+    // Store episodes first
+    let ep1 = store
+        .store_episode(&make_episode("msg1", Role::User, "s1", 1000))
+        .unwrap();
+    let ep2 = store
+        .store_episode(&make_episode("msg2", Role::User, "s1", 2000))
+        .unwrap();
+
+    // Learn with those episodes as sources
+    let nodes = vec![NewSemanticNode {
+        content: "User discussed topic X".to_string(),
+        node_type: SemanticType::Fact,
+        confidence: 0.9,
+        source_episodes: vec![ep1, ep2],
+        embedding: None,
+    }];
+    let report = store.learn(nodes).unwrap();
+    assert_eq!(report.nodes_created, 1);
+    assert_eq!(report.links_created, 2); // 2 Causal links
+
+    // Verify episodes are now consolidated
+    let unconsolidated = store.unconsolidated_episodes(100).unwrap();
+    assert!(unconsolidated.is_empty());
+}
+
+#[test]
+fn test_mcp_episodes_by_session() {
+    let store = AlayaStore::open_in_memory().unwrap();
+
+    // Store episodes in two sessions
+    store
+        .store_episode(&make_episode("msg1", Role::User, "s1", 1000))
+        .unwrap();
+    store
+        .store_episode(&make_episode("msg2", Role::Assistant, "s1", 2000))
+        .unwrap();
+    store
+        .store_episode(&make_episode("msg3", Role::User, "s2", 3000))
+        .unwrap();
+
+    // Query session s1
+    let eps = store.episodes_by_session("s1").unwrap();
+    assert_eq!(eps.len(), 2);
+    assert_eq!(eps[0].content, "msg1");
+    assert_eq!(eps[1].content, "msg2");
+
+    // Query session s2
+    let eps = store.episodes_by_session("s2").unwrap();
+    assert_eq!(eps.len(), 1);
+
+    // Query non-existent session
+    let eps = store.episodes_by_session("s999").unwrap();
+    assert!(eps.is_empty());
 }
