@@ -155,6 +155,49 @@ pub struct ImportClaudeMemParams {
     pub path: Option<String>,
 }
 
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct ImportClaudeCodeParams {
+    /// Path to Claude Code JSONL conversation file
+    #[schemars(description = "Path to Claude Code JSONL conversation file (e.g., ~/.claude/projects/-Users-me-myproject/{uuid}.jsonl)")]
+    pub path: String,
+}
+
+// ---------------------------------------------------------------------------
+// Claude Code JSONL parsing helpers
+// ---------------------------------------------------------------------------
+
+#[derive(serde::Deserialize)]
+struct ClaudeCodeEntry {
+    #[serde(rename = "type")]
+    entry_type: Option<String>,
+    message: Option<ClaudeCodeMessage>,
+    timestamp: Option<String>,
+    #[serde(rename = "sessionId")]
+    session_id: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct ClaudeCodeMessage {
+    #[allow(dead_code)]
+    role: Option<String>,
+    content: Option<serde_json::Value>,
+}
+
+fn extract_content(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::String(s) => s.clone(),
+        serde_json::Value::Array(arr) => {
+            arr.iter()
+                .filter_map(|item| {
+                    item.get("text").and_then(|t| t.as_str()).map(String::from)
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+        _ => String::new(),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // MCP Server
 // ---------------------------------------------------------------------------
@@ -718,6 +761,122 @@ impl AlayaMcp {
         }
     }
 
+    /// Import conversation history from Claude Code JSONL files.
+    #[tool(
+        description = "Import conversation history from Claude Code JSONL files. Reads messages and stores them as episodes."
+    )]
+    fn import_claude_code(&self, #[tool(aggr)] params: ImportClaudeCodeParams) -> String {
+        let path = &params.path;
+
+        // Read the JSONL file
+        let content = match std::fs::read_to_string(path) {
+            Ok(c) => c,
+            Err(e) => return format!("Cannot read file '{path}': {e}"),
+        };
+
+        let mut imported = 0u32;
+        let mut sessions = std::collections::HashSet::new();
+        let mut errors = 0u32;
+
+        for line in content.lines() {
+            if line.trim().is_empty() {
+                continue;
+            }
+
+            let entry: ClaudeCodeEntry = match serde_json::from_str(line) {
+                Ok(e) => e,
+                Err(_) => {
+                    errors += 1;
+                    continue;
+                }
+            };
+
+            // Only import human and assistant messages
+            let entry_type = entry.entry_type.as_deref().unwrap_or("");
+            if entry_type != "human" && entry_type != "assistant" {
+                continue;
+            }
+
+            let message = match entry.message {
+                Some(m) => m,
+                None => continue,
+            };
+
+            let role = match entry_type {
+                "human" => Role::User,
+                "assistant" => Role::Assistant,
+                _ => continue,
+            };
+
+            let content_value = match message.content {
+                Some(c) => c,
+                None => continue,
+            };
+            let content_text = extract_content(&content_value);
+            if content_text.trim().is_empty() {
+                continue;
+            }
+
+            // Truncate very long content (Claude Code messages can be huge)
+            let content_text = if content_text.len() > 2000 {
+                format!("{}...", &content_text[..2000])
+            } else {
+                content_text
+            };
+
+            let session_id = entry
+                .session_id
+                .unwrap_or_else(|| "imported".to_string());
+            sessions.insert(session_id.clone());
+
+            // Parse timestamp (string of unix seconds)
+            let timestamp = entry
+                .timestamp
+                .as_deref()
+                .and_then(|ts| ts.parse::<i64>().ok())
+                .unwrap_or(0);
+
+            let episode = NewEpisode {
+                content: content_text,
+                role,
+                session_id,
+                timestamp,
+                context: EpisodeContext::default(),
+                embedding: None,
+            };
+
+            match self.with_store(|s| s.store_episode(&episode)) {
+                Ok(_) => {
+                    imported += 1;
+                    self.episode_count.fetch_add(1, Ordering::Relaxed);
+                    self.unconsolidated_count.fetch_add(1, Ordering::Relaxed);
+                }
+                Err(_) => errors += 1,
+            }
+        }
+
+        if imported == 0 {
+            return format!(
+                "No importable messages found in '{path}'.{}",
+                if errors > 0 {
+                    format!(" ({errors} lines failed to parse)")
+                } else {
+                    String::new()
+                }
+            );
+        }
+
+        format!(
+            "Imported {imported} messages from {} sessions as episodes.{} Call 'learn' to consolidate.",
+            sessions.len(),
+            if errors > 0 {
+                format!(" ({errors} parse errors skipped)")
+            } else {
+                String::new()
+            }
+        )
+    }
+
     /// Purge memories by session, timestamp, or everything.
     #[tool(
         description = "Purge memories. Scope: 'session' (requires session_id), 'older_than' (requires before_timestamp), or 'all' (deletes everything)."
@@ -763,7 +922,9 @@ impl ServerHandler for AlayaMcp {
                  'status' to check stats, 'preferences' for user preferences, 'knowledge' for \
                  semantic facts, 'categories' for emergent clusters, 'neighbors' for graph \
                  traversal, 'node_category' to check a node's category, 'maintain' for cleanup, \
-                 'import_claude_mem' to import from claude-mem.db, and 'purge' to delete data."
+                 'import_claude_mem' to import from claude-mem.db, \
+                 'import_claude_code' to import from Claude Code JSONL files, \
+                 and 'purge' to delete data."
                     .into(),
             ),
             ..Default::default()

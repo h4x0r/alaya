@@ -9,6 +9,8 @@
 // so we test the underlying AlayaStore operations that the MCP tools wrap.
 // This validates the data flow that the MCP tools rely on.
 
+use std::collections::HashSet;
+
 use alaya::{
     AlayaStore, EpisodeContext, EpisodeId, KnowledgeFilter, NewEpisode, NewSemanticNode, NodeRef,
     PurgeFilter, Query, Role, SemanticType,
@@ -522,4 +524,93 @@ fn test_import_claude_mem_data_flow() {
         .collect();
     assert_eq!(facts.len(), 3);
     assert_eq!(concepts.len(), 3);
+}
+
+#[test]
+fn test_import_claude_code_data_flow() {
+    // Create a temp JSONL file
+    let dir = tempfile::tempdir().unwrap();
+    let jsonl_path = dir.path().join("conversation.jsonl");
+    let content = r#"{"type":"human","message":{"role":"user","content":"Hello, how are you?"},"timestamp":"1700000000","sessionId":"session-1"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"I'm doing well, thanks!"}]},"timestamp":"1700000001","sessionId":"session-1"}
+{"type":"human","message":{"role":"user","content":"Tell me about Rust"},"timestamp":"1700000002","sessionId":"session-2"}
+{"type":"summary","message":{"role":"assistant","content":"Summary of conversation"},"timestamp":"1700000003","sessionId":"session-1"}
+"#;
+    std::fs::write(&jsonl_path, content).unwrap();
+
+    // Simulate the import data flow
+    let file_content = std::fs::read_to_string(&jsonl_path).unwrap();
+    let store = AlayaStore::open_in_memory().unwrap();
+
+    let mut imported = 0u32;
+    let mut sessions = HashSet::new();
+
+    for line in file_content.lines() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let value: serde_json::Value = serde_json::from_str(line).unwrap();
+
+        let entry_type = value
+            .get("type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        if entry_type != "human" && entry_type != "assistant" {
+            continue;
+        }
+
+        let message = value.get("message").unwrap();
+        let role = match entry_type {
+            "human" => Role::User,
+            "assistant" => Role::Assistant,
+            _ => continue,
+        };
+
+        let content_val = message.get("content").unwrap();
+        let content_text = match content_val {
+            serde_json::Value::String(s) => s.clone(),
+            serde_json::Value::Array(arr) => arr
+                .iter()
+                .filter_map(|item| item.get("text").and_then(|t| t.as_str()).map(String::from))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            _ => continue,
+        };
+
+        let session_id = value
+            .get("sessionId")
+            .and_then(|v| v.as_str())
+            .unwrap_or("imported")
+            .to_string();
+        sessions.insert(session_id.clone());
+
+        let timestamp = value
+            .get("timestamp")
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or(0);
+
+        store
+            .store_episode(&NewEpisode {
+                content: content_text,
+                role,
+                session_id,
+                timestamp,
+                context: EpisodeContext::default(),
+                embedding: None,
+            })
+            .unwrap();
+        imported += 1;
+    }
+
+    assert_eq!(imported, 3); // human, assistant, human (summary is skipped)
+    assert_eq!(sessions.len(), 2); // session-1, session-2
+    assert_eq!(store.status().unwrap().episode_count, 3);
+
+    // Verify content was parsed correctly
+    let results = store.query(&Query::simple("Rust")).unwrap();
+    assert!(!results.is_empty());
+
+    let results = store.query(&Query::simple("Hello")).unwrap();
+    assert!(!results.is_empty());
 }
