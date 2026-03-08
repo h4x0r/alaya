@@ -20,3 +20,6 @@ alaya-paper/*.blg
 alaya-paper/*.log
 alaya-paper/*.out
 alaya-paper/*.pdf
+
+# Git worktrees
+.worktrees/
