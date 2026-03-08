@@ -93,13 +93,14 @@ Add to your agent's MCP config (e.g. `claude_desktop_config.json`):
 }
 ```
 
-That's it. Your agent now has 10 memory tools:
+That's it. Your agent now has 13 memory tools:
 
 | Tool | What it does |
 |------|-------------|
-| `remember` | Store a conversation message |
+| `remember` | Store a conversation message (auto-prompts consolidation after 10 episodes) |
 | `recall` | Search memory with hybrid retrieval (+ category boost) |
-| `status` | Get memory statistics |
+| `learn` | Teach extracted knowledge directly — agent extracts facts and calls this |
+| `status` | Rich memory statistics: episodes, knowledge breakdown, categories, graph, embeddings |
 | `preferences` | Get learned user preferences |
 | `knowledge` | Get distilled semantic facts (+ category filter) |
 | `maintain` | Run memory cleanup (dedup, decay) |
@@ -107,6 +108,11 @@ That's it. Your agent now has 10 memory tools:
 | `categories` | List emergent categories with stability filter |
 | `neighbors` | Graph neighbors via spreading activation |
 | `node_category` | Which category a node belongs to |
+| `import_claude_mem` | Import observations from a claude-mem database |
+| `import_claude_code` | Import conversation history from Claude Code JSONL files |
+
+See [docs/mcp-quickstart.md](docs/mcp-quickstart.md) for a full walkthrough
+with sample interactions and recommended system prompt.
 
 Data is stored in `~/.alaya/memory.db` (override with `ALAYA_DB` env var).
 Single SQLite file, no external services.
@@ -123,9 +129,12 @@ Alaya: Found 1 memories:
 
 Agent: [calls status()]
 Alaya: Memory Status:
-  Episodes: 1
-  Semantic nodes: 0
-  Preferences: 0
+  Episodes: 1 (1 this session, 1 unconsolidated)
+  Knowledge: none
+  Categories: 0
+  Preferences: 0 crystallized, 0 impressions accumulating
+  Graph: 0 links
+  Embedding coverage: 0/1 nodes (0%)
 ```
 
 **Environment variables:**
@@ -199,6 +208,8 @@ Your Agent                          Alaya
 Via MCP (stdio):                    alaya-mcp binary
   remember(content, role, session)    ──▶ episodic store + graph links
   recall(query, boost_category?)      ──▶ BM25 + vector + graph → RRF → rerank
+  learn(facts, session_id?)           ──▶ agent-driven knowledge extraction
+  status()                            ──▶ rich stats (episodes, knowledge, graph, embeddings)
   preferences(domain?)                ──▶ crystallized behavioral patterns
   knowledge(type?, category?)         ──▶ consolidated semantic nodes
   maintain()                          ──▶ dedup + decay
@@ -206,6 +217,8 @@ Via MCP (stdio):                    alaya-mcp binary
   categories(min_stability?)          ──▶ emergent ontology with hierarchy
   neighbors(node, depth?)             ──▶ graph spreading activation
   node_category(node_id)              ──▶ category assignment lookup
+  import_claude_mem(path?)            ──▶ import from claude-mem.db
+  import_claude_code(path)            ──▶ import from Claude Code JSONL
 
 Via Rust library:                   AlayaStore struct
   store_episode()                     ──▶ episodic store + graph links
@@ -450,7 +463,10 @@ lateral inhibition).
 - **Category evolution** — categories with 8+ members and coherence < 0.6 automatically split into sub-categories during `transform()`
 - **Cross-domain bridging** via `MemberOf` links — spreading activation traverses category boundaries
 - **EmbeddingProvider trait** — `embed()` + `embed_batch()` with default implementation; wired into `store_episode()` and `query()` for automatic embedding generation
-- **5 MCP tool extensions** — `categories`, `neighbors`, `node_category` + `knowledge` category filter + `recall` category boost
+- **8 MCP tool extensions** — `learn`, `import_claude_mem`, `import_claude_code` + `categories`, `neighbors`, `node_category` + `knowledge` category filter + `recall` category boost + enhanced `status` with knowledge breakdown, graph stats, and embedding coverage
+- **`learn` tool** — agent-driven consolidation: extract facts from episodes and teach Alaya directly, with full lifecycle wiring (strength, categories, graph links)
+- **Import tools** — `import_claude_mem` reads claude-mem.db observations; `import_claude_code` reads Claude Code JSONL conversation files
+- **Auto-lifecycle** — `remember` auto-triggers maintenance every 25 episodes and prompts consolidation after 10 unconsolidated
 - **232 tests** (223 core + 9 MCP) across unit, integration, property-based (proptest), and doc tests
 
 ## Benchmark Evaluation
