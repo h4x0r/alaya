@@ -418,11 +418,16 @@ impl AlayaStore {
     /// the MCP server calls this when the unconsolidated episode threshold
     /// is reached, and the provider calls a lightweight LLM to extract facts.
     pub fn auto_consolidate(&self) -> Result<ConsolidationReport> {
+        /// Maximum episodes to fetch per auto-consolidation pass.
+        /// Set to 2x the MCP trigger threshold (10) to catch any episodes
+        /// that arrived between threshold checks.
+        const AUTO_CONSOLIDATE_BATCH: u32 = 20;
+
         let provider = self.extraction_provider.as_ref()
             .ok_or_else(|| AlayaError::InvalidInput(
                 "no extraction provider configured; call set_extraction_provider() first".into()
             ))?;
-        let episodes = self.unconsolidated_episodes(20)?;
+        let episodes = self.unconsolidated_episodes(AUTO_CONSOLIDATE_BATCH)?;
         if episodes.is_empty() {
             return Ok(ConsolidationReport::default());
         }

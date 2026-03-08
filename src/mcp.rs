@@ -574,9 +574,36 @@ impl AlayaMcp {
                                 uncons
                             ));
                         }
-                        _ => {
-                            // No provider or extraction returned nothing — fall back to prompt
+                        Ok(_) => {
+                            // Provider returned zero nodes — fall back to prompt
                             if let Ok(episodes) = self.with_store(|s| s.unconsolidated_episodes(20)) {
+                                response.push_str(&format!(
+                                    "\n\n--- Consolidation suggested ---\n\
+                                     You have {} unconsolidated episodes. \
+                                     Please extract key facts and call the 'learn' tool.\n\
+                                     Recent unconsolidated episodes:",
+                                    episodes.len()
+                                ));
+                                for ep in &episodes {
+                                    response.push_str(&format!(
+                                        "\n[{}] {}: {}",
+                                        ep.id.0,
+                                        ep.role.as_str(),
+                                        ep.content
+                                    ));
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            // Provider error or no provider — fall back to prompt with note
+                            let err_msg = format!("{e}");
+                            let is_no_provider = err_msg.contains("extraction provider");
+                            if let Ok(episodes) = self.with_store(|s| s.unconsolidated_episodes(20)) {
+                                if !is_no_provider {
+                                    response.push_str(&format!(
+                                        "\n\n(Auto-consolidation failed: {e})"
+                                    ));
+                                }
                                 response.push_str(&format!(
                                     "\n\n--- Consolidation suggested ---\n\
                                      You have {} unconsolidated episodes. \
