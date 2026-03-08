@@ -47,6 +47,43 @@ pub trait EmbeddingProvider: Send + Sync {
     }
 }
 
+/// Trait for automatic knowledge extraction from episodes.
+///
+/// Implement this with your preferred LLM (Haiku, GPT-4o-mini, local Ollama)
+/// to enable auto-consolidation. When set on AlayaStore, the MCP server
+/// will automatically extract facts instead of prompting the agent.
+pub trait ExtractionProvider: Send + Sync {
+    /// Extract semantic knowledge from a batch of episodes.
+    fn extract(&self, episodes: &[Episode]) -> Result<Vec<NewSemanticNode>>;
+}
+
+/// Mock extraction provider for tests. Returns pre-configured nodes.
+pub struct MockExtractionProvider {
+    nodes: Vec<NewSemanticNode>,
+}
+
+impl MockExtractionProvider {
+    pub fn new(nodes: Vec<NewSemanticNode>) -> Self {
+        Self { nodes }
+    }
+
+    pub fn empty() -> Self {
+        Self { nodes: vec![] }
+    }
+}
+
+impl ExtractionProvider for MockExtractionProvider {
+    fn extract(&self, _episodes: &[Episode]) -> Result<Vec<NewSemanticNode>> {
+        Ok(self.nodes.clone())
+    }
+}
+
+impl ExtractionProvider for NoOpProvider {
+    fn extract(&self, _episodes: &[Episode]) -> Result<Vec<NewSemanticNode>> {
+        Ok(vec![])
+    }
+}
+
 /// Mock embedding provider for tests. Returns deterministic embeddings
 /// based on a hash of the input text.
 pub struct MockEmbeddingProvider {
@@ -196,5 +233,40 @@ mod tests {
         };
         let result = provider.detect_contradiction(&a, &b).unwrap();
         assert!(!result, "NoOpProvider should always return false for contradictions");
+    }
+
+    #[test]
+    fn test_mock_extraction_provider_returns_configured_nodes() {
+        let nodes = vec![NewSemanticNode {
+            content: "User likes Rust".into(),
+            node_type: SemanticType::Fact,
+            confidence: 0.9,
+            source_episodes: vec![],
+            embedding: None,
+        }];
+        let provider = MockExtractionProvider::new(nodes.clone());
+        let result = provider.extract(&[]).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].content, "User likes Rust");
+    }
+
+    #[test]
+    fn test_mock_extraction_provider_empty() {
+        let provider = MockExtractionProvider::empty();
+        let result = provider.extract(&[]).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_noop_extraction_returns_empty() {
+        let provider = NoOpProvider;
+        let result = ExtractionProvider::extract(&provider, &[]).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_extraction_provider_is_send_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<MockExtractionProvider>();
     }
 }

@@ -45,7 +45,7 @@ use rusqlite::Connection;
 use std::path::Path;
 
 pub use error::{AlayaError, Result};
-pub use provider::{ConsolidationProvider, EmbeddingProvider, MockEmbeddingProvider, NoOpProvider};
+pub use provider::{ConsolidationProvider, EmbeddingProvider, ExtractionProvider, MockEmbeddingProvider, MockExtractionProvider, NoOpProvider};
 pub use types::*;
 
 /// The main entry point. Owns a SQLite connection and exposes the full
