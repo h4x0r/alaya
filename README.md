@@ -1,7 +1,6 @@
 # Alaya
 
 [![DOI](https://zenodo.org/badge/1167077192.svg)](https://zenodo.org/badge/latestdoi/1167077192)
-[![CI](https://github.com/SecurityRonin/alaya/actions/workflows/ci.yml/badge.svg)](https://github.com/SecurityRonin/alaya/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/Rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
 [![crates.io](https://img.shields.io/crates/v/alaya.svg)](https://crates.io/crates/alaya)
@@ -9,6 +8,7 @@
 [![MCP](https://img.shields.io/badge/MCP-compatible-green.svg)](https://modelcontextprotocol.io/)
 [![GitHub stars](https://img.shields.io/github/stars/SecurityRonin/alaya?style=social)](https://github.com/SecurityRonin/alaya)
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=github)](https://github.com/sponsors/h4x0r)
+[![CI](https://github.com/SecurityRonin/alaya/actions/workflows/ci.yml/badge.svg)](https://github.com/SecurityRonin/alaya/actions)
 
 A memory engine for AI agents that remembers, forgets, and learns.
 
