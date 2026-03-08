@@ -18,6 +18,7 @@
 \usepackage{url}
 \usepackage{enumitem}
 \usepackage{adjustbox}
+\usepackage{placeins}
 \usepackage{tikz}
 \usetikzlibrary{positioning, arrows.meta, shapes.geometric}
 \usepackage{pgfplots}
@@ -45,6 +46,10 @@
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 \newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
 
+% Allow modest extra inter-word stretch to prevent overfull hboxes in
+% tight two-column layout.
+\emergencystretch=1.5em
+
 \begin{document}
 
 \title{A Taxonomy of Memory Architectures\\for LLM-Based Agents}
@@ -70,7 +75,7 @@
 
 \begin{abstract}
 Large language model (LLM) agents increasingly require persistent memory
-that goes beyond context-window chat history. Over 112 memory systems have
+that goes beyond context-window chat history. Over 116 memory systems have
 emerged since 2023, ranging from flat-file approaches (MEMORY.md) through
 knowledge-graph engines (Zep/Graphiti, HippoRAG) to cognitively inspired
 architectures (SYNAPSE~\cite{jiang2026synapse}, LightMem~\cite{fang2025lightmem}). Yet no unified taxonomy captures the full
@@ -109,6 +114,9 @@ fusion, complementary learning systems
 \input{sections/11-conclusion}
 
 % ---- References ----
+% Prevent any remaining floats from drifting past the bibliography
+\FloatBarrier
+
 % Allow URLs to break at any character to prevent overfull hboxes
 \def\UrlBreaks{\do\/\do-\do.\do=\do_\do?\do&\do\%\do\#\do\~}
 \bibliographystyle{IEEEtran}
