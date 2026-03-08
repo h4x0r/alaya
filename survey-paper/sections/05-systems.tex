@@ -289,6 +289,18 @@ infrastructure, OpenViking replaces fragmented vector storage with
 hierarchical directory-based retrieval, but provides no forgetting,
 no graph dynamics, and no preference learning.
 
+\paragraph{MCP Memory Service.}
+MCP Memory Service~\cite{doobidoo2026mcp} provides persistent memory
+for AI agent pipelines (LangGraph, CrewAI, AutoGen, Claude) via a REST
+API with knowledge graph and autonomous consolidation.  Storage uses
+SQLite-vec with lightweight ONNX embeddings, achieving 5ms retrieval
+latency.  The system supports over 20 AI client applications, making it
+the most broadly compatible standalone memory server surveyed.  Its
+\emph{Natural Memory Triggers} use AI-based heuristics (85\%+ accuracy)
+combined with rule-based Context-Provider patterns (100\% guaranteed
+coverage) to determine when to store new memories---a dual-strategy
+approach unique among the surveyed systems.
+
 %% ===============================================================
 \subsection{Framework-Level Memory}
 \label{sec:framework}
@@ -333,8 +345,15 @@ it lacks graph structure, consolidation, and forgetting.
 \label{sec:coding-agents}
 
 A distinctive cluster of memory systems has emerged around coding
-agents (Claude Code, Cursor, Windsurf), exposed primarily via the
-Model Context Protocol (MCP). These systems share a common pattern:
+agents (Claude Code, Cursor, Windsurf, Augment Code), exposed primarily
+via the Model Context Protocol (MCP).  While these tools originated as
+coding assistants, their deployment as general-purpose agents---
+particularly through MCP-based memory extensions---means their memory
+architectures must serve domain-agnostic use cases.  We retain the
+``coding agent'' label to reflect their primary deployment context, while
+noting that the memory systems built for them (memsearch, QMD, Basic
+Memory) are architecturally indistinguishable from dedicated memory
+systems.  These systems share a common pattern:
 replace the default full-context injection of MEMORY.md files with
 ranked retrieval, typically achieving 70--96\% token savings.
 \textbf{memsearch}~\cite{zilliz2026a} (Zilliz/Milvus team) extracts
@@ -377,7 +396,7 @@ approach: approximately 4,000 lines of core code with a
 (\texttt{MEMORY.md})---no vector retrieval, no graph, just two plain
 files and grep.
 
-Three IDE-integrated memory systems emerged in late 2025 and early 2026.
+Four IDE-integrated memory systems emerged in late 2025 and early 2026.
 \textbf{GitHub Copilot Memory}~\cite{copilot2026} introduces a
 \emph{citation-based} architecture: memories are stored with references
 to specific code locations, and agents verify citations in real-time
@@ -397,6 +416,59 @@ and \emph{Cursor Rules} (persistent project/user/team instructions in
 memories during conversation when it encounters useful context, with
 a user toggle for autonomous memory creation and
 \texttt{.windsurfrules} for persistent project rules.
+\textbf{Augment Code}~\cite{augment2026} is the most
+infrastructure-heavy IDE memory system, designed for enterprise
+codebases exceeding 400{,}000 files.  Its Context Engine performs
+real-time repository indexing across multiple repositories, tracking
+cross-service dependencies and commit history.  The \emph{Memories}
+feature stores project-specific facts---architecture decisions, coding
+patterns, preferred libraries---that persist across sessions and are
+automatically created by the agent when it encounters reusable context.
+A \emph{Memory Review} interface lets users approve, edit, or reject
+memories before finalization, providing a manual curation loop unique
+among IDE memory systems.  Despite this sophistication, Augment's
+memories lack automated lifecycle management: there is no consolidation,
+no forgetting mechanism, and no contradiction resolution---memories
+persist indefinitely until manually deleted.
+
+\textbf{episodic-memory}~\cite{vincent2025episodic} (Jesse Vincent,
+Superpowers ecosystem) archives Claude Code's conversation JSONL logs
+into a SQLite database with \texttt{sqlite-vec} vector embeddings
+(generated locally via Transformers.js), enabling semantic search over
+the complete interaction history.  Its distinguishing contribution is a
+\emph{subagent delegation} pattern: a specialized Haiku subagent handles
+all memory retrieval and context assembly, preventing the context bloat
+that arises from injecting raw conversation transcripts into the primary
+agent's context window.  The system implements a session-end learning
+loop in which the agent reflects on completed work---a ``reflect''
+pattern independently adopted by several other systems.  The plugin is
+part of the Superpowers marketplace, one of the largest Claude Code
+plugin ecosystems.
+
+\textbf{claude-mem}~\cite{newman2025claudemem} captures tool usage and
+agent actions across five lifecycle hooks
+(SessionStart, UserPromptSubmit, PostToolUse, Summary, SessionEnd) and
+compresses raw observations into structured knowledge using Claude's
+Agent SDK---a form of automated episodic-to-semantic consolidation.
+Retrieval follows a token-efficient three-layer workflow:
+\emph{search} returns a compact index of matching observation IDs,
+\emph{review} presents titles and metadata for filtering, and
+\emph{fetch} retrieves full details only for selected observations.
+This progressive disclosure pattern minimizes context consumption---the
+agent reads observation titles ($\sim$100 tokens) before deciding
+whether to load full content ($\sim$500 tokens each).  An experimental
+\emph{Endless Mode} implements a biomimetic memory architecture for
+extended sessions, automatically managing context pressure through
+adaptive summarization.  With over 28{,}000 GitHub stars, claude-mem is
+among the most widely deployed agent memory systems.
+
+Despite their retrieval sophistication, no IDE-integrated memory system
+implements consolidation or automated forgetting.  Copilot's 28-day
+expiry is the closest approximation, but it is a fixed TTL rather than
+usage-adaptive decay.  This lifecycle gap will become acute as memory
+stores grow unboundedly---particularly for Augment, where enterprise
+teams accumulating memories across hundreds of thousands of files face
+eventual retrieval degradation without principled memory management.
 
 %% ===============================================================
 \subsection{File-Based Memory}

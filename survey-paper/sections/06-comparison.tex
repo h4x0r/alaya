@@ -1,15 +1,15 @@
 \section{Comparative Analysis}
 \label{sec:comparison}
 
-This section provides a quantitative cross-sectional analysis of the 112 memory
+This section provides a quantitative cross-sectional analysis of the 116 memory
 systems surveyed in \S\ref{sec:systems}, organized along three axes: feature
 prevalence across the full landscape, temporal trends showing how the field has
 evolved from 2023 to 2026, and the distribution of retrieval sophistication
 mapped to the RAG taxonomy of Gao et al.~\cite{gao2023rag}. We exclude vector
 databases (Pinecone, ChromaDB, Weaviate, Milvus, etc.) from all counts, as
 these are infrastructure components rather than memory architectures. The
-remaining 112 systems span five categories: Dedicated Memory Systems (37),
-Framework Memory Modules (15), Coding Agent Memory (17), File-Based Memory (4),
+remaining 116 systems span five categories: Dedicated Memory Systems (38),
+Framework Memory Modules (15), Coding Agent Memory (20), File-Based Memory (4),
 and Research Architectures (19), plus 20 additional systems described in
 sufficient detail to classify but not included in the primary comparison
 tables.
@@ -29,7 +29,7 @@ infrastructure requirements.
 
 \begin{table}[!t]
 \centering
-\caption{Feature prevalence across 112 surveyed memory systems (excluding vector databases). Counts reflect systems with explicit support for each capability based on documentation, publications, and source code analysis.}
+\caption{Feature prevalence across 116 surveyed memory systems (excluding vector databases). Counts reflect systems with explicit support for each capability based on documentation, publications, and source code analysis.}
 \label{tab:feature-prevalence}
 \small
 \begin{tabular}{@{}lrr@{}}
@@ -215,9 +215,10 @@ RAG taxonomy of Gao et al.~\cite{gao2023rag}: Naive RAG (single retrieval
 signal, no fusion), Advanced RAG (multiple signals or sophisticated
 scoring, but fixed pipeline), and Modular RAG (composable retrieval
 components with principled fusion and post-retrieval processing).  The
-expansion of the coding agent category from 9 to 14 classified systems
+expansion of the coding agent category from 9 to 17 classified systems
 in early 2026---driven by OpenClaw alternatives (OpenFang, IronClaw,
-Nanobot) and IDE-integrated memory (Copilot, Cursor, Windsurf)---has
+Nanobot) and IDE-integrated memory (Copilot, Cursor, Windsurf,
+Augment Code)---has
 shifted the balance toward Advanced RAG in that category, as newer
 systems implement hybrid retrieval rather than simple MEMORY.md
 injection.
@@ -751,12 +752,47 @@ this capability cannot emerge from retrieval alone---it requires explicit
 lifecycle management that identifies and resolves conflicting facts.
 
 %% ---------------------------------------------------------------
+\subsection{Function-Based vs.\ Type-Based Memory Organization}
+\label{sec:function-vs-type}
+
+The CoALA taxonomy~\cite{sumers2024coala} organizes memory by
+\emph{type}---episodic, semantic, procedural---and this typology
+underpins our classification framework.  However, several systems have
+independently converged on an orthogonal organizing principle:
+decomposing memory by \emph{function} (what purpose it serves) rather
+than type (what kind of information it stores).
+
+ReMe~\cite{reme2025} distinguishes \emph{personal memory} (user
+preferences and traits) from \emph{task memory} (learned strategies from
+prior executions), treating these as first-class architectural
+boundaries rather than metadata annotations on a unified store.
+GitHub Copilot Memory~\cite{copilot2026} similarly separates memory
+by function, with citation-linked code memories serving a different
+retrieval and validation pipeline than general user preferences.
+Augment Code~\cite{augment2026} implicitly adopts a functional split
+between its real-time Context Engine (codebase-structural memory) and
+its Memories feature (cross-session knowledge).
+
+This functional decomposition suggests the field may be converging on a
+two-dimensional classification: \emph{type} (what kind of memory)
+$\times$ \emph{function} (what purpose it serves).  A fact about a
+user's coding style is semantically a ``semantic memory'' in CoALA
+terms, but functionally a ``personal memory'' in ReMe's taxonomy---and
+the appropriate retrieval strategy, update policy, and lifecycle
+management may differ based on function rather than type.  Whether
+function-based decomposition produces measurably better retrieval or
+lifecycle management than type-based organization remains an open
+empirical question, but the independent convergence across three
+unrelated systems suggests that the CoALA typology, while foundational,
+may be insufficient as the sole organizational axis for agent memory.
+
+%% ---------------------------------------------------------------
 \subsection{The Long Tail Problem}
 \label{sec:long-tail}
 
 The feature prevalence data in Table~\ref{tab:feature-prevalence} reveals a
 pronounced long-tail distribution: most capabilities are concentrated in a
-small number of systems, while the majority of the 112 surveyed systems
+small number of systems, while the majority of the 116 surveyed systems
 implement only basic memory functionality. To quantify this, we define a
 \emph{feature breadth count} as the number of features present from a set of
 eight discriminating capabilities: episodic memory, semantic memory, graph
@@ -768,7 +804,7 @@ Table~\ref{tab:capability-distribution} shows the distribution.
 
 \begin{table}[!t]
 \centering
-\caption{Distribution of feature breadth counts across 112 systems.  The count tallies eight features: episodic memory, semantic memory, graph structure, forgetting, consolidation, contradiction resolution, preference learning, and hybrid retrieval.  This measures architectural breadth, not quality.}
+\caption{Distribution of feature breadth counts across 116 systems.  The count tallies eight features: episodic memory, semantic memory, graph structure, forgetting, consolidation, contradiction resolution, preference learning, and hybrid retrieval.  This measures architectural breadth, not quality.}
 \label{tab:capability-distribution}
 \small
 \begin{tabular}{@{}crrp{3.8cm}@{}}

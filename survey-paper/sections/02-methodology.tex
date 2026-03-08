@@ -52,6 +52,54 @@ excluded side of this boundary: they address context-window limits
 \emph{within} an interaction rather than maintaining persistent memory
 \emph{across} interactions.
 
+In addition to the criteria above, Table~\ref{tab:excluded} lists
+specific systems that were evaluated during our search but deliberately
+excluded because they fell outside our scope despite surface-level
+relevance to agent memory.
+
+\begin{table}[h]
+\centering
+\caption{Deliberately excluded systems with rationale.  Each system was
+evaluated during our search but fell outside scope despite surface-level
+relevance to agent memory.}
+\label{tab:excluded}
+\small
+\begin{tabular}{@{}lp{5.0cm}@{}}
+\toprule
+\textbf{System} & \textbf{Reason for Exclusion} \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{OpenClaw Ecosystem}} \\
+TinyClaw        & $\sim$400~LOC bash wrapper; no novel memory \\
+SecureClaw      & Security audit plugin; not a memory system \\
+NanoClaw, ZeroClaw, NullClaw, PicoClaw & Language rewrites without novel memory mechanisms \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{Agent Frameworks}} \\
+BabyAGI         & Archived 2024; task-queue equivalent to AutoGPT (included) \\
+MetaGPT         & Multi-agent orchestration; message passing only, no persistent memory \\
+AgentVerse      & Multi-agent simulation; no cross-session memory \\
+Autogen / AG2   & Multi-agent conversation framework; session-scoped message history only \\
+SWE-agent       & Benchmark agent; no persistent memory across tasks \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{Platforms \& Infrastructure}} \\
+Cohere, Vectara & Search/retrieval platforms; infrastructure, not memory architectures \\
+Semantic Kernel & SDK with memory connectors; infrastructure abstraction layer \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{IDE / Coding Tools}} \\
+Aider           & AI pair programmer; chat history only, no persistent memory architecture \\
+Continue        & Open-source code assistant; context providers but no cross-session memory \\
+Devin           & Autonomous engineer; memory architecture not published \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{Libraries}} \\
+MemEngine       & Reimplementation library; wraps existing backends with no novel design \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{MCP Memory Servers (below threshold)}} \\
+WhenMoon claude-memory-mcp & $\sim$57 stars; identity anchors without novel retrieval \\
+Memory Anchor       & Too new; insufficient adoption data \\
+Memorix             & Derivative; combines existing backends \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Analysis Framework}
 
 Each system is analyzed along four axes using three complementary
