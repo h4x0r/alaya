@@ -448,7 +448,7 @@ impl AlayaMcp {
             .iter()
             .map(|fact| {
                 let node_type = SemanticType::from_str(&fact.node_type).unwrap_or(SemanticType::Fact);
-                let confidence = fact.confidence.unwrap_or(0.8);
+                let confidence = fact.confidence.unwrap_or(0.8).clamp(0.0, 1.0);
                 NewSemanticNode {
                     content: fact.content.clone(),
                     node_type,
