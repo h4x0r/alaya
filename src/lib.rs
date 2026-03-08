@@ -41,12 +41,18 @@ pub(crate) mod types;
 #[cfg(feature = "mcp")]
 pub mod mcp;
 
+#[cfg(feature = "llm")]
+pub mod extraction;
+
 use rusqlite::Connection;
 use std::path::Path;
 
 pub use error::{AlayaError, Result};
 pub use provider::{ConsolidationProvider, EmbeddingProvider, ExtractionProvider, MockEmbeddingProvider, MockExtractionProvider, NoOpProvider};
 pub use types::*;
+
+#[cfg(feature = "llm")]
+pub use extraction::LlmExtractionProvider;
 
 /// The main entry point. Owns a SQLite connection and exposes the full
 /// store / query / lifecycle API.

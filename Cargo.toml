@@ -17,6 +17,7 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
 
 [features]
 mcp = ["dep:rmcp", "dep:tokio", "dep:schemars", "dep:anyhow"]
+llm = ["dep:ureq"]
 
 [dependencies]
 rusqlite = { version = "0.32", features = ["bundled", "modern_sqlite"] }
@@ -29,6 +30,9 @@ rmcp = { version = "0.1", features = ["server", "macros", "transport-io"], optio
 tokio = { version = "1", features = ["full"], optional = true }
 schemars = { version = "0.8", optional = true }
 anyhow = { version = "1", optional = true }
+
+# LLM extraction (optional, for LlmExtractionProvider)
+ureq = { version = "2", features = ["json"], optional = true }
 
 [dev-dependencies]
 tempfile = "3"
