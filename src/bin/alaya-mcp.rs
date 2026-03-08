@@ -183,6 +183,16 @@ struct ClaudeCodeMessage {
     content: Option<serde_json::Value>,
 }
 
+/// Expand `~/` prefix to the user's home directory.
+fn expand_tilde(path: &str) -> String {
+    if let Some(rest) = path.strip_prefix("~/") {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        format!("{home}/{rest}")
+    } else {
+        path.to_string()
+    }
+}
+
 fn extract_content(value: &serde_json::Value) -> String {
     match value {
         serde_json::Value::String(s) => s.clone(),
@@ -668,10 +678,9 @@ impl AlayaMcp {
     )]
     fn import_claude_mem(&self, #[tool(aggr)] params: ImportClaudeMemParams) -> String {
         // 1. Resolve path (default to ~/.claude-mem/claude-mem.db)
-        let path = params.path.unwrap_or_else(|| {
-            let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-            format!("{home}/.claude-mem/claude-mem.db")
-        });
+        let path = expand_tilde(&params.path.unwrap_or_else(|| {
+            "~/.claude-mem/claude-mem.db".to_string()
+        }));
 
         // 2. Open SQLite read-only
         let source_conn = match rusqlite::Connection::open_with_flags(
@@ -766,26 +775,42 @@ impl AlayaMcp {
         description = "Import conversation history from Claude Code JSONL files. Reads messages and stores them as episodes."
     )]
     fn import_claude_code(&self, #[tool(aggr)] params: ImportClaudeCodeParams) -> String {
-        let path = &params.path;
+        let path = expand_tilde(&params.path);
 
-        // Read the JSONL file
-        let content = match std::fs::read_to_string(path) {
-            Ok(c) => c,
+        // Read the JSONL file line-by-line (files can be hundreds of MB)
+        let file = match std::fs::File::open(&path) {
+            Ok(f) => f,
             Err(e) => return format!("Cannot read file '{path}': {e}"),
         };
 
         let mut imported = 0u32;
         let mut sessions = std::collections::HashSet::new();
         let mut errors = 0u32;
+        let mut first_error: Option<String> = None;
 
-        for line in content.lines() {
+        let reader = std::io::BufReader::new(file);
+        use std::io::BufRead;
+        for line_result in reader.lines() {
+            let line = match line_result {
+                Ok(l) => l,
+                Err(e) => {
+                    if first_error.is_none() {
+                        first_error = Some(e.to_string());
+                    }
+                    errors += 1;
+                    continue;
+                }
+            };
             if line.trim().is_empty() {
                 continue;
             }
 
-            let entry: ClaudeCodeEntry = match serde_json::from_str(line) {
+            let entry: ClaudeCodeEntry = match serde_json::from_str(&line) {
                 Ok(e) => e,
-                Err(_) => {
+                Err(e) => {
+                    if first_error.is_none() {
+                        first_error = Some(e.to_string());
+                    }
                     errors += 1;
                     continue;
                 }
@@ -818,8 +843,9 @@ impl AlayaMcp {
             }
 
             // Truncate very long content (Claude Code messages can be huge)
-            let content_text = if content_text.len() > 2000 {
-                format!("{}...", &content_text[..2000])
+            let content_text = if content_text.chars().count() > 2000 {
+                let truncated: String = content_text.chars().take(2000).collect();
+                format!("{truncated}...")
             } else {
                 content_text
             };
@@ -855,25 +881,18 @@ impl AlayaMcp {
             }
         }
 
+        let error_detail = match (&first_error, errors) {
+            (Some(e), n) if n > 0 => format!(" ({n} errors, first: {e})"),
+            _ => String::new(),
+        };
+
         if imported == 0 {
-            return format!(
-                "No importable messages found in '{path}'.{}",
-                if errors > 0 {
-                    format!(" ({errors} lines failed to parse)")
-                } else {
-                    String::new()
-                }
-            );
+            return format!("No importable messages found in '{path}'.{error_detail}");
         }
 
         format!(
-            "Imported {imported} messages from {} sessions as episodes.{} Call 'learn' to consolidate.",
+            "Imported {imported} messages from {} sessions as episodes.{error_detail} Call 'learn' to consolidate.",
             sessions.len(),
-            if errors > 0 {
-                format!(" ({errors} parse errors skipped)")
-            } else {
-                String::new()
-            }
         )
     }
 
