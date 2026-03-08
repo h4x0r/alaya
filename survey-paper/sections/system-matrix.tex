@@ -5,13 +5,13 @@
 \label{sec:system-matrix}
 
 Table~\ref{tab:system-matrix} presents per-feature classifications for
-69~systems with complete capability data across the eight discriminating
+86~systems with complete capability data across the eight discriminating
 features defined in \S\ref{sec:long-tail}.  Systems are grouped by category
 and sorted alphabetically within each group.
 
 \begin{table*}[!t]
 \centering
-\caption{Per-system capability matrix for 69 classified systems.
+\caption{Per-system capability matrix for 86 classified systems.
 $\bullet$~=~capability present.
 RAG tier: N~=~Naive, A~=~Advanced, M~=~Modular~\cite{gao2023rag}.
 An interactive visualization with filtering is available at
@@ -32,7 +32,7 @@ An interactive visualization with filtering is available at
   & \rotatebox{90}{\textbf{Contrad.}}
   & \rotatebox{90}{\textbf{Preference}} \\
 \midrule
-\multicolumn{10}{@{}l}{\textit{Dedicated Memory Systems (33)}} \\
+\multicolumn{10}{@{}l}{\textit{Dedicated Memory Systems (37)}} \\
 Backboard            & A & $\bullet$ & $\bullet$ &           &           &           &           &           &           \\
 ChatGPT Memory       & N & $\bullet$ &           &           &           &           & $\bullet$ &           & $\bullet$ \\
 Claude Memory Tool   & N & $\bullet$ &           &           &           &           &           &           &           \\
@@ -49,6 +49,7 @@ Mem0                 & A & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &      
 Memary               & A &           & $\bullet$ & $\bullet$ &           &           & $\bullet$ &           &           \\
 MemMachine           & A & $\bullet$ & $\bullet$ &           &           &           &           &           &           \\
 Memobase             & N &           &           &           &           &           &           &           & $\bullet$ \\
+memU                 & A & $\bullet$ & $\bullet$ &           & $\bullet$ &           & $\bullet$ &           & $\bullet$ \\
 MemOS                & A & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           & $\bullet$ \\
 MemoryOS             & A & $\bullet$ & $\bullet$ &           & $\bullet$ &           & $\bullet$ &           & $\bullet$ \\
 Memonto              & N &           & $\bullet$ & $\bullet$ &           &           &           &           &           \\
@@ -59,17 +60,21 @@ Neo4j Agent Mem.     & A & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &      
 OpenClaw Redis       & A & $\bullet$ & $\bullet$ &           &           &           & $\bullet$ &           & $\bullet$ \\
 OpenMemory           & A & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           & $\bullet$ &           & $\bullet$ \\
 OpenViking           & N & $\bullet$ &           &           &           &           &           &           &           \\
-Papr Memory          & A & $\bullet$ & $\bullet$ &           &           &           &           &           &           \\
+MIRIX                & M & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           &           &           &           \\
+Papr Memory          & A & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           &           &           &           \\
 Perplexity Memory    & A & $\bullet$ &           &           &           &           &           &           & $\bullet$ \\
 Redis Memory         & A &           & $\bullet$ &           & $\bullet$ &           &           &           &           \\
+ReMe                 & A & $\bullet$ & $\bullet$ &           & $\bullet$ & $\bullet$ & $\bullet$ &           & $\bullet$ \\
 Supermemory          & A & $\bullet$ & $\bullet$ & $\bullet$ &           &           & $\bullet$ &           & $\bullet$ \\
 TiMem                & A & $\bullet$ & $\bullet$ &           &           & $\bullet$ & $\bullet$ &           &           \\
 Vestige              & M & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           & $\bullet$ &           & $\bullet$ \\
 Zep/Graphiti         & M & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           \\
 \midrule
-\multicolumn{10}{@{}l}{\textit{Framework Memory Modules (10)}} \\
+\multicolumn{10}{@{}l}{\textit{Framework Memory Modules (12)}} \\
 Agency Swarm         & N & $\bullet$ &           &           &           &           &           &           &           \\
+AgentScope           & A & $\bullet$ & $\bullet$ &           & $\bullet$ & $\bullet$ & $\bullet$ &           & $\bullet$ \\
 AutoGPT              & N & $\bullet$ &           &           &           &           &           &           &           \\
+CAMEL                & A & $\bullet$ & $\bullet$ &           &           &           &           &           &           \\
 CrewAI               & A & $\bullet$ & $\bullet$ &           & $\bullet$ &           &           &           & $\bullet$ \\
 Haystack             & N & $\bullet$ &           &           &           &           &           &           &           \\
 LangChain            & N & $\bullet$ &           &           &           &           & $\bullet$ &           &           \\
@@ -79,36 +84,48 @@ LlamaIndex           & N & $\bullet$ &           &           &           &      
 MS GraphRAG          & M &           & $\bullet$ & $\bullet$ & $\bullet$ &           &           &           &           \\
 Qwen-Agent           & N & $\bullet$ &           &           &           &           &           &           &           \\
 \midrule
-\multicolumn{10}{@{}l}{\textit{Coding Agent Memory (9)}} \\
+\multicolumn{10}{@{}l}{\textit{Coding Agent Memory (14)}} \\
 Basic Memory         & A &           & $\bullet$ & $\bullet$ &           &           &           &           &           \\
 Beads                & A & $\bullet$ & $\bullet$ & $\bullet$ &           & $\bullet$ & $\bullet$ &           &           \\
 Cipher (ByteRover)   & A & $\bullet$ & $\bullet$ &           &           &           & $\bullet$ &           &           \\
 Clawdbot-Next        & A & $\bullet$ &           &           & $\bullet$ &           &           &           &           \\
 ClaudeHistory Cloud  & N & $\bullet$ &           &           &           &           &           &           &           \\
+Copilot Memory       & A & $\bullet$ & $\bullet$ &           &           &           &           & $\bullet$ &           \\
+Cursor Memory        & A & $\bullet$ &           &           &           &           &           &           & $\bullet$ \\
 Engram               & N & $\bullet$ &           &           &           &           &           &           &           \\
+IronClaw             & A & $\bullet$ & $\bullet$ &           & $\bullet$ &           &           &           &           \\
 MemoryMesh           & N & $\bullet$ &           &           &           &           &           &           &           \\
+Nanobot              & N & $\bullet$ &           &           &           &           &           &           &           \\
+OpenFang             & A & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           & $\bullet$ &           &           \\
 Memsearch            & A & $\bullet$ &           &           &           &           & $\bullet$ &           &           \\
 QMD                  & M & $\bullet$ & $\bullet$ &           & $\bullet$ &           &           &           &           \\
 \midrule
-\multicolumn{10}{@{}l}{\textit{File-Based Memory (2)}} \\
+\multicolumn{10}{@{}l}{\textit{File-Based Memory (4)}} \\
 Claude Code          & N & $\bullet$ &           &           &           &           &           &           & $\bullet$ \\
 Claudesidian         & A & $\bullet$ &           & $\bullet$ &           &           & $\bullet$ &           &           \\
+Cursor Rules         & N & $\bullet$ &           &           &           &           &           &           & $\bullet$ \\
+Windsurf Memory      & N & $\bullet$ &           &           &           &           &           &           & $\bullet$ \\
 \midrule
-\multicolumn{10}{@{}l}{\textit{Research Architectures (15)}} \\
+\multicolumn{10}{@{}l}{\textit{Research Architectures (19)}} \\
 A-MEM                & A &           & $\bullet$ & $\bullet$ & $\bullet$ &           &           &           &           \\
 AgeMem               & A & $\bullet$ &           &           &           &           & $\bullet$ &           &           \\
+AriadneMem           & M &           & $\bullet$ & $\bullet$ & $\bullet$ &           &           & $\bullet$ &           \\
 G-Memory             & A & $\bullet$ & $\bullet$ &           &           &           &           & $\bullet$ &           \\
 Generative Agents    & A & $\bullet$ & $\bullet$ &           & $\bullet$ & $\bullet$ & $\bullet$ &           & $\bullet$ \\
 HippoRAG             & M &           & $\bullet$ & $\bullet$ &           &           &           &           &           \\
 HippoRAG~2           & M & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           &           &           &           \\
+ID-RAG               & A & $\bullet$ & $\bullet$ & $\bullet$ &           &           &           &           & $\bullet$ \\
 LightMem             & A & $\bullet$ & $\bullet$ &           &           & $\bullet$ & $\bullet$ &           &           \\
 LightRAG             & M &           & $\bullet$ & $\bullet$ & $\bullet$ &           &           &           &           \\
 Mem-alpha            & A & $\bullet$ & $\bullet$ &           &           &           & $\bullet$ &           &           \\
 MemAgent             & A & $\bullet$ &           &           &           &           & $\bullet$ &           &           \\
 MemoryBank           & A & $\bullet$ & $\bullet$ &           &           &           & $\bullet$ &           & $\bullet$ \\
 MemoRAG              & A & $\bullet$ & $\bullet$ &           & $\bullet$ &           &           &           &           \\
+MemR3                & A & $\bullet$ & $\bullet$ &           &           &           &           &           &           \\
 MemRL                & A & $\bullet$ &           &           &           &           & $\bullet$ &           &           \\
 Memory-R1            & A & $\bullet$ &           &           &           &           & $\bullet$ &           &           \\
+PersonaRAG           & A & $\bullet$ & $\bullet$ &           &           &           &           &           & $\bullet$ \\
+SimpleMem            & A & $\bullet$ & $\bullet$ &           & $\bullet$ & $\bullet$ & $\bullet$ &           &           \\
 SYNAPSE              & M & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ &           &           \\
 \bottomrule
 \end{tabular}
@@ -116,15 +133,16 @@ SYNAPSE              & M & $\bullet$ & $\bullet$ & $\bullet$ & $\bullet$ & $\bul
 
 Three patterns emerge from the per-system view that are not visible in the
 aggregate statistics.  First, contradiction resolution is the rarest
-capability: only 4 of 69~systems implement it (Mem0, Zep/Graphiti,
-Hindsight, and G-Memory), spanning dedicated and research categories.
+capability: only 6 of 86~systems implement it (Mem0, Zep/Graphiti,
+Hindsight, G-Memory, Copilot Memory, and AriadneMem), spanning dedicated,
+coding agent, and research categories.
 Second, Modular RAG systems implement more lifecycle operations
 (consolidation, forgetting) than Naive or Advanced RAG systems---retrieval
 sophistication correlates with architectural investment in lifecycle
-operations.  Third, framework memory modules implement at most five of the
-eight features: memory is a secondary concern in orchestration frameworks,
-limiting investment in consolidation, contradiction resolution, and
-graph-based retrieval.
+operations.  Third, most framework memory modules implement at most five of the
+eight features: memory is typically a secondary concern in orchestration
+frameworks, though AgentScope's integration of ReMe long-term memory with
+consolidation and forgetting represents a notable exception.
 
 \begin{figure}[!t]
 \centering
@@ -136,7 +154,7 @@ graph-based retrieval.
     xlabel={Number of classified systems},
     symbolic y coords={File-Based, Coding Agent, Framework, Research, Dedicated},
     ytick=data,
-    xmin=0, xmax=38,
+    xmin=0, xmax=42,
     nodes near coords,
     nodes near coords style={font=\scriptsize, anchor=west},
     every node near coord/.append style={xshift=2pt},
@@ -146,11 +164,11 @@ graph-based retrieval.
     xlabel style={font=\small},
 ]
 \addplot[fill=blue!40] coordinates {
-    (2,File-Based)
-    (9,Coding Agent)
-    (10,Framework)
-    (15,Research)
-    (33,Dedicated)
+    (4,File-Based)
+    (14,Coding Agent)
+    (12,Framework)
+    (19,Research)
+    (37,Dedicated)
 };
 \end{axis}
 \end{tikzpicture}
@@ -234,13 +252,16 @@ No system achieves the maximum on both axes simultaneously.
     (2,2)      % OpenClaw Redis
     (4,2)      % OpenMemory
     (1,0.15)   % OpenViking (jitter)
-    (2,0.35)   % Papr (jitter)
+    (4,0.35)   % Papr (jitter)
     (1,0.9)    % Perplexity Memory (jitter)
     (2,0.25)   % Redis Memory (jitter)
     (3,2.3)    % Supermemory (jitter)
     (2,2.2)    % TiMem (jitter)
     (4,2.15)   % Vestige (jitter)
     (4,3.3)    % Zep/Graphiti (jitter)
+    (3,1.3)    % memU (jitter)
+    (4,0.2)    % MIRIX (jitter)
+    (3,2.4)    % ReMe (jitter)
 };
 
 % --- Framework Memory Modules (squares) ---
@@ -255,6 +276,8 @@ No system achieves the maximum on both axes simultaneously.
     (1,1.3)    % LlamaIndex (jitter)
     (3,0.2)    % MS GraphRAG (jitter)
     (1,0.4)    % Qwen-Agent (jitter)
+    (3,2.2)    % AgentScope (jitter)
+    (2,0.55)   % CAMEL (jitter)
 };
 
 % --- Coding Agent Memory (triangles) ---
@@ -268,12 +291,19 @@ No system achieves the maximum on both axes simultaneously.
     (1,0.5)    % MemoryMesh (jitter)
     (1,1.4)    % Memsearch (jitter)
     (3,0.05)   % QMD (jitter)
+    (2,1.5)    % Copilot Memory (jitter)
+    (1,0.85)   % Cursor Memory (jitter)
+    (2,0.6)    % IronClaw (jitter)
+    (1,0.55)   % Nanobot (jitter)
+    (4,0.25)   % OpenFang (jitter)
 };
 
 % --- File-Based Memory (diamonds) ---
 \addplot[only marks, mark=diamond*, orange!80, mark size=3pt] coordinates {
     (1,1.15)   % Claude Code (jitter)
     (2,1.2)    % Claudesidian (jitter)
+    (1,1.25)   % Cursor Rules (jitter)
+    (1,1.35)   % Windsurf Memory (jitter)
 };
 
 % --- Research Architectures (pentagons/stars) ---
@@ -293,6 +323,11 @@ No system achieves the maximum on both axes simultaneously.
     (1,1.15)   % MemRL (jitter)
     (1,1.25)   % Memory-R1 (jitter)
     (4,2.3)    % SYNAPSE (jitter)
+    (3,0.45)   % AriadneMem (jitter)
+    (3,0.55)   % ID-RAG (jitter)
+    (2,1.35)   % MemR3 (jitter)
+    (2,1.45)   % PersonaRAG (jitter)
+    (3,2.25)   % SimpleMem (jitter)
 };
 
 \legend{Dedicated, Framework, Coding Agent, File-Based, Research}
@@ -323,13 +358,13 @@ Marker shapes distinguish system categories.}
 
 Table~\ref{tab:rag-breadth} cross-tabulates RAG tier with mean feature
 breadth count.  The progression is monotonic: Naive RAG systems average
-1.6 features, Advanced 3.4, and Modular 4.3---confirming that retrieval
+1.5 features, Advanced 3.2, and Modular 4.4---confirming that retrieval
 sophistication is a reliable proxy for overall architectural investment
 in memory lifecycle operations.
 
 \begin{table}[!t]
 \centering
-\caption{Mean feature breadth by RAG tier for 69 classified systems.
+\caption{Mean feature breadth by RAG tier for 86 classified systems.
 Feature count tallies the same eight capabilities as
 Table~\ref{tab:capability-distribution}.}
 \label{tab:rag-breadth}
@@ -338,32 +373,32 @@ Table~\ref{tab:capability-distribution}.}
 \toprule
 \textbf{RAG Tier} & \textbf{$N$} & \textbf{Mean} & \textbf{Min} & \textbf{Max} \\
 \midrule
-Naive    & 22 & 1.6 & 1 & 5 \\
-Advanced & 39 & 3.4 & 2 & 7 \\
-Modular  &  8 & 4.3 & 2 & 7 \\
+Naive    & 25 & 1.5 & 1 & 5 \\
+Advanced & 51 & 3.2 & 2 & 7 \\
+Modular  & 10 & 4.4 & 2 & 7 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 Table~\ref{tab:cooccurrence} reveals pairwise feature co-occurrence
-across the 69 classified systems.  Two correlations are striking.
-First, consolidation and forgetting are perfectly co-occurrent: all 9
+across the 86 classified systems.  Two correlations are striking.
+First, consolidation and forgetting are perfectly co-occurrent: all 12
 systems with consolidation also implement forgetting, consistent with
 the architectural argument that consolidation creates a growing semantic
 store that requires active management.  Second, graph structure and
-fusion are strongly correlated (13 of 20 graph systems also use fusion),
+fusion are strongly correlated (16 of 24 graph systems also use fusion),
 confirming that graph traversal provides a third retrieval signal that
 motivates principled fusion.  Contradiction resolution is the most
-isolated feature: only 4 systems implement it, all of which also have
-both episodic and semantic storage---suggesting it requires a mature
+isolated feature: only 6 systems implement it, all of which also have
+both episodic or semantic storage---suggesting it requires a mature
 architectural foundation.
 
 \begin{table}[!t]
 \centering
-\caption{Feature co-occurrence matrix (lower triangle) for 69 classified
+\caption{Feature co-occurrence matrix (lower triangle) for 86 classified
 systems.  Diagonal (bold) shows total count per feature.  Notable:
-Consolidation $\leftrightarrow$ Forgetting = 9/9 (100\%);
-Graph $\leftrightarrow$ Fusion = 13/20 (65\%).}
+Consolidation $\leftrightarrow$ Forgetting = 12/12 (100\%);
+Graph $\leftrightarrow$ Fusion = 16/24 (67\%).}
 \label{tab:cooccurrence}
 \scriptsize
 \setlength{\tabcolsep}{3pt}
@@ -378,14 +413,14 @@ Graph $\leftrightarrow$ Fusion = 13/20 (65\%).}
 & \rotatebox{70}{\textbf{Contrad.}}
 & \rotatebox{70}{\textbf{Pref.}} \\
 \midrule
-Episodic      & \textbf{56} \\
-Semantic      & 30 & \textbf{42} \\
-Graph         & 11 & 19 & \textbf{20} \\
-Fusion        & 17 & 21 & 13 & \textbf{23} \\
-Consolidation &  9 &  9 &  4 &  5 & \textbf{9} \\
-Forgetting    & 29 & 20 & 10 & 10 &  9 & \textbf{30} \\
-Contradiction &  4 &  4 &  2 &  3 &  1 &  3 & \textbf{4} \\
-Preference    & 17 & 12 &  5 &  8 &  3 & 12 &  2 & \textbf{18} \\
+Episodic      & \textbf{72} \\
+Semantic      & 42 & \textbf{55} \\
+Graph         & 14 & 23 & \textbf{24} \\
+Fusion        & 23 & 27 & 16 & \textbf{30} \\
+Consolidation & 12 & 12 &  4 &  8 & \textbf{12} \\
+Forgetting    & 33 & 24 & 12 & 14 & 12 & \textbf{34} \\
+Contradiction &  5 &  6 &  3 &  4 &  1 &  3 & \textbf{6} \\
+Preference    & 24 & 18 &  6 & 12 &  5 & 15 &  2 & \textbf{26} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -443,6 +478,6 @@ partition the landscape into distinct architectural tiers.}
 For interactive exploration with filtering by category, capability, RAG
 tier, and lifecycle operations, see the companion
 visualization.\footnote{\url{https://securityronin.github.io/alaya/docs/memory-landscape.html}
-The visualization includes the full 69-system matrix with sortable
+The visualization includes the full 86-system matrix with sortable
 columns, the quadrant plot with hover details, and the co-occurrence
 heatmap with color encoding.}

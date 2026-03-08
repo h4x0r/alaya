@@ -53,7 +53,7 @@ Rank Fusion (RRF) with subsequent maximal marginal relevance (MMR)
 diversification. Multi-stage reranking considers episode mentions, node
 distance, and cross-signal fusion. This places Zep/Graphiti firmly in
 the Modular RAG category, alongside a small minority of systems
-(18.2\%, Table~\ref{tab:rag-distribution}).
+(17.9\%, Table~\ref{tab:rag-distribution}).
 
 Zep's most distinctive lifecycle feature is \emph{bi-temporal
 invalidation}: facts are never deleted, only marked with validity
@@ -226,6 +226,47 @@ Advanced RAG category---the only consumer platform to exceed Naive RAG
 for memory retrieval.  Like its peers, Perplexity lacks graph structure,
 consolidation, and principled forgetting.
 
+\paragraph{memU (NevaMind).}
+memU~\cite{memu2026} is an agentic memory framework designed for 24/7
+proactive agents.  Its distinguishing contribution is a hierarchical
+file-system metaphor: raw interactions are transformed into structured,
+searchable intelligence organized as a virtual file system, supporting
+both embedding-based (RAG) and non-embedding (LLM) retrieval.  memU
+receives multimodal inputs (conversations, documents, images) and
+organizes them into daily notes, long-term memory, and extracted user
+profiles.  A fourth ``intention layer'' (in development) analyzes
+accumulated memories to predict user needs before they are expressed,
+representing the most ambitious proactive memory capability in the
+surveyed systems.  The framework claims approximately 10$\times$ token
+reduction versus comparable usage patterns.  memU Bot extends the
+framework into an enterprise-ready OpenClaw alternative with persistent
+cross-session memory and team-scale deployment.
+
+\paragraph{ReMe (MemoryScope).}
+ReMe~\cite{reme2025} (formerly MemoryScope, ModelScope) provides a dual
+memory architecture distinguishing \emph{personal memory} (user
+preferences and traits) from \emph{task memory} (learned strategies from
+prior executions).  Task memory implements four patterns: success
+recognition, failure analysis, comparative learning across sampling
+trajectories, and validation of extracted memories.  The framework
+supports file-based and vector-based storage backends (Elasticsearch,
+ChromaDB) with hybrid retrieval (vector + BM25).  ReMe integrates into
+the AgentScope runtime as its default long-term memory service.  The
+dual personal--task decomposition is architecturally distinct from most
+systems' episodic--semantic split, treating memory \emph{function} rather
+than memory \emph{type} as the primary organizing principle.
+
+\paragraph{MIRIX.}
+MIRIX~\cite{wang2025mirix} is a modular, multi-agent memory system with
+six distinct memory types: Core, Episodic, Semantic, Procedural, Resource
+Memory, and Knowledge Vault.  Its distinguishing contribution is
+multimodal memory: unlike prior approaches confined to text, MIRIX
+captures rich visual and multimodal experiences with temporally grounded
+interactions.  A multi-agent framework dynamically coordinates updates
+and retrieval across memory types.  On ScreenshotVQA, MIRIX achieves
+35\% higher accuracy than the RAG baseline while reducing storage by
+99.9\%; on LoCoMo, it attains 85.4\%, surpassing existing baselines.
+
 %% ===============================================================
 \subsection{Standalone Memory Servers}
 \label{sec:standalone}
@@ -272,6 +313,21 @@ emergence. Their retrieval ranges from direct prompt injection
 (LangChain) to vector similarity via LangGraph's storage layer
 (LangMem), placing them uniformly in the Naive RAG category.
 
+Two frameworks stand apart with substantially richer memory modules.
+\textbf{AgentScope}~\cite{agentscope2025} (Alibaba/ModelScope) provides
+layered memory: in-memory short-term storage, Redis-backed working memory
+with TTL-based expiration, LLM-driven memory compression (added January
+2026), and ReMe-based long-term memory with hybrid vector+BM25 retrieval.
+AgentScope is one of the few frameworks with both consolidation and
+forgetting, placing it in the Advanced RAG category.
+\textbf{CAMEL}~\cite{camel2025} implements composable memory blocks via
+the Composite pattern: \texttt{ChatHistoryMemory} (windowed history with
+configurable window size), \texttt{VectorDBMemory} (vector similarity
+over past interactions), and \texttt{LongtermAgentMemory} (a combined
+module that augments chat history with vector retrieval).  CAMEL provides
+the most flexible memory composition in the framework category, though
+it lacks graph structure, consolidation, and forgetting.
+
 %% ===============================================================
 \subsection{Coding Agent Memory}
 \label{sec:coding-agents}
@@ -297,6 +353,50 @@ Observations and Relations that form a semantic knowledge graph
 navigable via \texttt{memory://} URLs. All four independently adopted
 RRF over the default weighted linear fusion---a convergence we
 analyze further in \Cref{sec:memorymd}.
+
+The OpenClaw ecosystem has spawned multiple alternative agents, each with
+distinct memory approaches.
+\textbf{OpenFang}~\cite{openfang2026} (RightNow AI, Rust) is the most
+architecturally ambitious: its dedicated \texttt{openfang-memory} crate
+implements SQLite-backed storage with vector embeddings, a knowledge
+graph, cross-channel canonical sessions (context persists across
+Telegram, Slack, Discord, etc.), and automatic LLM-based compaction.
+OpenFang ships as a single 32MB binary with 40 channel adapters, making
+it the most infrastructure-light system with graph capabilities.
+\textbf{IronClaw}~\cite{ironclaw2026} (NEAR AI, Rust) implements
+PostgreSQL with pgvector for persistent vector search, Reciprocal Rank
+Fusion combining full-text search (tsvector/tsquery) and vector
+similarity (cosine distance), and WASM sandboxing for all untrusted
+tools.  Its credential isolation architecture (secrets are never exposed
+to the LLM, injected only at the host boundary) is unique among the
+surveyed systems.
+\textbf{Nanobot}~\cite{nanobot2026} (HKU, Python) takes the opposite
+approach: approximately 4,000 lines of core code with a
+\texttt{MemoryStore} class maintaining daily notes
+(\texttt{memory/YYYY-MM-DD.md}) and long-term memory
+(\texttt{MEMORY.md})---no vector retrieval, no graph, just two plain
+files and grep.
+
+Three IDE-integrated memory systems emerged in late 2025 and early 2026.
+\textbf{GitHub Copilot Memory}~\cite{copilot2026} introduces a
+\emph{citation-based} architecture: memories are stored with references
+to specific code locations, and agents verify citations in real-time
+before using a memory.  In adversarial testing, agents consistently
+detected contradictions between memories and code, updated incorrect
+memories, and the memory pool self-healed.  This is the only system in
+our survey that implements contradiction resolution through citation
+verification rather than LLM-based fact comparison.  Memories
+automatically expire after 28 days and are refreshed only through
+re-validation.
+\textbf{Cursor} provides two memory mechanisms:
+\emph{Cursor Memory}~\cite{cursor2026} (IDE-level RAG indexing of the
+entire repository via \texttt{@Codebase} symbols with vector embeddings)
+and \emph{Cursor Rules} (persistent project/user/team instructions in
+\texttt{.cursor/rules/*.mdc} files, injected as file-based context).
+\textbf{Windsurf Memory}~\cite{windsurf2026} (Cascade) auto-generates
+memories during conversation when it encounters useful context, with
+a user toggle for autonomous memory creation and
+\texttt{.windsurfrules} for persistent project rules.
 
 %% ===============================================================
 \subsection{File-Based Memory}
@@ -419,3 +519,54 @@ trend: Memory-R1, MemRL~\cite{zhang2026memrl}, and AgeMem all train
 memory management via RL, collectively establishing learned memory
 policies as a distinct paradigm alongside rule-based and
 neuroscience-inspired approaches.
+
+\paragraph{SimpleMem.}
+SimpleMem~\cite{simplemem2026} introduces an efficient memory framework
+based on semantic lossless compression, implemented as a three-stage
+pipeline: (1)~Semantic Structured Compression, which distills
+unstructured interactions into compact, multi-view indexed memory units;
+(2)~Online Semantic Synthesis, an intra-session process that integrates
+related context into unified abstract representations to eliminate
+redundancy; and (3)~Intent-Aware Retrieval Planning, which infers search
+intent to dynamically determine retrieval scope.  SimpleMem achieves a
+26.4\% average F1 improvement over baselines while reducing
+inference-time token consumption by up to 30$\times$.
+
+\paragraph{AriadneMem.}
+AriadneMem~\cite{ariadnemem2026} extends graph-based memory with two
+innovations: \emph{conflict-aware coarsening} for memory updates that
+detects and resolves contradictions during graph construction, and
+\emph{approximate Steiner completion with bridge-node discovery} to
+construct connected evidence subgraphs for retrieval.  Rather than
+expanding to large contexts or running iterative planning loops,
+AriadneMem retrieves a compact connected subgraph and exposes explicit
+reasoning paths to the generator.  It achieves the highest average F1
+across all evaluated backbones (42.57 on GPT-4o vs.\ 39.06 for SimpleMem
+and 36.09 for Mem0), with the largest gains on multi-hop and temporal
+reasoning subsets.
+
+\paragraph{MemR3.}
+MemR3~\cite{memr3_2025} introduces closed-loop control over memory
+retrieval through two mechanisms: a router that selects among retrieve,
+reflect, and answer actions, and a global evidence-gap tracker that
+renders the answering process transparent.  This design departs from the
+standard retrieve-then-answer pipeline, minimizing unnecessary lookups
+while providing a human-readable trace of the agent's decision process.
+
+\paragraph{PersonaRAG.}
+PersonaRAG~\cite{personarag2024} incorporates user-centric agents to
+adapt retrieval and generation based on real-time user data.  Four
+specialized agents---engagement tracking, preference analysis, context
+understanding, and feedback integration---analyze interactions from
+different perspectives, achieving over 5\% accuracy improvement over
+baseline RAG.
+
+\paragraph{ID-RAG.}
+ID-RAG~\cite{idrag2025} addresses identity drift in long-horizon
+generative agents by grounding persona in a structured identity
+knowledge graph of core beliefs, traits, and values.  During the agent's
+decision loop, this graph is queried to retrieve relevant identity
+context, directly informing action selection.  The separation of identity
+memory from other memory types is architecturally distinctive and
+addresses a failure mode (persona drift) that no other surveyed system
+explicitly targets.
