@@ -844,10 +844,10 @@ fn chapter_11_v020_features(store: &AlayaStore) {
     }
     println!();
 
-    // Show subcategories by filtering from the already-fetched list
+    // Show subcategories using the public API
     let root_cats: Vec<_> = cats.iter().filter(|c| c.parent_id.is_none()).collect();
     for root in &root_cats {
-        let subs: Vec<_> = cats.iter().filter(|c| c.parent_id == Some(root.id)).collect();
+        let subs = store.subcategories(root.id).unwrap_or_default();
         if !subs.is_empty() {
             println!("  Subcategories of \"{}\": {}", root.label, subs.len());
             for sub in &subs {

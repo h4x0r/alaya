@@ -295,6 +295,21 @@ impl AlayaStore {
         store::categories::list_categories(&self.conn, min_stability)
     }
 
+    /// Get direct child categories of a parent category.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use alaya::{AlayaStore, CategoryId};
+    ///
+    /// let store = AlayaStore::open_in_memory().unwrap();
+    /// let subs = store.subcategories(CategoryId(1)).unwrap();
+    /// assert!(subs.is_empty());
+    /// ```
+    pub fn subcategories(&self, parent_id: CategoryId) -> Result<Vec<Category>> {
+        store::categories::get_subcategories(&self.conn, parent_id)
+    }
+
     /// Get the category for a semantic node, if assigned.
     ///
     /// # Examples
