@@ -19,55 +19,72 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         rust: [stable, "1.75.0"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # master
         with:
           toolchain: ${{ matrix.rust }}
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
-      - name: Run tests
+      - name: Run tests (default features)
         run: cargo test --verbose
+
+      - name: Run tests (mcp feature)
+        run: cargo test --features mcp --verbose
+
+      - name: Run tests (llm feature)
+        run: cargo test --features llm --verbose
+
+      - name: Run tests (all features)
+        run: cargo test --features "mcp llm" --verbose
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # master
         with:
           toolchain: stable
           components: rustfmt, clippy
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
       - name: Check formatting
         run: cargo fmt -- --check
 
-      - name: Clippy
-        run: cargo clippy --all-targets -- -D warnings
+      - name: Clippy (all features)
+        run: cargo clippy --all-targets --features "mcp llm" -- -D warnings
 
       - name: Doc tests
         run: cargo test --doc
+
+  deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: EmbarkStudios/cargo-deny-action@3fd3802e88374d3fe9159b834c7714ec57d6c979 # v2.0.15
 
   no-network-deps:
     name: No network dependencies
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9 # master
         with:
           toolchain: stable
 
       - name: Verify no network dependencies in default features
         shell: bash
         run: |
-          if cargo tree --no-default-features | grep -qE 'reqwest|hyper|h2'; then
+          if cargo tree --no-default-features | grep -qE 'reqwest|hyper|h2|ureq'; then
             echo "ERROR: Network dependencies found in default features!"
-            cargo tree --no-default-features | grep -E 'reqwest|hyper|h2'
+            cargo tree --no-default-features | grep -E 'reqwest|hyper|h2|ureq'
             exit 1
           fi
           echo "No network dependencies in default features."
