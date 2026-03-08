@@ -1,6 +1,6 @@
 # Alaya
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18912131.svg)](https://doi.org/10.5281/zenodo.18912131)
+[![DOI](https://zenodo.org/badge/1167077192.svg)](https://zenodo.org/badge/latestdoi/1167077192)
 [![crates.io](https://img.shields.io/crates/v/alaya.svg)](https://crates.io/crates/alaya)
 [![docs.rs](https://docs.rs/alaya/badge.svg)](https://docs.rs/alaya)
 [![CI](https://github.com/SecurityRonin/alaya/actions/workflows/ci.yml/badge.svg)](https://github.com/SecurityRonin/alaya/actions)
