@@ -313,22 +313,102 @@ impl AlayaMcp {
 
     /// Get memory statistics.
     #[tool(
-        description = "Get Alaya memory statistics: counts of episodes, semantic nodes, preferences, impressions, links, and embeddings."
+        description = "Get Alaya memory statistics: episode counts, knowledge breakdown by type, categories, preferences, graph links with strongest connection, and embedding coverage."
     )]
     fn status(&self) -> String {
-        match self.with_store(|s| s.status()) {
-            Ok(st) => format!(
-                "Memory Status:\n  Episodes: {}\n  Semantic nodes: {}\n  Preferences: {}\n  Impressions: {}\n  Links: {}\n  Embeddings: {}\n  Categories: {}",
-                st.episode_count,
-                st.semantic_node_count,
-                st.preference_count,
-                st.impression_count,
-                st.link_count,
-                st.embedding_count,
-                st.category_count,
-            ),
-            Err(e) => format!("Error: {e}"),
+        let st = match self.with_store(|s| s.status()) {
+            Ok(st) => st,
+            Err(e) => return format!("Error: {e}"),
+        };
+
+        let session_eps = self.episode_count.load(Ordering::Relaxed);
+        let unconsolidated = self.unconsolidated_count.load(Ordering::Relaxed);
+
+        // Episodes line
+        let mut out = format!("Memory Status:\n  Episodes: {}", st.episode_count);
+        if session_eps > 0 || unconsolidated > 0 {
+            out.push_str(&format!(
+                " ({session_eps} this session, {unconsolidated} unconsolidated)"
+            ));
         }
+
+        // Knowledge breakdown
+        let knowledge_line = match self.with_store(|s| s.knowledge_breakdown()) {
+            Ok(breakdown) if !breakdown.is_empty() => {
+                let mut parts = Vec::new();
+                for (st, label) in [
+                    (SemanticType::Fact, "facts"),
+                    (SemanticType::Relationship, "relationships"),
+                    (SemanticType::Event, "events"),
+                    (SemanticType::Concept, "concepts"),
+                ] {
+                    if let Some(&count) = breakdown.get(&st) {
+                        parts.push(format!("{count} {label}"));
+                    }
+                }
+                parts.join(", ")
+            }
+            Ok(_) => "none".to_string(),
+            Err(_) => "error".to_string(),
+        };
+        out.push_str(&format!("\n  Knowledge: {knowledge_line}"));
+
+        // Categories
+        let cat_line = match self.with_store(|s| s.categories(None)) {
+            Ok(cats) if !cats.is_empty() => {
+                let labels: Vec<&str> = cats.iter().map(|c| c.label.as_str()).collect();
+                format!("{} ({})", cats.len(), labels.join(", "))
+            }
+            Ok(_) => "0".to_string(),
+            Err(_) => "error".to_string(),
+        };
+        out.push_str(&format!("\n  Categories: {cat_line}"));
+
+        // Preferences
+        out.push_str(&format!(
+            "\n  Preferences: {} crystallized, {} impressions accumulating",
+            st.preference_count, st.impression_count
+        ));
+
+        // Graph + strongest link
+        let strongest_desc = match self.with_store(|s| {
+            let link = s.strongest_link()?;
+            match link {
+                Some((src, tgt, w)) => {
+                    let src_label = s.node_content(src)?
+                        .unwrap_or_else(|| format!("{}#{}", src.type_str(), src.id()));
+                    let tgt_label = s.node_content(tgt)?
+                        .unwrap_or_else(|| format!("{}#{}", tgt.type_str(), tgt.id()));
+                    Ok(Some(format!(
+                        " (strongest: \"{src_label}\" <-> \"{tgt_label}\" weight {w:.2})"
+                    )))
+                }
+                None => Ok(None),
+            }
+        }) {
+            Ok(Some(desc)) => desc,
+            _ => String::new(),
+        };
+        out.push_str(&format!(
+            "\n  Graph: {} links{strongest_desc}",
+            st.link_count
+        ));
+
+        // Embedding coverage
+        let total_nodes = st.episode_count + st.semantic_node_count;
+        let coverage = if total_nodes > 0 {
+            format!(
+                "{}/{} nodes ({}%)",
+                st.embedding_count,
+                total_nodes,
+                st.embedding_count * 100 / total_nodes
+            )
+        } else {
+            "0/0 nodes".to_string()
+        };
+        out.push_str(&format!("\n  Embedding coverage: {coverage}"));
+
+        out
     }
 
     /// Get user preferences.

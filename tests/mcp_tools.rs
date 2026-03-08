@@ -10,7 +10,7 @@
 // This validates the data flow that the MCP tools rely on.
 
 use alaya::{
-    AlayaStore, EpisodeContext, EpisodeId, KnowledgeFilter, NewEpisode, NewSemanticNode,
+    AlayaStore, EpisodeContext, EpisodeId, KnowledgeFilter, NewEpisode, NewSemanticNode, NodeRef,
     PurgeFilter, Query, Role, SemanticType,
 };
 
@@ -348,4 +348,59 @@ fn test_transform_and_forget_on_empty() {
     let fr = store.forget().unwrap();
     assert_eq!(tr.duplicates_merged, 0);
     assert_eq!(fr.nodes_decayed, 0);
+}
+
+#[test]
+fn test_mcp_rich_status_fields() {
+    let store = AlayaStore::open_in_memory().unwrap();
+
+    // Empty breakdown
+    let breakdown = store.knowledge_breakdown().unwrap();
+    assert!(breakdown.is_empty());
+
+    // Empty strongest link
+    assert!(store.strongest_link().unwrap().is_none());
+
+    // Add an episode
+    store
+        .store_episode(&make_episode("test content", Role::User, "s1", 1000))
+        .unwrap();
+
+    // Learn a fact and a relationship
+    let nodes = vec![
+        NewSemanticNode {
+            content: "User likes Rust".to_string(),
+            node_type: SemanticType::Fact,
+            confidence: 0.8,
+            source_episodes: vec![EpisodeId(1)],
+            embedding: None,
+        },
+        NewSemanticNode {
+            content: "Rust relates to async".to_string(),
+            node_type: SemanticType::Relationship,
+            confidence: 0.7,
+            source_episodes: vec![EpisodeId(1)],
+            embedding: None,
+        },
+    ];
+    store.learn(nodes).unwrap();
+
+    // Knowledge breakdown should reflect 1 fact, 1 relationship
+    let breakdown = store.knowledge_breakdown().unwrap();
+    assert_eq!(breakdown.get(&SemanticType::Fact), Some(&1));
+    assert_eq!(breakdown.get(&SemanticType::Relationship), Some(&1));
+    assert_eq!(breakdown.get(&SemanticType::Event), None);
+    assert_eq!(breakdown.get(&SemanticType::Concept), None);
+
+    // Strongest link should now exist (learn creates Causal links)
+    let strongest = store.strongest_link().unwrap();
+    assert!(strongest.is_some(), "learn should have created links");
+
+    // node_content should resolve episode content
+    let label = store.node_content(NodeRef::Episode(EpisodeId(1))).unwrap();
+    assert_eq!(label, Some("test content".to_string()));
+
+    // node_content for missing node
+    let missing = store.node_content(NodeRef::Episode(EpisodeId(999))).unwrap();
+    assert!(missing.is_none());
 }

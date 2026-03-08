@@ -525,6 +525,61 @@ impl AlayaStore {
         })
     }
 
+    /// Count semantic knowledge nodes grouped by type (Fact, Relationship, Event, Concept).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let store = alaya::AlayaStore::open_in_memory().unwrap();
+    /// let breakdown = store.knowledge_breakdown().unwrap();
+    /// assert!(breakdown.is_empty());
+    /// ```
+    pub fn knowledge_breakdown(&self) -> Result<std::collections::HashMap<SemanticType, u64>> {
+        store::semantic::count_nodes_by_type(&self.conn)
+    }
+
+    /// Returns the link with the highest forward weight, if any exist.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let store = alaya::AlayaStore::open_in_memory().unwrap();
+    /// assert!(store.strongest_link().unwrap().is_none());
+    /// ```
+    pub fn strongest_link(&self) -> Result<Option<(NodeRef, NodeRef, f32)>> {
+        graph::links::strongest_link(&self.conn)
+    }
+
+    /// Resolve a `NodeRef` to a human-readable content string (first 30 chars).
+    ///
+    /// Returns `None` if the referenced node no longer exists.
+    pub fn node_content(&self, node: NodeRef) -> Result<Option<String>> {
+        match node {
+            NodeRef::Episode(id) => {
+                match store::episodic::get_episode(&self.conn, id) {
+                    Ok(ep) => Ok(Some(truncate_label(&ep.content, 30))),
+                    Err(AlayaError::NotFound(_)) => Ok(None),
+                    Err(e) => Err(e),
+                }
+            }
+            NodeRef::Semantic(id) => {
+                match store::semantic::get_semantic_node(&self.conn, id) {
+                    Ok(node) => Ok(Some(truncate_label(&node.content, 30))),
+                    Err(AlayaError::NotFound(_)) => Ok(None),
+                    Err(e) => Err(e),
+                }
+            }
+            NodeRef::Category(id) => {
+                match store::categories::get_category(&self.conn, id) {
+                    Ok(cat) => Ok(Some(truncate_label(&cat.label, 30))),
+                    Err(AlayaError::NotFound(_)) => Ok(None),
+                    Err(e) => Err(e),
+                }
+            }
+            _ => Ok(Some(format!("{}#{}", node.type_str(), node.id()))),
+        }
+    }
+
     /// Purge data matching the filter.
     ///
     /// # Examples
@@ -574,6 +629,16 @@ impl AlayaStore {
         }
         tx.commit()?;
         Ok(report)
+    }
+}
+
+/// Truncate a string to at most `max_chars` characters, appending "..." if truncated.
+fn truncate_label(s: &str, max_chars: usize) -> String {
+    if s.chars().count() <= max_chars {
+        s.to_string()
+    } else {
+        let truncated: String = s.chars().take(max_chars).collect();
+        format!("{truncated}...")
     }
 }
 

@@ -114,6 +114,33 @@ pub fn count_links(conn: &Connection) -> Result<u64> {
     Ok(count as u64)
 }
 
+/// Returns the link with the highest forward weight, if any exist.
+pub fn strongest_link(conn: &Connection) -> Result<Option<(NodeRef, NodeRef, f32)>> {
+    let mut stmt = conn.prepare(
+        "SELECT source_type, source_id, target_type, target_id, forward_weight
+         FROM links ORDER BY forward_weight DESC LIMIT 1",
+    )?;
+    let mut rows = stmt.query_map([], |row| {
+        let source_type: String = row.get(0)?;
+        let source_id: i64 = row.get(1)?;
+        let target_type: String = row.get(2)?;
+        let target_id: i64 = row.get(3)?;
+        let weight: f32 = row.get(4)?;
+        Ok((source_type, source_id, target_type, target_id, weight))
+    })?;
+    match rows.next() {
+        Some(Ok((st, si, tt, ti, w))) => {
+            let source = NodeRef::from_parts(&st, si)
+                .unwrap_or(NodeRef::Episode(EpisodeId(0)));
+            let target = NodeRef::from_parts(&tt, ti)
+                .unwrap_or(NodeRef::Episode(EpisodeId(0)));
+            Ok(Some((source, target, w)))
+        }
+        Some(Err(e)) => Err(e.into()),
+        None => Ok(None),
+    }
+}
+
 fn map_link(row: &rusqlite::Row<'_>) -> rusqlite::Result<Link> {
     let source_type: String = row.get(1)?;
     let source_id: i64 = row.get(2)?;
@@ -331,5 +358,45 @@ mod tests {
         // Weight should remain original (0.5), not updated to 0.8
         let links = get_links_from(&conn, a).unwrap();
         assert!((links[0].forward_weight - 0.5).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_strongest_link_empty() {
+        let conn = open_memory_db().unwrap();
+        assert!(strongest_link(&conn).unwrap().is_none());
+    }
+
+    #[test]
+    fn test_strongest_link_returns_highest_weight() {
+        let conn = open_memory_db().unwrap();
+        create_link(
+            &conn,
+            NodeRef::Episode(EpisodeId(1)),
+            NodeRef::Episode(EpisodeId(2)),
+            LinkType::Temporal,
+            0.5,
+        )
+        .unwrap();
+        create_link(
+            &conn,
+            NodeRef::Episode(EpisodeId(2)),
+            NodeRef::Episode(EpisodeId(3)),
+            LinkType::Temporal,
+            0.9,
+        )
+        .unwrap();
+        create_link(
+            &conn,
+            NodeRef::Episode(EpisodeId(3)),
+            NodeRef::Episode(EpisodeId(4)),
+            LinkType::Topical,
+            0.3,
+        )
+        .unwrap();
+
+        let strongest = strongest_link(&conn).unwrap().unwrap();
+        assert_eq!(strongest.2, 0.9);
+        assert_eq!(strongest.0, NodeRef::Episode(EpisodeId(2)));
+        assert_eq!(strongest.1, NodeRef::Episode(EpisodeId(3)));
     }
 }
