@@ -373,6 +373,46 @@ impl AlayaStore {
         Ok(report)
     }
 
+    /// Provider-less consolidation: store pre-extracted semantic knowledge.
+    ///
+    /// Accepts a `Vec<NewSemanticNode>` directly and runs the same pipeline as
+    /// [`consolidate`](Self::consolidate) — store node, create Causal links to
+    /// source episodes, init Bjork strength, try category assignment — but
+    /// without requiring a [`ConsolidationProvider`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use alaya::{AlayaStore, NewSemanticNode, SemanticType, EpisodeId};
+    ///
+    /// let store = AlayaStore::open_in_memory().unwrap();
+    /// let report = store.learn(vec![]).unwrap();
+    /// assert_eq!(report.nodes_created, 0);
+    /// ```
+    pub fn learn(&self, nodes: Vec<NewSemanticNode>) -> Result<ConsolidationReport> {
+        let tx = schema::begin_immediate(&self.conn)?;
+        let report = lifecycle::consolidation::learn_direct(&tx, nodes)?;
+        tx.commit()?;
+        Ok(report)
+    }
+
+    /// Return unconsolidated episodes (those not yet linked to any semantic node).
+    ///
+    /// An episode is considered "consolidated" once a Causal link connects it
+    /// to a semantic node (created by [`consolidate`](Self::consolidate) or
+    /// [`learn`](Self::learn)).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let store = alaya::AlayaStore::open_in_memory().unwrap();
+    /// let eps = store.unconsolidated_episodes(100).unwrap();
+    /// assert!(eps.is_empty());
+    /// ```
+    pub fn unconsolidated_episodes(&self, limit: u32) -> Result<Vec<Episode>> {
+        store::episodic::get_unconsolidated_episodes(&self.conn, limit)
+    }
+
     /// Run perfuming: extract impressions, crystallize preferences (vasana).
     ///
     /// # Examples
