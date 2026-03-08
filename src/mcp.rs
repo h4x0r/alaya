@@ -561,23 +561,65 @@ impl AlayaMcp {
                 let mut response =
                     format!("Stored episode {} in session '{}'.", id.0, params.session_id);
 
-                // Consolidation prompt at 10 unconsolidated episodes
+                // Auto-consolidation at 10 unconsolidated episodes
                 if uncons >= 10 {
-                    if let Ok(episodes) = self.with_store(|s| s.unconsolidated_episodes(20)) {
-                        response.push_str(&format!(
-                            "\n\n--- Consolidation suggested ---\n\
-                             You have {} unconsolidated episodes. \
-                             Please extract key facts and call the 'learn' tool.\n\
-                             Recent unconsolidated episodes:",
-                            episodes.len()
-                        ));
-                        for ep in &episodes {
+                    // Try auto-consolidation first (if ExtractionProvider is set)
+                    match self.with_store(|s| s.auto_consolidate()) {
+                        Ok(report) if report.nodes_created > 0 => {
+                            self.unconsolidated_count.store(0, Ordering::Relaxed);
                             response.push_str(&format!(
-                                "\n[{}] {}: {}",
-                                ep.id.0,
-                                ep.role.as_str(),
-                                ep.content
+                                "\n\n--- Auto-consolidated ---\n\
+                                 Extracted {} knowledge nodes from {} episodes.",
+                                report.nodes_created,
+                                uncons
                             ));
+                        }
+                        Ok(_) => {
+                            // Provider returned zero nodes — fall back to prompt
+                            if let Ok(episodes) = self.with_store(|s| s.unconsolidated_episodes(20)) {
+                                response.push_str(&format!(
+                                    "\n\n--- Consolidation suggested ---\n\
+                                     You have {} unconsolidated episodes. \
+                                     Please extract key facts and call the 'learn' tool.\n\
+                                     Recent unconsolidated episodes:",
+                                    episodes.len()
+                                ));
+                                for ep in &episodes {
+                                    response.push_str(&format!(
+                                        "\n[{}] {}: {}",
+                                        ep.id.0,
+                                        ep.role.as_str(),
+                                        ep.content
+                                    ));
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            // Provider error or no provider — fall back to prompt with note
+                            let err_msg = format!("{e}");
+                            let is_no_provider = err_msg.contains("extraction provider");
+                            if let Ok(episodes) = self.with_store(|s| s.unconsolidated_episodes(20)) {
+                                if !is_no_provider {
+                                    response.push_str(&format!(
+                                        "\n\n(Auto-consolidation failed: {e})"
+                                    ));
+                                }
+                                response.push_str(&format!(
+                                    "\n\n--- Consolidation suggested ---\n\
+                                     You have {} unconsolidated episodes. \
+                                     Please extract key facts and call the 'learn' tool.\n\
+                                     Recent unconsolidated episodes:",
+                                    episodes.len()
+                                ));
+                                for ep in &episodes {
+                                    response.push_str(&format!(
+                                        "\n[{}] {}: {}",
+                                        ep.id.0,
+                                        ep.role.as_str(),
+                                        ep.content
+                                    ));
+                                }
+                            }
                         }
                     }
                 }
@@ -990,7 +1032,7 @@ impl ServerHandler for AlayaMcp {
 #[cfg(all(test, feature = "mcp"))]
 mod tests {
     use super::*;
-    use crate::AlayaStore;
+    use crate::{AlayaStore, MockExtractionProvider};
 
     fn make_server() -> AlayaMcp {
         let store = AlayaStore::open_in_memory().unwrap();
@@ -1236,6 +1278,84 @@ mod tests {
         assert!(
             maintenance_seen,
             "Auto-maintenance should trigger at 25 episodes"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // auto-consolidation via ExtractionProvider
+    // -----------------------------------------------------------------------
+
+    fn make_server_with_extraction() -> AlayaMcp {
+        let mut store = AlayaStore::open_in_memory().unwrap();
+        store.set_extraction_provider(Box::new(MockExtractionProvider::new(vec![
+            NewSemanticNode {
+                content: "Auto-extracted fact".into(),
+                node_type: SemanticType::Fact,
+                confidence: 0.85,
+                source_episodes: vec![],
+                embedding: None,
+            },
+        ])));
+        AlayaMcp::new(store)
+    }
+
+    #[test]
+    fn remember_auto_consolidates_with_extraction_provider() {
+        let srv = make_server_with_extraction();
+        let mut auto_response = String::new();
+        for i in 0..10 {
+            let result = srv.remember(RememberParams {
+                content: format!("Episode {i}"),
+                role: "user".into(),
+                session_id: "s1".into(),
+            });
+            if result.contains("Auto-consolidated") {
+                auto_response = result;
+            }
+        }
+        assert!(
+            !auto_response.is_empty(),
+            "Should have auto-consolidated at episode 10"
+        );
+        assert!(auto_response.contains("knowledge nodes"));
+    }
+
+    #[test]
+    fn remember_falls_back_to_prompt_without_provider() {
+        let srv = make_server(); // no extraction provider
+        let mut prompt_response = String::new();
+        for i in 0..10 {
+            let result = srv.remember(RememberParams {
+                content: format!("Episode {i}"),
+                role: "user".into(),
+                session_id: "s1".into(),
+            });
+            if result.contains("Consolidation suggested") {
+                prompt_response = result;
+            }
+        }
+        assert!(
+            !prompt_response.is_empty(),
+            "Should fall back to prompt without extraction provider"
+        );
+        assert!(prompt_response.contains("unconsolidated episodes"));
+    }
+
+    #[test]
+    fn remember_auto_consolidation_resets_counter() {
+        let srv = make_server_with_extraction();
+        for i in 0..10 {
+            srv.remember(RememberParams {
+                content: format!("Episode {i}"),
+                role: "user".into(),
+                session_id: "s1".into(),
+            });
+        }
+        // Counter should be reset after auto-consolidation
+        let status = srv.status();
+        assert!(
+            status.contains("0 unconsolidated"),
+            "Counter should reset after auto-consolidation: {status}"
         );
     }
 
