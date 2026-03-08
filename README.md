@@ -198,20 +198,28 @@ Your Agent                          Alaya
 
 Via MCP (stdio):                    alaya-mcp binary
   remember(content, role, session)    ──▶ episodic store + graph links
-  recall(query)                       ──▶ BM25 + vector + graph → RRF → rerank
+  recall(query, boost_category?)      ──▶ BM25 + vector + graph → RRF → rerank
   preferences(domain?)                ──▶ crystallized behavioral patterns
-  knowledge(type?, confidence?)       ──▶ consolidated semantic nodes
+  knowledge(type?, category?)         ──▶ consolidated semantic nodes
   maintain()                          ──▶ dedup + decay
   purge(scope)                        ──▶ selective or full deletion
+  categories(min_stability?)          ──▶ emergent ontology with hierarchy
+  neighbors(node, depth?)             ──▶ graph spreading activation
+  node_category(node_id)              ──▶ category assignment lookup
 
 Via Rust library:                   AlayaStore struct
   store_episode()                     ──▶ episodic store + graph links
   query()                            ──▶ BM25 + vector + graph → RRF → rerank
   preferences()                      ──▶ crystallized behavioral patterns
   knowledge()                        ──▶ consolidated semantic nodes
+  categories()                       ──▶ emergent ontology with hierarchy
+  subcategories()                    ──▶ children of a parent category
+  neighbors()                        ──▶ graph spreading activation
+  node_category()                    ──▶ category assignment lookup
+  set_embedding_provider()           ──▶ auto-embed in store + query
   consolidate(provider)              ──▶ episodes → semantic knowledge
   perfume(interaction, provider)     ──▶ impressions → preferences
-  transform()                        ──▶ dedup, LTD, prune, discover categories
+  transform()                        ──▶ dedup, LTD, prune, split categories
   forget()                           ──▶ Bjork strength decay + archival
   purge(scope)                       ──▶ cascade deletion + tombstones
 ```
@@ -307,12 +315,16 @@ impl AlayaStore {
     // Write
     pub fn store_episode(&self, episode: &NewEpisode) -> Result<EpisodeId>;
 
+    // Embedding
+    pub fn set_embedding_provider(&mut self, provider: Box<dyn EmbeddingProvider>);
+
     // Read
     pub fn query(&self, q: &Query) -> Result<Vec<ScoredMemory>>;
     pub fn preferences(&self, domain: Option<&str>) -> Result<Vec<Preference>>;
     pub fn knowledge(&self, filter: Option<KnowledgeFilter>) -> Result<Vec<SemanticNode>>;
     pub fn neighbors(&self, node: NodeRef, depth: u32) -> Result<Vec<(NodeRef, f32)>>;
     pub fn categories(&self, min_stability: Option<f32>) -> Result<Vec<Category>>;
+    pub fn subcategories(&self, parent_id: CategoryId) -> Result<Vec<Category>>;
     pub fn node_category(&self, node_id: NodeId) -> Result<Option<Category>>;
 
     // Lifecycle
@@ -429,7 +441,7 @@ lateral inhibition).
 - **Emergent flat categories** via dual-signal clustering (embedding + graph)
 - **Tombstone tracking:** cascade deletion records audit trail for every purged node
 - **Zero-dependency Rust library** with SQLite WAL + FTS5
-- **231 tests** (222 core + 9 MCP) + property-based tests via proptest
+- **210 tests** (201 core + 9 MCP) + property-based tests via proptest
 - **MCP server** (optional `mcp` feature flag)
 
 ## v0.2.0 (current)
@@ -439,6 +451,7 @@ lateral inhibition).
 - **Cross-domain bridging** via `MemberOf` links — spreading activation traverses category boundaries
 - **EmbeddingProvider trait** — `embed()` + `embed_batch()` with default implementation; wired into `store_episode()` and `query()` for automatic embedding generation
 - **5 MCP tool extensions** — `categories`, `neighbors`, `node_category` + `knowledge` category filter + `recall` category boost
+- **232 tests** (223 core + 9 MCP) across unit, integration, property-based (proptest), and doc tests
 
 ## Benchmark Evaluation
 

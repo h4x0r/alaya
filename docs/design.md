@@ -143,7 +143,9 @@ graph TD
 
 A weighted directed graph spans all three stores. Edges represent associations:
 temporal (A before B), topical (shared topic), entity (shared mention), causal
-(A led to B), co-retrieval (A and B retrieved together — Hebbian).
+(A led to B), co-retrieval (A and B retrieved together — Hebbian), and
+MemberOf (semantic node belongs to category — enables cross-domain bridging
+via spreading activation through category nodes).
 
 Links have asymmetric forward/backward weights. Co-retrieval strengthens weights
 (LTP), disuse weakens them (LTD). The graph naturally develops small-world
@@ -203,40 +205,51 @@ flowchart TD
 
 - **Consolidation**: Episodic -> semantic (CLS interleaved replay)
 - **Perfuming**: Interactions -> impressions -> crystallized preferences
-- **Transformation**: LTD link decay, dedup, category discovery, preference decay, pruning
+- **Transformation**: LTD link decay, dedup, category discovery, category splitting, preference decay, pruning
 - **Forgetting**: Dual-strength decay (storage vs retrieval strength)
 - **RIF**: Retrieval-induced forgetting suppresses competing same-session memories
-- **Emergent Ontology**: Categories emerge from semantic node embedding clustering
+- **Emergent Ontology**: Categories emerge from semantic node embedding clustering; hierarchical via `parent_id`; categories with 8+ members and coherence < 0.6 auto-split during transform
 - **Purge**: Cascade deletion with tombstone tracking (session, TTL, or full reset)
 
 ## Public API
 
 ```rust
-pub trait Alaya {
+impl AlayaStore {
+    // Open / create
+    pub fn open(path: impl AsRef<Path>) -> Result<Self>;
+    pub fn open_in_memory() -> Result<Self>;
+
+    // Embedding
+    pub fn set_embedding_provider(&mut self, provider: Box<dyn EmbeddingProvider>);
+
     // Write
-    fn store_episode(&self, episode: NewEpisode) -> Result<EpisodeId>;
+    pub fn store_episode(&self, episode: &NewEpisode) -> Result<EpisodeId>;
 
     // Read
-    fn query(&self, q: Query) -> Result<Vec<ScoredMemory>>;
-    fn preferences(&self, domain: Option<&str>) -> Result<Vec<Preference>>;
-    fn knowledge(&self, filter: Option<KnowledgeFilter>) -> Result<Vec<SemanticNode>>;
-    fn neighbors(&self, node: NodeRef, depth: u32) -> Result<Vec<(NodeRef, f32)>>;
+    pub fn query(&self, q: &Query) -> Result<Vec<ScoredMemory>>;
+    pub fn preferences(&self, domain: Option<&str>) -> Result<Vec<Preference>>;
+    pub fn knowledge(&self, filter: Option<KnowledgeFilter>) -> Result<Vec<SemanticNode>>;
+    pub fn neighbors(&self, node: NodeRef, depth: u32) -> Result<Vec<(NodeRef, f32)>>;
+    pub fn categories(&self, min_stability: Option<f32>) -> Result<Vec<Category>>;
+    pub fn subcategories(&self, parent_id: CategoryId) -> Result<Vec<Category>>;
+    pub fn node_category(&self, node_id: NodeId) -> Result<Option<Category>>;
 
-    // Lifecycle (triggered by agent or autonomous schedule)
-    async fn consolidate(&self, provider: &dyn ConsolidationProvider) -> Result<Report>;
-    async fn perfume(&self, interaction: &Interaction, provider: &dyn ConsolidationProvider) -> Result<Report>;
-    async fn transform(&self) -> Result<Report>;
-    async fn forget(&self) -> Result<Report>;
+    // Lifecycle
+    pub fn consolidate(&self, provider: &dyn ConsolidationProvider) -> Result<ConsolidationReport>;
+    pub fn perfume(&self, interaction: &Interaction, provider: &dyn ConsolidationProvider) -> Result<PerfumingReport>;
+    pub fn transform(&self) -> Result<TransformationReport>;
+    pub fn forget(&self) -> Result<ForgettingReport>;
 
     // Admin
-    fn status(&self) -> Result<MemoryStatus>;
-    fn purge(&self, filter: PurgeFilter) -> Result<PurgeReport>;
-    fn export(&self, format: ExportFormat) -> Result<ExportData>;
+    pub fn status(&self) -> Result<MemoryStatus>;
+    pub fn purge(&self, filter: PurgeFilter) -> Result<PurgeReport>;
 }
 ```
 
-The agent provides embeddings via `Option<Vec<f32>>` on write, and LLM logic via
-the `ConsolidationProvider` trait. Alaya never calls an LLM directly.
+The agent provides embeddings either manually via `Option<Vec<f32>>` on write,
+or automatically via `set_embedding_provider()` (which wires into `store_episode()`
+and `query()`). LLM logic is provided via the `ConsolidationProvider` trait.
+Alaya never calls an LLM directly.
 
 ## Design Principles
 
