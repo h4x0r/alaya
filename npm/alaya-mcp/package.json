@@ -1,0 +1,36 @@
+{
+  "name": "alaya-mcp",
+  "version": "0.0.0",
+  "description": "Alaya MCP Server — a memory engine for AI agents that remembers, forgets, and learns",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SecurityRonin/alaya"
+  },
+  "homepage": "https://github.com/SecurityRonin/alaya",
+  "bin": {
+    "alaya-mcp": "bin/run.js"
+  },
+  "files": [
+    "bin/",
+    "scripts/",
+    "README.md"
+  ],
+  "optionalDependencies": {
+    "@alaya-mcp/cli-linux-x64": "0.0.0",
+    "@alaya-mcp/cli-darwin-arm64": "0.0.0",
+    "@alaya-mcp/cli-darwin-x64": "0.0.0",
+    "@alaya-mcp/cli-win32-x64": "0.0.0"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "keywords": [
+    "mcp",
+    "memory",
+    "ai",
+    "agent",
+    "alaya",
+    "llm"
+  ]
+}

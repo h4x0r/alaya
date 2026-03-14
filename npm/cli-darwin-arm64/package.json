@@ -1,0 +1,14 @@
+{
+  "name": "@alaya-mcp/cli-darwin-arm64",
+  "version": "0.0.0",
+  "description": "Platform-specific binary for alaya-mcp (macOS ARM64)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SecurityRonin/alaya"
+  },
+  "os": ["darwin"],
+  "cpu": ["arm64"],
+  "files": ["alaya-mcp"],
+  "preferUnplugged": true
+}
